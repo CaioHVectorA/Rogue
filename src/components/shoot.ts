@@ -16,13 +16,12 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
     let lastPos: Vec2 | null = null;
     let channeling = false;
     let charge = 0;
-    let squaresCharge = 0
-    let sizeLines = {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-    }
+    let topLine: GameObj | null = null;
+    let rightLine: GameObj | null = null;
+    let bottomLine: GameObj | null = null;
+    let leftLine: GameObj | null = null;
+    const lineThickness = 4;
+
     function isStationary(self: GameObj) {
         if (!lastPos) return false;
         const delta = self.pos.sub(lastPos);
@@ -72,97 +71,100 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
         require: ["pos"],
         add(this: GameObj) {
             lastPos = this.pos.clone();
+
+            // Create persistent line objects once
+            const w = this.getSize().width;
+            const h = this.getSize().height;
+            if (!topLine) {
+                topLine = this.add([
+                    k.rect(1, lineThickness),
+                    k.pos(0, -2),
+                    k.color(0, 255, 0),
+                    k.scale(0, 1), // start with zero length on X
+                    { id: "charge-indicator-top" },
+                ]);
+            }
+            if (!rightLine) {
+                rightLine = this.add([
+                    k.rect(lineThickness, 1),
+                    k.pos(w - 2, 0),
+                    k.color(0, 255, 0),
+                    k.scale(1, 0), // start with zero length on Y
+                    { id: "charge-indicator-right" },
+                ]);
+            }
+            if (!bottomLine) {
+                bottomLine = this.add([
+                    k.rect(1, lineThickness),
+                    k.pos(0, h - 2),
+                    k.color(0, 255, 0),
+                    k.scale(0, 1), // start with zero length on X
+                    { id: "charge-indicator-bottom" },
+                ]);
+            }
+            if (!leftLine) {
+                leftLine = this.add([
+                    k.rect(lineThickness, 1),
+                    k.pos(-2, 0),
+                    k.color(0, 255, 0),
+                    k.scale(1, 0), // start with zero length on Y
+                    { id: "charge-indicator-left" },
+                ]);
+            }
+
             k.onUpdate(() => {
                 const still = isStationary(this);
                 if (still) {
                     channeling = true;
                     charge += k.dt();
                     const percentToShoot = Math.min(1, charge / chargeTime) * 100; // 0-100
-                    //console.log(`Charging: ${(percentToShoot).toFixed(0)}%`);
-                    const fixedSize = 4;
-                    const sizeSquare = (this.getSize().width / 100); // a edge in percenting based on 100
-                    // the idea is to make a crescent outline based on charge time
-                    if (percentToShoot <= 25) {
-                        // is a horizontal line
-                        const squaresNeededFirstEdge = (percentToShoot) * 4;
-                        for (let i = squaresCharge; i < squaresNeededFirstEdge + 16; i++) {
-                            const sizeToUp = (i - squaresCharge) * sizeSquare;
-                            const rect = k.rect(sizeSquare, fixedSize);
-                            //const pos = squaresCharge * sizeSquare - 2;
-                            const pos = i * sizeSquare - 2;
-                            this.add([
-                                rect,
-                                k.color(0, 255, 0),
-                                //k.outline(fixedSize, k.rgb(0, 255, 0)),
-                                k.pos(pos, -2),
-                                { id: "charge-indicator" },
-                            ]);
-                            sizeLines.top += sizeSquare;
-                        }
-                        squaresCharge = squaresNeededFirstEdge;
+
+                    const sizeSquare = (this.getSize().width / 100);
+
+                    // Grow line lengths based on charge percent without spawning new squares
+                    // Top edge: 0% - 25%
+                    if (topLine) {
+                        const pct = Math.min(percentToShoot, 25);
+                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full width
+                        // Scale X relative to base width 1
+                        topLine.scale = k.vec2(len, 1);
+                        topLine.pos = k.vec2(-2, -2);
                     }
-                    else if (percentToShoot <= 50) {
-                        // is a vertical line
-                        const squaresNeededSecondEdge = (percentToShoot - 25) * 4;
-                        for (let i = squaresCharge; i < squaresNeededSecondEdge + 16; i++) {
-                            const sizeToUp = (i - squaresCharge) * sizeSquare;
-                            const rect = k.rect(fixedSize, sizeSquare);
-                            const pos = i * sizeSquare - 2;
-                            this.add([
-                                rect,
-                                k.color(0, 255, 0),
-                                //k.outline(fixedSize, k.rgb(0, 255, 0)),
-                                k.pos(this.getSize().width - 2, pos),
-                                { id: "charge-indicator" },
-                            ]);
-                            sizeLines.right += sizeSquare;
-                        }
-                        squaresCharge = squaresNeededSecondEdge;
+                    // Right edge: 25% - 50%
+                    if (rightLine) {
+                        const pct = Math.max(0, Math.min(percentToShoot - 25, 25));
+                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
+                        rightLine.scale = k.vec2(1, len);
+                        rightLine.pos = k.vec2(this.getSize().width - 2, -2);
                     }
-                    else if (percentToShoot <= 75) {
-                        // is a horizontal line (bottom)
-                        const squaresNeededThirdEdge = (percentToShoot - 50) * 4;
-                        for (let i = squaresCharge; i < squaresNeededThirdEdge + 16; i++) {
-                            const sizeToUp = (i - squaresCharge) * sizeSquare;
-                            const rect = k.rect(sizeSquare, fixedSize);
-                            const pos = i * sizeSquare - 2;
-                            this.add([
-                                rect,
-                                k.color(0, 255, 0),
-                                //k.outline(fixedSize, k.rgb(0, 255, 0)),
-                                k.pos(pos, this.getSize().height - 2),
-                                { id: "charge-indicator" },
-                            ]);
-                            sizeLines.bottom += sizeSquare;
-                        }
-                        squaresCharge = squaresNeededThirdEdge;
-                    } else if (percentToShoot <= 100) {
-                        // is a vertical line (left)
-                        const squaresNeededFourthEdge = (percentToShoot - 75) * 4;
-                        for (let i = squaresCharge; i < squaresNeededFourthEdge + 16; i++) {
-                            const sizeToUp = (i - squaresCharge) * sizeSquare;
-                            const rect = k.rect(fixedSize, sizeSquare);
-                            const pos = i * sizeSquare - 2;
-                            this.add([
-                                rect,
-                                k.color(0, 255, 0),
-                                //k.outline(fixedSize, k.rgb(0, 255, 0)),
-                                k.pos(-2, pos),
-                                { id: "charge-indicator" },
-                            ]);
-                            sizeLines.left += sizeSquare;
-                        }
-                        squaresCharge = squaresNeededFourthEdge;
+                    // Bottom edge: 50% - 75%
+                    if (bottomLine) {
+                        const pct = Math.max(0, Math.min(percentToShoot - 50, 25));
+                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
+                        bottomLine.scale = k.vec2(len, 1);
+                        bottomLine.pos = k.vec2(-2, this.getSize().height - 2);
+                    }
+                    // Left edge: 75% - 100%
+                    if (leftLine) {
+                        const pct = Math.max(0, Math.min(percentToShoot - 75, 25));
+                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
+                        leftLine.scale = k.vec2(1, len);
+                        leftLine.pos = k.vec2(-2, -2);
                     }
                 } else {
                     // movement cancels channeling and resets charge
                     channeling = false;
-                    //charge = 0;
+                    // Reset lines when movement happens
+                    charge = 0;
+                    if (topLine) topLine.scale = k.vec2(0, 1);
+                    if (rightLine) rightLine.scale = k.vec2(1, 0);
+                    if (bottomLine) bottomLine.scale = k.vec2(0, 1);
+                    if (leftLine) leftLine.scale = k.vec2(1, 0);
                 }
 
                 if (channeling && charge >= chargeTime) {
-                    //charge = 0;
                     channeling = false;
+                    // Optionally fire here
                     //fire(this);
                 }
 
