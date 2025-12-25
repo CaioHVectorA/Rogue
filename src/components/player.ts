@@ -22,18 +22,18 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
     const mapState = k.clamp(opts.mapState ?? 1, 1, 5);
     const zoomOutFactor = 1 - (mapState - 1) * 0.33;
     k.camScale(k.vec2(Math.max(0.4, zoomOutFactor)));
-
+    const outlineSize = 8 * zoomOutFactor;
     const player = k.add([
         k.rect(s, s),
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
-        k.outline(4, k.rgb(255, 255, 255)),
+        k.outline(outlineSize, k.rgb(255, 255, 255)),
         k.area(),
         k.body(),
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { chargeTime: 1, projectileSpeed: 560 }),
+        shoot(k, { chargeTime: 1, outlineSize, projectileSpeed: 560 }),
         {
             update(this: GameObj) {
                 k.camPos(this.pos);

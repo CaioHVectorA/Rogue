@@ -2,12 +2,13 @@ import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 
 export type ShootOptions = {
     chargeTime?: number,
+    outlineSize: number,
     projectileSpeed?: number,
     projectileSize?: number,
     projectileColor?: [number, number, number],
 };
 
-export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
+export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     const chargeTime = opts.chargeTime ?? 1.0; // seconds to charge
     const projSpeed = opts.projectileSpeed ?? 500;
     const projSize = opts.projectileSize ?? 8;
@@ -20,7 +21,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
     let rightLine: GameObj | null = null;
     let bottomLine: GameObj | null = null;
     let leftLine: GameObj | null = null;
-    const lineThickness = 4;
+    const lineThickness = opts.outlineSize ?? 4;
 
     function isStationary(self: GameObj) {
         if (!lastPos) return false;
@@ -78,7 +79,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
             if (!topLine) {
                 topLine = this.add([
                     k.rect(1, lineThickness),
-                    k.pos(0, -2),
+                    k.pos(0, (opts.outlineSize / -2)),
                     k.color(0, 255, 0),
                     k.scale(0, 1), // start with zero length on X
                     { id: "charge-indicator-top" },
@@ -87,7 +88,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
             if (!rightLine) {
                 rightLine = this.add([
                     k.rect(lineThickness, 1),
-                    k.pos(w - 2, 0),
+                    k.pos(w - (opts.outlineSize / 2), 0),
                     k.color(0, 255, 0),
                     k.scale(1, 0), // start with zero length on Y
                     { id: "charge-indicator-right" },
@@ -96,7 +97,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
             if (!bottomLine) {
                 bottomLine = this.add([
                     k.rect(1, lineThickness),
-                    k.pos(0, h - 2),
+                    k.pos(0, h - (opts.outlineSize / 2)),
                     k.color(0, 255, 0),
                     k.scale(0, 1), // start with zero length on X
                     { id: "charge-indicator-bottom" },
@@ -105,7 +106,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
             if (!leftLine) {
                 leftLine = this.add([
                     k.rect(lineThickness, 1),
-                    k.pos(-2, 0),
+                    k.pos(- (opts.outlineSize / 2), 0),
                     k.color(0, 255, 0),
                     k.scale(1, 0), // start with zero length on Y
                     { id: "charge-indicator-left" },
@@ -126,32 +127,32 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
                 // Top edge: 0% - 25%
                 if (topLine) {
                     const pct = Math.min(percentToShoot, 25);
-                    const len = Math.max(0, pct * 4 * sizeSquare + 4);
+                    const len = Math.max(0, pct * 4 * sizeSquare + opts.outlineSize);
                     topLine.scale = k.vec2(len, 1);
-                    topLine.pos = k.vec2(-2, -2);
+                    topLine.pos = k.vec2(- (opts.outlineSize / 2), -opts.outlineSize / 2);
                 }
                 // Right edge: 25% - 50%
                 if (rightLine) {
                     const pct = Math.max(0, Math.min(percentToShoot - 25, 25));
-                    const len = Math.max(0, pct * 4 * sizeSquare + 4);
+                    const len = Math.max(0, pct * 4 * sizeSquare + opts.outlineSize);
                     rightLine.scale = k.vec2(1, len);
-                    rightLine.pos = k.vec2(this.getSize().width - 2, -2);
+                    rightLine.pos = k.vec2(this.getSize().width - (opts.outlineSize / 2), - (opts.outlineSize / 2));
                 }
                 // Bottom edge: 50% - 75%
                 if (bottomLine) {
                     const pct = Math.max(0, Math.min(percentToShoot - 50, 25));
                     const len = Math.max(0, pct * 4 * sizeSquare);
                     bottomLine.scale = k.vec2(len, 1);
-                    const startX = this.getSize().width - 2 - len;
-                    bottomLine.pos = k.vec2(startX, this.getSize().height - 2);
+                    const startX = this.getSize().width - (opts.outlineSize / 2) - len;
+                    bottomLine.pos = k.vec2(startX, this.getSize().height - (opts.outlineSize / 2));
                 }
                 // Left edge: 75% - 100%
                 if (leftLine) {
                     const pct = Math.max(0, Math.min(percentToShoot - 75, 25));
                     const len = Math.max(0, pct * 4 * sizeSquare);
                     leftLine.scale = k.vec2(1, len);
-                    const startY = this.getSize().height - 2 - len;
-                    leftLine.pos = k.vec2(-2, startY);
+                    const startY = this.getSize().height - (opts.outlineSize / 2) - len;
+                    leftLine.pos = k.vec2(- (opts.outlineSize / 2), startY);
                 }
 
                 // When moving, optionally dim color to indicate slower charge

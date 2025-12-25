@@ -14,7 +14,7 @@ k.setBackground(k.rgb(0, 0, 0));
 const MAP_STATE = 1;
 
 // Player: a controllable square
-const player = createPlayer(k, { size: 36, speed: 360, mapState: MAP_STATE });
+const player = createPlayer(k, { size: 60, speed: 360, mapState: MAP_STATE });
 
 // Create arena walls decoupled from player
 createArena(k, { center: player.pos.clone(), mapState: MAP_STATE });
