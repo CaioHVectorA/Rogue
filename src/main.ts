@@ -1,6 +1,7 @@
 import kaplay from "kaplay";
 import { createPlayer } from "./components/player";
 import { createArena } from "./components/walls";
+import { createEnemy } from "./components/enemy";
 
 const k = kaplay();
 
@@ -17,6 +18,11 @@ const player = createPlayer(k, { size: 36, speed: 360, mapState: MAP_STATE });
 
 // Create arena walls decoupled from player
 createArena(k, { center: player.pos.clone(), mapState: MAP_STATE });
+
+// Spawn a few simple enemies that chase the player
+for (let i = 0; i < 5; i++) {
+    createEnemy(k, { target: player });
+}
 
 // Optional: click to kaboom effect
 k.onClick(() => k.addKaboom(k.mousePos()));
