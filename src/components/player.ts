@@ -33,7 +33,7 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { chargeTime: 0.2, projectileSpeed: 560 }),
+        shoot(k, { chargeTime: 1, projectileSpeed: 560 }),
         {
             update(this: GameObj) {
                 k.camPos(this.pos);

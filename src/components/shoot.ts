@@ -114,63 +114,67 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
 
             k.onUpdate(() => {
                 const still = isStationary(this);
-                if (still) {
-                    channeling = true;
-                    charge += k.dt();
-                    const percentToShoot = Math.min(1, charge / chargeTime) * 100; // 0-100
+                // charge even while moving (slower when moving)
+                const rate = still ? 1.0 : 0.5; // 100% speed when parado, 50% andando
+                channeling = true;
+                charge += k.dt() * rate;
+                const percentToShoot = Math.min(1, charge / chargeTime) * 100; // 0-100
 
-                    const sizeSquare = (this.getSize().width / 100);
+                const sizeSquare = (this.getSize().width / 100);
 
-                    // Grow line lengths based on charge percent without spawning new squares
-                    // Top edge: 0% - 25%
-                    if (topLine) {
-                        const pct = Math.min(percentToShoot, 25);
-                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full width
-                        // Scale X relative to base width 1
-                        topLine.scale = k.vec2(len, 1);
-                        topLine.pos = k.vec2(-2, -2);
-                    }
-                    // Right edge: 25% - 50%
-                    if (rightLine) {
-                        const pct = Math.max(0, Math.min(percentToShoot - 25, 25));
-                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
-                        rightLine.scale = k.vec2(1, len);
-                        rightLine.pos = k.vec2(this.getSize().width - 2, -2);
-                    }
-                    // Bottom edge: 50% - 75%
-                    if (bottomLine) {
-                        const pct = Math.max(0, Math.min(percentToShoot - 50, 25));
-                        const len = Math.max(0, pct * 4 * sizeSquare); // up to full width
-                        bottomLine.scale = k.vec2(len, 1);
-                        // grow inversely: start from right and extend left
-                        const startX = this.getSize().width - 2 - len;
-                        bottomLine.pos = k.vec2(startX, this.getSize().height - 2);
-                    }
-                    // Left edge: 75% - 100%
-                    if (leftLine) {
-                        const pct = Math.max(0, Math.min(percentToShoot - 75, 25));
-                        const len = Math.max(0, pct * 4 * sizeSquare); // up to full height
-                        leftLine.scale = k.vec2(1, len);
-                        // grow inversely: start from bottom and extend up
-                        const startY = this.getSize().height - 2 - len;
-                        leftLine.pos = k.vec2(-2, startY);
-                    }
-                } else {
-                    // movement cancels channeling and resets charge
-                    channeling = false;
-                    // Reset lines when movement happens
-                    charge = 0;
-                    if (topLine) topLine.scale = k.vec2(0, 1);
-                    if (rightLine) rightLine.scale = k.vec2(1, 0);
-                    if (bottomLine) bottomLine.scale = k.vec2(0, 1);
-                    if (leftLine) leftLine.scale = k.vec2(1, 0);
+                // Grow line lengths based on charge percent without spawning new squares
+                // Top edge: 0% - 25%
+                if (topLine) {
+                    const pct = Math.min(percentToShoot, 25);
+                    const len = Math.max(0, pct * 4 * sizeSquare + 4);
+                    topLine.scale = k.vec2(len, 1);
+                    topLine.pos = k.vec2(-2, -2);
+                }
+                // Right edge: 25% - 50%
+                if (rightLine) {
+                    const pct = Math.max(0, Math.min(percentToShoot - 25, 25));
+                    const len = Math.max(0, pct * 4 * sizeSquare + 4);
+                    rightLine.scale = k.vec2(1, len);
+                    rightLine.pos = k.vec2(this.getSize().width - 2, -2);
+                }
+                // Bottom edge: 50% - 75%
+                if (bottomLine) {
+                    const pct = Math.max(0, Math.min(percentToShoot - 50, 25));
+                    const len = Math.max(0, pct * 4 * sizeSquare);
+                    bottomLine.scale = k.vec2(len, 1);
+                    const startX = this.getSize().width - 2 - len;
+                    bottomLine.pos = k.vec2(startX, this.getSize().height - 2);
+                }
+                // Left edge: 75% - 100%
+                if (leftLine) {
+                    const pct = Math.max(0, Math.min(percentToShoot - 75, 25));
+                    const len = Math.max(0, pct * 4 * sizeSquare);
+                    leftLine.scale = k.vec2(1, len);
+                    const startY = this.getSize().height - 2 - len;
+                    leftLine.pos = k.vec2(-2, startY);
                 }
 
-                if (channeling && charge >= chargeTime) {
-                    channeling = false;
-                    charge = 0;
-                    // Optionally fire here
-                    fire(this);
+                // When moving, optionally dim color to indicate slower charge
+                const col = still ? k.rgb(0, 255, 0) : k.rgb(0, 180, 0);
+                if (topLine) topLine.color = col;
+                if (rightLine) rightLine.color = col;
+                if (bottomLine) bottomLine.color = col;
+                if (leftLine) leftLine.color = col;
+
+                if (charge >= chargeTime) {
+                    if (still) {
+                        channeling = false;
+                        charge = 0;
+                        fire(this);
+                        // reset visuals
+                        if (topLine) topLine.scale = k.vec2(0, 1);
+                        if (rightLine) rightLine.scale = k.vec2(1, 0);
+                        if (bottomLine) bottomLine.scale = k.vec2(0, 1);
+                        if (leftLine) leftLine.scale = k.vec2(1, 0);
+                    } else {
+                        // keep charged while moving, but don’t fire
+                        charge = chargeTime;
+                    }
                 }
 
                 // Track last pos for next frame
