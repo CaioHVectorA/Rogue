@@ -140,16 +140,20 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
                     // Bottom edge: 50% - 75%
                     if (bottomLine) {
                         const pct = Math.max(0, Math.min(percentToShoot - 50, 25));
-                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
+                        const len = Math.max(0, pct * 4 * sizeSquare); // up to full width
                         bottomLine.scale = k.vec2(len, 1);
-                        bottomLine.pos = k.vec2(-2, this.getSize().height - 2);
+                        // grow inversely: start from right and extend left
+                        const startX = this.getSize().width - 2 - len;
+                        bottomLine.pos = k.vec2(startX, this.getSize().height - 2);
                     }
                     // Left edge: 75% - 100%
                     if (leftLine) {
                         const pct = Math.max(0, Math.min(percentToShoot - 75, 25));
-                        const len = Math.max(0, pct * 4 * sizeSquare + 4); // up to full height
+                        const len = Math.max(0, pct * 4 * sizeSquare); // up to full height
                         leftLine.scale = k.vec2(1, len);
-                        leftLine.pos = k.vec2(-2, -2);
+                        // grow inversely: start from bottom and extend up
+                        const startY = this.getSize().height - 2 - len;
+                        leftLine.pos = k.vec2(-2, startY);
                     }
                 } else {
                     // movement cancels channeling and resets charge
@@ -164,8 +168,9 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = {}) {
 
                 if (channeling && charge >= chargeTime) {
                     channeling = false;
+                    charge = 0;
                     // Optionally fire here
-                    //fire(this);
+                    fire(this);
                 }
 
                 // Track last pos for next frame

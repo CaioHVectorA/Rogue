@@ -21,7 +21,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
         k.outline(3),
-        k.opacity(0),
+        // k.opacity(0),
         k.area(),
         // No physics body to avoid gravity; still collides via area
         speed({ value: spd }),
