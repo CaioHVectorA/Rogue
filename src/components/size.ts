@@ -11,14 +11,19 @@ export function size(opts: SizeOptions = {}) {
     return {
         id: "size",
         require: [],
-        width: w,
-        height: h,
-        setSize(this: GameObj & { width: number; height: number }, nw: number, nh: number) {
-            this.width = nw;
-            this.height = nh;
+        add(this: GameObj & { width: number; height: number }) {
+            this.width = w;
+            this.height = h;
         },
+
         getSize(this: GameObj & { width: number; height: number }) {
             return { width: this.width, height: this.height };
         },
+
+        setSize(this: GameObj & { width: number; height: number }, nw: number, nh: number) {
+            this.width = nw;
+            this.height = nh;
+        }
+
     } as const;
 }

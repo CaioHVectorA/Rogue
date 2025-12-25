@@ -1,4 +1,4 @@
-import type { GameObj, Vec2 } from "kaplay";
+import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { speed } from "./speed";
 import { movimentable } from "./movimentable";
 
@@ -10,7 +10,7 @@ export type EnemyOptions = {
     target: GameObj,
 };
 
-export function createEnemy(k: any, opts: EnemyOptions): GameObj {
+export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     const s = opts.size ?? 28;
     const spd = opts.speed ?? 160;
     const startPos = opts.pos ?? k.vec2(k.rand(0, k.width()), k.rand(0, k.height()));
@@ -21,6 +21,7 @@ export function createEnemy(k: any, opts: EnemyOptions): GameObj {
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
         k.outline(3),
+        k.opacity(0),
         k.area(),
         // No physics body to avoid gravity; still collides via area
         speed({ value: spd }),

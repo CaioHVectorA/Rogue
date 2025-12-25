@@ -1,6 +1,8 @@
 import type { GameObj, Vec2 } from "kaplay";
 import { speed } from "./speed";
 import { movimentable } from "./movimentable";
+import { shoot } from "./shoot";
+import { size } from "./size";
 
 export type PlayerOptions = {
     pos?: Vec2,
@@ -25,11 +27,13 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
         k.rect(s, s),
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
-        k.outline(4),
+        k.outline(4, k.rgb(255, 255, 255)),
         k.area(),
         k.body(),
+        size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
+        shoot(k, { chargeTime: 1.0, projectileSpeed: 560 }),
         {
             update(this: GameObj) {
                 k.camPos(this.pos);
