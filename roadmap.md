@@ -1,153 +1,71 @@
 # 🗺️ Roadmap de Desenvolvimento — Roguelike (Kaplay.js)
 
-> Objetivo: construir um roguelike **completo, simples e finalizável**, evitando overdesign e abandono.
-
----
-
-## 🧱 FASE 0 — Setup básico
-**Objetivo:** abrir o jogo e renderizar algo
-
+## 🧱 Setup básico
 - [X] Criar projeto Kaplay.js
-- [X] Configurar loop principal
-- [X] Criar cena principal
-- [X] Renderizar player placeholder (quadrado ou círculo)
+- [X] Loop principal
+- [X] Cena principal
+- [X] Player como quadrado
+- [X] Câmera fixa
 
-✅ **Resultado:** algo aparece na tela
-
----
-
-## 🧪 FASE 1 — Movimento
-**Objetivo:** controle básico divertido
-
+## 🧪 Movimento + Recarga (CORE)
 - [X] Movimento WASD
-- [X] Atributo de velocidade
-- [X] Limites da arena
-- [X] Debug visual (opcional)
+- [X] Velocidade configurável
+- [X] Sistema de recarga contínua
+- [X] Recarga acontece enquanto anda
+- [X] Recarga mais lenta enquanto se move
+- [X] SÓ ATIRA PARADO
+- [X] Animação de outline representando recarga
 
-✅ **Resultado:** movimentação fluida e responsiva
-
----
-
-## 🎯 FASE 2 — Tiro parado (core mechanic)
-**Objetivo:** estabelecer a identidade do jogo
-
-- [X] Detectar se o player está parado
-- [ ] Delay mínimo parado (ex: 0.2s)
-- [ ] Implementar tiro básico
-- [ ] Cooldown de tiro
-- [ ] Cancelar tiro ao mover
-
-✅ **Resultado:** mover → parar → atirar
-
----
-
-## 👾 FASE 3 — Inimigo básico
-**Objetivo:** combate funcional
-
-- [ ] Inimigo segue o player
-- [ ] Sistema de vida do inimigo
-- [ ] Colisão tiro → inimigo
+## 👾 Inimigos básicos (visual + comportamento)
+- [X] Inimigos em quadrados coloridos
+  [X] Movimento direto ao player
+- [X] Colisão tiro → inimigo
 - [ ] Colisão inimigo → player
-- [ ] Morte do player e restart
+- [ ] Morte e restart
+- [ ] Cada cor = comportamento
+    - Preto -> Neutro
+    - Verde -> Inimigo Que atira
+    - Azul -> Inimigo tank
+    - Vermelho -> Imigo Veloz
+    - Roxo -> Inimigo com dash/pulo
 
-✅ **Resultado:** jogo jogável em loop simples
+## 🌊 Sistema de waves (estilo enxame)
+- [ ] Waves temporizadas
+- [ ] Spawner progressivo
+- [ ] Tipos de inimigos misturados
+- [ ] Escala de quantidade, não só vida
+- [ ] Intervalo curto entre waves
 
----
+## 🗺️ Arena expansiva + Zoom Out
+- [ ] Aumentar tamanho da arena por wave
+- [ ] Zoom out progressivo da câmera
+- [ ] Mais espaço = mais inimigos
+- [ ] Player continua central
 
-## 🌊 FASE 4 — Sistema de waves
-**Objetivo:** criar o loop principal
-
-- [ ] Timer de wave (45–60s)
-- [ ] Spawner de inimigos
-- [ ] Escala de dificuldade por wave
-- [ ] Contador de waves
-
-✅ **Resultado:** sobrevivência por ondas
-
----
-
-## 💰 FASE 5 — Ouro e drops
-**Objetivo:** recompensa clara ao jogador
-
+## 💰 Ouro + Drops
 - [ ] Inimigos dropam ouro
-- [ ] Sistema de coleta (magnetismo opcional)
-- [ ] UI simples mostrando ouro
+- [ ] Magnetismo leve
+- [ ] UI simples de ouro
 
-✅ **Resultado:** matar → coletar → sentir progresso
-
----
-
-## ⏸️ FASE 6 — Pausa entre waves + UI de atributos
-**Objetivo:** progressão controlada
-
+## ⏸️ Pausa entre waves + UI de atributos
 - [ ] Pausar jogo entre waves
-- [ ] Criar UI de compra de atributos
-- [ ] Implementar custo crescente
-- [ ] Aplicar upgrades imediatamente
+- [ ] UI de compra de atributos
+- [ ] Custos crescentes
 
-### Atributos iniciais:
-- Ataque
-- Velocidade
-- Vida máxima
-- Fire Rate
-- Cooldown Reduction
-- Skill Charge Speed
-- Sorte
-
-✅ **Resultado:** gastar ouro muda o gameplay
-
----
-
-## ⭐ FASE 7 — XP e Skills
-**Objetivo:** profundidade de builds
-
-- [ ] XP dropa dos inimigos
-- [ ] Barra de XP
+## ⭐ XP + Skills
+- [ ] XP separado do ouro
 - [ ] Skill de movimentação
 - [ ] Skill de dano/controle
 - [ ] Ultimate
-- [ ] Sistema de cooldown visível
+- [ ] Cooldowns visíveis
 
-✅ **Resultado:** builds começam a surgir
+## 🎲 Perks (interagem com recarga e movimento)
+- [ ] Seleção aleatória entre waves
+- [ ] Tradeoffs claros
 
----
-
-## 🎲 FASE 8 — Sorte + Perks aleatórios
-**Objetivo:** reforçar o roguelike
-
-- [ ] Sorte afeta drops de ouro e XP
-- [ ] Seleção de perks entre waves
-- [ ] Perks econômicos
-- [ ] Perks defensivos
-- [ ] Perks ofensivos
-- [ ] Tradeoffs simples
-
-✅ **Resultado:** nenhuma run é igual
-
----
-
-## ✨ FASE 9 — Polimento mínimo
-**Objetivo:** fechar o jogo
-
+## ✨ Polimento mínimo
 - [ ] Feedback visual de dano
 - [ ] Sons básicos
-- [ ] Shake de câmera
-- [ ] Tela de Game Over
+- [ ] Camera shake
+- [ ] Game Over
 - [ ] Restart rápido
-
-✅ **Resultado:** jogo completo e apresentável
-
----
-
-## 🧠 Regra de ouro (anti-abandono)
-
-> ❗ **Nunca avance de fase se a atual não estiver jogável e divertida.**
-
----
-
-## 📌 Observações finais
-- Comece sempre com **placeholders**
-- Visual bonito vem depois
-- Cada fase deve gerar um **jogo jogável**, não apenas código
-
----
