@@ -15,8 +15,28 @@ export function createArena(k: any, opts: ArenaOptions = {}) {
     const mapState = k.clamp(opts.mapState ?? 1, 1, 5);
     const color = opts.color ?? [40, 40, 60];
 
-    const scaleW = 1 + (mapState - 1) * 0.5;
-    const scaleH = 1 + (mapState - 1) * 0.3;
+    // Explicit calibration per mapState
+    let scaleW: number;
+    let scaleH: number;
+    switch (mapState) {
+        case 1: // bem reduzido
+            scaleW = 0.6; scaleH = 0.6;
+            break;
+        case 2: // ok (referência)
+            scaleW = 1.0; scaleH = 1.0;
+            break;
+        case 3: // estado atual (ajustado para caber melhor na tela)
+            scaleW = 1.3; scaleH = 1.2;
+            break;
+        case 4: // menor que 3
+            scaleW = 1.2; scaleH = 1.1;
+            break;
+        case 5: // maior o suficiente para vazar além da tela
+            scaleW = 2.2; scaleH = 2.0;
+            break;
+        default:
+            scaleW = 1.0; scaleH = 1.0;
+    }
 
     const arena = {
         x: center.x - (k.width() * scaleW) / 2 + padding,

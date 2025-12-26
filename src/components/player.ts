@@ -18,25 +18,36 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
     const startPos = opts.pos ?? k.vec2(k.width() / 2, k.height() / 2);
     const color = opts.color ?? [0, 180, 255];
 
-    // Camera zoom based on mapState
+    // Camera zoom based on mapState (gentler scaling)
     const mapState = k.clamp(opts.mapState ?? 1, 1, 5);
-    const zoomOutFactor = 1 - (mapState - 1) * 0.33;
-    k.camScale(k.vec2(Math.max(0.4, zoomOutFactor)));
-    const outlineSize = 8 * zoomOutFactor;
+    let camScaleVal: number;
+    switch (mapState) {
+        case 1: camScaleVal = 1.15; break; // menos pequeno
+        case 2: camScaleVal = 1.0; break;  // ok
+        case 3: camScaleVal = 0.8; break; // quase sem zoom out
+        case 4: camScaleVal = 0.72; break; // um pouco menor
+        case 5: camScaleVal = 0.82; break; // amplo sem exagero
+        default: camScaleVal = 1.0;
+    }
+    k.camScale(k.vec2(camScaleVal));
+
     const player = k.add([
         k.rect(s, s),
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
-        k.outline(outlineSize, k.rgb(255, 255, 255)),
+        k.outline(4, k.rgb(255, 255, 255)),
         k.area(),
         k.body(),
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { chargeTime: 1, outlineSize, projectileSpeed: 560 }),
+        shoot(k, { outlineSize: 4, chargeTime: 0.2, projectileSpeed: 560 }),
         {
             update(this: GameObj) {
-                k.camPos(this.pos);
+                // Camera só segue o player no estado 5
+                if (mapState === 5) {
+                    k.camPos(this.pos);
+                }
             },
         },
     ]);

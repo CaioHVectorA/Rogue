@@ -11,7 +11,7 @@ k.loadRoot("./");
 k.setBackground(k.rgb(0, 0, 0));
 
 // MAP_STATE: 1..5 (mais alto = mais zoom out e mapa mais largo)
-const MAP_STATE = 1;
+const MAP_STATE = 5;
 
 // Player: a controllable square
 const player = createPlayer(k, { size: 60, speed: 360, mapState: MAP_STATE });
