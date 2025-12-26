@@ -59,8 +59,12 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
             if (p.pos.dist(self.pos) > k.width() * 2) p.destroy();
         });
         // hit enemy
-        p.onCollide("enemy", (e: GameObj) => {
-            // Simple effect: destroy projectile, optionally knock enemy
+        p.onCollide("enemy", (e: GameObj & { hp?: number }) => {
+            // Apply damage: reduce HP and destroy on 0
+            if (typeof e.hp === "number") {
+                e.hp -= 1;
+                if (e.hp <= 0) e.destroy();
+            }
             p.destroy();
         });
         // hit walls

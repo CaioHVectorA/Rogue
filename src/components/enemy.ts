@@ -8,44 +8,68 @@ export type EnemyOptions = {
     color?: [number, number, number],
     speed?: number,
     target: GameObj,
+    arenaBounds?: { x: number, y: number, w: number, h: number },
+    margin?: number,
+    hp?: number,
 };
 
 export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     const s = opts.size ?? 28;
-    const spd = opts.speed ?? 160;
-    const startPos = opts.pos ?? k.vec2(k.rand(0, k.width()), k.rand(0, k.height()));
+    const spd = opts.speed ?? 90; // slower default speed
+    const margin = opts.margin ?? 32; // avoid spawning inside walls
+    const arena = opts.arenaBounds;
+    const startPos = opts.pos ?? (
+        arena
+            ? k.vec2(
+                k.rand(arena.x + margin, arena.x + arena.w - margin),
+                k.rand(arena.y + margin, arena.y + arena.h - margin)
+            )
+            : k.vec2(k.rand(0, k.width()), k.rand(0, k.height()))
+    );
     const color = opts.color ?? [255, 60, 60];
+    const maxHP = opts.hp ?? 3;
 
     const enemy = k.add([
         k.rect(s, s),
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
         k.outline(3),
-        // k.opacity(0),
         k.area(),
-        // No physics body to avoid gravity; still collides via area
+        k.body(), // enable physics collisions with walls and other enemies
         speed({ value: spd }),
         movimentable(k, {
-            // Provide AI direction that chases the target
-            getDirection: () => {
-                const to = opts.target.pos.sub(startPos);
-                // Use current enemy pos for direction calculation
-                return opts.target.pos.sub(enemy.pos);
+            getDirection: (self) => {
+                // Chase the target based on current position
+                return opts.target.pos.sub(self.pos);
             },
         }),
         {
             id: "enemy",
-            update(this: GameObj) {
-                // Optional simple behavior: look at target, could add wobble or patrol later
+            hp: maxHP,
+            update(this: GameObj & { hp: number }) {
+                // keep inside arena bounds by nudging back if beyond
+                if (arena) {
+                    const minX = arena.x + margin;
+                    const maxX = arena.x + arena.w - margin;
+                    const minY = arena.y + margin;
+                    const maxY = arena.y + arena.h - margin;
+                    this.pos.x = k.clamp(this.pos.x, minX, maxX);
+                    this.pos.y = k.clamp(this.pos.y, minY, maxY);
+                }
             },
         },
-    ]);
+    ]) as GameObj & { hp: number, speed?: number };
 
-    // Simple collision feedback
+    // Collide with walls: body handles resolution; add small bounce feedback
     enemy.onCollide("arena-wall", () => {
-        // Bounce back a bit on wall hit
         const away = enemy.pos.sub(opts.target.pos).unit();
-        enemy.move(away.scale(enemy.speed ?? 160));
+        enemy.move(away.scale(enemy.speed ?? spd));
+    });
+
+    // Collide with other enemies to avoid overlapping
+    enemy.onCollide("enemy", (other: GameObj) => {
+        const push = enemy.pos.sub(other.pos).unit();
+        enemy.move(push.scale(20));
     });
 
     return enemy;

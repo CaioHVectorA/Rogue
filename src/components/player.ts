@@ -41,7 +41,7 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { outlineSize: 4, chargeTime: 0.2, projectileSpeed: 560 }),
+        shoot(k, { outlineSize: 4, chargeTime: 1, projectileSpeed: 560 }),
         {
             update(this: GameObj) {
                 // Camera só segue o player no estado 5

@@ -17,11 +17,11 @@ const MAP_STATE = 1;
 const player = createPlayer(k, { size: 60, speed: 360, mapState: MAP_STATE });
 
 // Create arena walls decoupled from player
-createArena(k, { center: player.pos.clone(), mapState: MAP_STATE });
+const arena = createArena(k, { center: player.pos.clone(), mapState: MAP_STATE });
 
-// Spawn a few simple enemies that chase the player
-for (let i = 0; i < 5; i++) {
-    createEnemy(k, { target: player });
+// Spawn a few simple enemies that chase the player, inside arena
+for (let i = 0; i < 7; i++) {
+    createEnemy(k, { target: player, arenaBounds: arena, hp: 3 });
 }
 
 // Optional: click to kaboom effect
