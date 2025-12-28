@@ -5,6 +5,8 @@ export type UIHandles = {
     updateGold: (amount: number) => void,
     updateXP: (xp: number, xpToLevel: number, level: number) => void,
     updateWave: (wave: number) => void,
+    onPlayClick: (handler: () => void) => void,
+    setPlayVisible: (visible: boolean) => void,
 };
 
 export function setupUI(k: KAPLAYCtx): UIHandles {
@@ -92,6 +94,35 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
         { id: "ui-level" },
     ]);
 
+    // Play button
+    const playBtn = k.add([
+        k.rect(120, 36),
+        k.pos(k.width() / 2 - 60, 20),
+        k.color(40, 160, 40),
+        k.outline(3, k.rgb(255, 255, 255)),
+        k.area(),
+        k.fixed(),
+        k.z(1002),
+        { id: "ui-play" },
+    ]);
+    const playText = k.add([
+        k.text("Play", { size: 22 }),
+        k.pos(playBtn.pos.x + 30, playBtn.pos.y + 6),
+        k.color(255, 255, 255),
+        k.fixed(),
+        k.z(1003),
+        { id: "ui-play-text" },
+    ]);
+    function positionPlay() {
+        playBtn.pos = k.vec2(k.width() / 2 - 60, 20);
+        playText.pos = k.vec2(playBtn.pos.x + 30, playBtn.pos.y + 6);
+    }
+    k.onResize(() => positionPlay());
+    positionPlay();
+
+    let playHandler: (() => void) | null = null;
+    playBtn.onClick(() => { if (playHandler) playHandler(); });
+
     return {
         updateHearts: (count: number) => ensureHearts(count),
         updateGold: (amount: number) => { (goldLabel as any).text = String(amount); },
@@ -101,5 +132,7 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
             (levelLabel as any).text = `Lv ${level}`;
         },
         updateWave: (wave: number) => { (waveLabel as any).text = `Onda ${wave}`; },
+        onPlayClick: (handler: () => void) => { playHandler = handler; },
+        setPlayVisible: (visible: boolean) => { playBtn.hidden = !visible; playText.hidden = !visible; },
     };
 }

@@ -12,11 +12,31 @@ export type EnemyOptions = {
     arenaBounds?: { x: number, y: number, w: number, h: number },
     margin?: number,
     hp?: number,
+    type?: "red" | "blue",
+    damage?: number,
+};
+
+export const ENEMY_PRESETS = {
+    red: {
+        size: 28,
+        color: [255, 60, 60] as [number, number, number],
+        speed: 120,
+        hp: 3,
+        damage: 1,
+    },
+    blue: {
+        size: 40,
+        color: [60, 120, 255] as [number, number, number],
+        speed: 80,
+        hp: 6,
+        damage: 1,
+    },
 };
 
 export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
-    const s = opts.size ?? 28;
-    const spd = opts.speed ?? 90; // slower default speed
+    const preset = ENEMY_PRESETS[opts.type ?? "red"];
+    const s = opts.size ?? preset.size;
+    const spd = opts.speed ?? preset.speed; // default based on type
     const margin = opts.margin ?? 32; // avoid spawning inside walls
     const arena = opts.arenaBounds;
     const startPos = opts.pos ?? (
@@ -27,8 +47,9 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
             )
             : k.vec2(k.rand(0, k.width()), k.rand(0, k.height()))
     );
-    const color = opts.color ?? [255, 60, 60];
-    const maxHP = opts.hp ?? 3;
+    const color = opts.color ?? preset.color;
+    const maxHP = opts.hp ?? preset.hp;
+    const dmg = opts.damage ?? preset.damage;
 
     const enemy = k.add([
         k.rect(s, s),
@@ -47,6 +68,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         {
             id: "enemy",
             hp: maxHP,
+            damage: dmg,
+            lastDamageTime: 0,
             update(this: GameObj & { hp: number }) {
                 // keep inside arena bounds by nudging back if beyond
                 if (arena) {
@@ -59,7 +82,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
                 }
             },
         },
-    ]) as GameObj & { hp: number, speed?: number };
+    ]) as GameObj & { hp: number, speed?: number, damage: number, lastDamageTime: number };
 
     // Collide with walls: body handles resolution; add small bounce feedback
     enemy.onCollide("arena-wall", () => {

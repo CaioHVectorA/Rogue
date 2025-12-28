@@ -10,6 +10,9 @@ export type GameState = {
   xp: number,
   level: number,
   xpToLevel: number,
+  playerHealth: number,
+  enemyDamageCooldownMs: number,
+  waves: Array<Array<{ type: "red" | "blue", count: number }>>,
 };
 
 export const gameState: GameState = {
@@ -24,4 +27,11 @@ export const gameState: GameState = {
   xp: 0,
   level: 1,
   xpToLevel: 10,
+  playerHealth: 5,
+  enemyDamageCooldownMs: 1000,
+  waves: [
+    [{ type: "red", count: 5 }],
+    [{ type: "red", count: 6 }, { type: "blue", count: 1 }],
+    [{ type: "red", count: 6 }, { type: "blue", count: 2 }],
+  ],
 };
