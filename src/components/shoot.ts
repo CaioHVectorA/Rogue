@@ -1,4 +1,5 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
+import { gameState } from "../state/gameState";
 
 export type ShootOptions = {
     chargeTime?: number,
@@ -120,7 +121,9 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
             k.onUpdate(() => {
                 const still = isStationary(this);
                 // charge even while moving (slower when moving)
-                const rate = still ? 1.0 : 0.5; // 100% speed when parado, 50% andando
+                const base = gameState.reloadSpeed; // e.g., 1.0
+                const movePenalty = gameState.reloadMovePenalty; // e.g., 0.5
+                const rate = still ? base : base * movePenalty;
                 channeling = true;
                 charge += k.dt() * rate;
                 const percentToShoot = Math.min(1, charge / chargeTime) * 100; // 0-100

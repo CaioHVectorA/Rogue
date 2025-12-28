@@ -2,27 +2,47 @@ import kaplay from "kaplay";
 import { createPlayer } from "./components/player";
 import { createArena } from "./components/walls";
 import { createEnemy } from "./components/enemy";
+import { setupUI } from "./components/ui";
+import { gameState } from "./state/gameState";
 
 const k = kaplay();
 
 k.loadRoot("./");
 
-// Background preto
 k.setBackground(k.rgb(0, 0, 0));
 
-// MAP_STATE: 1..5 (mais alto = mais zoom out e mapa mais largo)
 const MAP_STATE = 1;
 
-// Player: a controllable square
-const player = createPlayer(k, { size: 60, speed: 360, mapState: MAP_STATE });
-
-// Create arena walls decoupled from player
+const player = createPlayer(k, { size: 60, speed: gameState.moveSpeed, mapState: MAP_STATE, hp: gameState.maxHealth });
 const arena = createArena(k, { center: player.pos.clone(), mapState: MAP_STATE });
 
-// Spawn a few simple enemies that chase the player, inside arena
+// UI
+const ui = setupUI(k);
+ui.updateHearts((player as any).hp ?? 0);
+ui.updateGold(gameState.gold);
+ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
+ui.updateWave(gameState.wave);
+
+// Collect gold drops on overlap with player
+k.onCollide("player", "gold-drop", (p: any, drop: any) => {
+    gameState.gold += drop.value ?? 1;
+    ui.updateGold(gameState.gold);
+    drop.destroy();
+});
+
+// Spawn enemies inside arena
 for (let i = 0; i < 7; i++) {
-    createEnemy(k, { target: player, arenaBounds: arena, hp: 3 });
+    const e = createEnemy(k, { target: player, arenaBounds: arena, hp: 3 });
+    e.onDestroy(() => {
+        // XP increases when enemy dies (not on pick-up)
+        gameState.xp += 1;
+        if (gameState.xp >= gameState.xpToLevel) {
+            gameState.xp -= gameState.xpToLevel;
+            gameState.level += 1;
+            gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
+        }
+        ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
+    });
 }
 
-// Optional: click to kaboom effect
 k.onClick(() => k.addKaboom(k.mousePos()));

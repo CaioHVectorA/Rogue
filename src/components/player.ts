@@ -10,6 +10,7 @@ export type PlayerOptions = {
     color?: [number, number, number],
     speed?: number,
     mapState?: number,
+    hp?: number,
 };
 
 export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
@@ -17,6 +18,7 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
     const spd = opts.speed ?? 220;
     const startPos = opts.pos ?? k.vec2(k.width() / 2, k.height() / 2);
     const color = opts.color ?? [0, 180, 255];
+    const baseHP = opts.hp ?? 5;
 
     // Camera zoom based on mapState (gentler scaling)
     const mapState = k.clamp(opts.mapState ?? 1, 1, 5);
@@ -30,27 +32,28 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
         default: camScaleVal = 1.0;
     }
     k.camScale(k.vec2(camScaleVal));
-
+    const outline = 6
     const player = k.add([
         k.rect(s, s),
         k.pos(startPos.x, startPos.y),
         k.color(color[0], color[1], color[2]),
-        k.outline(4, k.rgb(255, 255, 255)),
+        k.outline(outline, k.rgb(255, 255, 255)),
         k.area(),
         k.body(),
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { outlineSize: 4, chargeTime: 1, projectileSpeed: 560 }),
+        shoot(k, { outlineSize: outline, chargeTime: 0.2, projectileSpeed: 560 }),
         {
-            update(this: GameObj) {
+            id: "player", hp: baseHP,
+            update(this: GameObj & { hp: number }) {
                 // Camera só segue o player no estado 5
                 if (mapState === 5) {
                     k.camPos(this.pos);
                 }
             },
         },
-    ]);
+    ]) as GameObj & { hp: number };
 
     return player;
 }

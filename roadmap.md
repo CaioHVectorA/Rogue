@@ -29,6 +29,11 @@
     - Vermelho -> Imigo Veloz
     - Roxo -> Inimigo com dash/pulo
 
+## 💰 Ouro + Drops
+- [ ] UI simples de ouro
+- [ ] Inimigos dropam ouro
+- [ ] Magnetismo leve
+
 ## 🌊 Sistema de waves (estilo enxame)
 - [ ] Waves temporizadas
 - [ ] Spawner progressivo
@@ -42,10 +47,6 @@
 - [ ] Mais espaço = mais inimigos
 - [ ] Player continua central
 
-## 💰 Ouro + Drops
-- [ ] Inimigos dropam ouro
-- [ ] Magnetismo leve
-- [ ] UI simples de ouro
 
 ## ⏸️ Pausa entre waves + UI de atributos
 - [ ] Pausar jogo entre waves
@@ -69,3 +70,4 @@
 - [ ] Camera shake
 - [ ] Game Over
 - [ ] Restart rápido
+1

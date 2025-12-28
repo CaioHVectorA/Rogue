@@ -1,6 +1,7 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { speed } from "./speed";
 import { movimentable } from "./movimentable";
+import { spawnGoldDrop } from "./gold";
 
 export type EnemyOptions = {
     pos?: Vec2,
@@ -70,6 +71,11 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     enemy.onCollide("enemy", (other: GameObj) => {
         const push = enemy.pos.sub(other.pos).unit();
         enemy.move(push.scale(20));
+    });
+
+    enemy.onDestroy(() => {
+        // spawn a gold drop at enemy position
+        spawnGoldDrop(k, enemy.pos.clone(), 1);
     });
 
     return enemy;
