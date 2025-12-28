@@ -18,6 +18,7 @@ export type EnemyOptions = {
 
 export const ENEMY_PRESETS = {
     red: {
+        name: "REDUBIO",
         size: 28,
         color: [255, 60, 60] as [number, number, number],
         speed: 120,
@@ -25,8 +26,9 @@ export const ENEMY_PRESETS = {
         damage: 1,
     },
     blue: {
+        name: "barrublu",
         size: 40,
-        color: [60, 120, 255] as [number, number, number],
+        color: [60, 120, 255] as [number, number, number], // azul de fato
         speed: 80,
         hp: 6,
         damage: 1,
@@ -34,7 +36,8 @@ export const ENEMY_PRESETS = {
 };
 
 export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
-    const preset = ENEMY_PRESETS[opts.type ?? "red"];
+    const type = opts.type ?? "red";
+    const preset = ENEMY_PRESETS[type];
     const s = opts.size ?? preset.size;
     const spd = opts.speed ?? preset.speed; // default based on type
     const margin = opts.margin ?? 32; // avoid spawning inside walls
@@ -67,6 +70,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         }),
         {
             id: "enemy",
+            enemyType: type,
+            name: preset.name,
             hp: maxHP,
             damage: dmg,
             lastDamageTime: 0,
@@ -80,9 +85,23 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
                     this.pos.x = k.clamp(this.pos.x, minX, maxX);
                     this.pos.y = k.clamp(this.pos.y, minY, maxY);
                 }
+                // Red-specific schooling: tend to group with nearby reds
+                if (this.enemyType === "red") {
+                    const neighbors = (k.get ? k.get("enemy") : []) as (GameObj & { enemyType?: string })[];
+                    const nearbyReds = neighbors.filter(n => n !== this && n.enemyType === "red" && this.pos.dist(n.pos) < 160);
+                    if (nearbyReds.length > 0) {
+                        // steer slightly towards average position of nearby reds
+                        let cx = 0, cy = 0;
+                        for (const n of nearbyReds) { cx += n.pos.x; cy += n.pos.y; }
+                        cx /= nearbyReds.length; cy /= nearbyReds.length;
+                        const cohesion = k.vec2(cx, cy).sub(this.pos).unit();
+                        // apply small attraction
+                        this.move(cohesion.scale(30));
+                    }
+                }
             },
         },
-    ]) as GameObj & { hp: number, speed?: number, damage: number, lastDamageTime: number };
+    ]) as GameObj & { hp: number, speed?: number, damage: number, lastDamageTime: number, enemyType: "red" | "blue" };
 
     // Collide with walls: body handles resolution; add small bounce feedback
     enemy.onCollide("arena-wall", () => {
