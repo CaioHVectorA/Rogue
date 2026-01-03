@@ -2,6 +2,7 @@ import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { speed } from "./speed";
 import { movimentable } from "./movimentable";
 import { spawnGoldDrop } from "./gold";
+import { Enemies, ENEMY_PRESETS } from "./enemies";
 
 export type EnemyOptions = {
     pos?: Vec2,
@@ -12,27 +13,8 @@ export type EnemyOptions = {
     arenaBounds?: { x: number, y: number, w: number, h: number },
     margin?: number,
     hp?: number,
-    type?: "red" | "blue",
+    type?: Enemies,
     damage?: number,
-};
-
-export const ENEMY_PRESETS = {
-    red: {
-        name: "REDUBIO",
-        size: 28,
-        color: [255, 60, 60] as [number, number, number],
-        speed: 120,
-        hp: 3,
-        damage: 1,
-    },
-    blue: {
-        name: "barrublu",
-        size: 40,
-        color: [60, 120, 255] as [number, number, number], // azul de fato
-        speed: 80,
-        hp: 6,
-        damage: 1,
-    },
 };
 
 export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {

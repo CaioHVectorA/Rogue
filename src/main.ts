@@ -1,7 +1,7 @@
 import kaplay from "kaplay";
 import { createPlayer } from "./components/player";
 import { createArena } from "./components/walls";
-import { createEnemy, ENEMY_PRESETS } from "./components/enemy";
+import { createEnemy } from "./components/enemy";
 import { setupUI } from "./components/ui";
 import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
