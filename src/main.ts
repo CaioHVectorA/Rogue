@@ -3,6 +3,7 @@ import { createPlayer } from "./components/player";
 import { createArena } from "./components/walls";
 import { createEnemy, ENEMY_PRESETS } from "./components/enemy";
 import { setupUI } from "./components/ui";
+import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
 
 const k = kaplay();
@@ -24,10 +25,15 @@ ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
 ui.updateWave(gameState.wave);
 ui.setPlayVisible(true);
 
+// Shop setup
+setupShop(k, ui, player);
+ui.refreshShopStats({ moveSpeed: gameState.moveSpeed, maxHealth: gameState.maxHealth, reloadSpeed: gameState.reloadSpeed, luck: gameState.luck, gold: gameState.gold });
+
 // Collect gold drops on overlap with player
 k.onCollide("player", "gold-drop", (p: any, drop: any) => {
     gameState.gold += drop.value ?? 1;
     ui.updateGold(gameState.gold);
+    ui.refreshShopStats({ moveSpeed: gameState.moveSpeed, maxHealth: gameState.maxHealth, reloadSpeed: gameState.reloadSpeed, luck: gameState.luck, gold: gameState.gold });
     drop.destroy();
 });
 
@@ -54,8 +60,10 @@ function spawnWave(waveIndex: number) {
                 }
                 ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
 
-                // If wave finished, show Play to start next
+                // If wave finished, show Play to start next and advance wave
                 if (enemiesLeft <= 0) {
+                    gameState.wave += 1;
+                    ui.updateWave(gameState.wave);
                     ui.setPlayVisible(true);
                 }
             });
@@ -63,7 +71,7 @@ function spawnWave(waveIndex: number) {
     }
 }
 
-// Start first wave when pressing Play
+// Start wave when pressing Play
 ui.onPlayClick(() => {
     // hide button during wave
     ui.setPlayVisible(false);

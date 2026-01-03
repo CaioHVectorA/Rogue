@@ -20,7 +20,7 @@
 - [X] Inimigos em quadrados coloridos
   [X] Movimento direto ao player
 - [X] Colisão tiro → inimigo
-- [ ] Colisão inimigo → player
+- [X] Colisão inimigo → player
 - [ ] Morte e restart
 - [ ] Cada cor = comportamento
     - Preto -> Neutro

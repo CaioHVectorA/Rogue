@@ -1,3 +1,7 @@
+import { waves } from "./waves";
+import { upgrades } from "./upgrades";
+import { debug } from "./debug";
+
 export type GameState = {
   moveSpeed: number,
   reloadSpeed: number,
@@ -12,7 +16,9 @@ export type GameState = {
   xpToLevel: number,
   playerHealth: number,
   enemyDamageCooldownMs: number,
-  waves: Array<Array<{ type: "red" | "blue", count: number }>>,
+  waves: typeof waves,
+  projectileSpeed: number,
+  upgrades: typeof upgrades,
 };
 
 export const gameState: GameState = {
@@ -22,16 +28,14 @@ export const gameState: GameState = {
   maxHealth: 5,
   cooldown: 0,
   luck: 1.0,
-  wave: 1,
-  gold: 0,
+  wave: debug.INITIAL_WAVE ?? 1,
+  gold: debug.INITIAL_GOLD ?? 0,
   xp: 0,
   level: 1,
   xpToLevel: 10,
   playerHealth: 5,
   enemyDamageCooldownMs: 1000,
-  waves: [
-    [{ type: "red", count: 5 }],
-    [{ type: "red", count: 6 }, { type: "blue", count: 1 }],
-    [{ type: "red", count: 6 }, { type: "blue", count: 2 }],
-  ],
+  waves,
+  projectileSpeed: 560,
+  upgrades,
 };

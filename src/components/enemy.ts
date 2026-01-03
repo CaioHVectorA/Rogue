@@ -42,7 +42,9 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     const spd = opts.speed ?? preset.speed; // default based on type
     const margin = opts.margin ?? 32; // avoid spawning inside walls
     const arena = opts.arenaBounds;
-    const startPos = opts.pos ?? (
+    const playerPos = opts.target.pos.clone();
+    const minSpawnDist = 180; // minimum distance from player
+    let startPos = opts.pos ?? (
         arena
             ? k.vec2(
                 k.rand(arena.x + margin, arena.x + arena.w - margin),
@@ -50,6 +52,11 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
             )
             : k.vec2(k.rand(0, k.width()), k.rand(0, k.height()))
     );
+    // Reposition if too close to player
+    if (startPos.dist(playerPos) < minSpawnDist) {
+        const dir = playerPos.sub(k.vec2(k.rand(0, k.width()), k.rand(0, k.height()))).unit();
+        startPos = playerPos.add(dir.scale(minSpawnDist));
+    }
     const color = opts.color ?? preset.color;
     const maxHP = opts.hp ?? preset.hp;
     const dmg = opts.damage ?? preset.damage;
