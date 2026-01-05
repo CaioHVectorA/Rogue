@@ -19,12 +19,12 @@ export function applyGreenBehavior(
   data._greenTimer += k.dt();
   data._greenShotCooldown = Math.max(0, data._greenShotCooldown - k.dt());
 
-  if (data._greenWalking && data._greenTimer >= 1.2) {
+  if (data._greenWalking && data._greenTimer >= 0.1) {
     data._greenWalking = false;
     data._greenTimer = 0;
     if (self.setSpeed) self.setSpeed(0);
     else data.speed = 0;
-  } else if (!data._greenWalking && data._greenTimer >= 0.6) {
+  } else if (!data._greenWalking && data._greenTimer >= 1.2) {
     data._greenWalking = true;
     data._greenTimer = 0;
     // restore some default speed if available (fallback 110)
@@ -48,7 +48,7 @@ export function applyGreenBehavior(
       k.area(),
       { id: "enemy-bullet" },
     ]);
-    b.onUpdate(() => b.move(dir.scale(260)));
+    b.onUpdate(() => b.move(dir.scale(400)));
   }
 }
 

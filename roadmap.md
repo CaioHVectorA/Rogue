@@ -21,7 +21,7 @@
   [X] Movimento direto ao player
 - [X] Colisão tiro → inimigo
 - [X] Colisão inimigo → player
-- [ ] Morte e restart
+- [X] Morte e restart
 - [ ] Cada cor = comportamento
     - Preto -> Neutro
     - Verde -> Inimigo Que atira
