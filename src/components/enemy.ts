@@ -3,6 +3,7 @@ import { speed } from "./speed";
 import { movimentable } from "./movimentable";
 import { spawnGoldDrop } from "./gold";
 import { Enemies, ENEMY_PRESETS } from "./enemies";
+import { applyGreenBehavior, applyRedBehavior } from "./behaviors";
 
 export type EnemyOptions = {
     pos?: Vec2,
@@ -64,6 +65,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
             hp: maxHP,
             damage: dmg,
             lastDamageTime: 0,
+            defaultSpeed: spd,
             update(this: GameObj & { hp: number }) {
                 // keep inside arena bounds by nudging back if beyond
                 if (arena) {
@@ -76,17 +78,10 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
                 }
                 // Red-specific schooling: tend to group with nearby reds
                 if (this.enemyType === "red") {
-                    const neighbors = (k.get ? k.get("enemy") : []) as (GameObj & { enemyType?: string })[];
-                    const nearbyReds = neighbors.filter(n => n !== this && n.enemyType === "red" && this.pos.dist(n.pos) < 160);
-                    if (nearbyReds.length > 0) {
-                        // steer slightly towards average position of nearby reds
-                        let cx = 0, cy = 0;
-                        for (const n of nearbyReds) { cx += n.pos.x; cy += n.pos.y; }
-                        cx /= nearbyReds.length; cy /= nearbyReds.length;
-                        const cohesion = k.vec2(cx, cy).sub(this.pos).unit();
-                        // apply small attraction
-                        this.move(cohesion.scale(30));
-                    }
+                    applyRedBehavior(k, this as any);
+                }
+                if (this.enemyType === "green") {
+                    applyGreenBehavior(k, this as any, opts.target);
                 }
             },
         },

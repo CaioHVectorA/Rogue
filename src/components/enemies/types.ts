@@ -62,7 +62,6 @@ export function commonEnemy(k: KAPLAYCtx, opts: EnemyBaseOptions) {
             },
         },
     ]) as GameObj & { hp: number, speed?: number, damage: number, lastDamageTime: number, enemyType: string };
-
     enemy.onCollide("arena-wall", () => {
         const away = enemy.pos.sub(opts.target.pos).unit();
         enemy.move(away.scale(enemy.speed ?? spd));

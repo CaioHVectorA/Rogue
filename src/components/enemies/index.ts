@@ -26,23 +26,33 @@ export function spawnYellow(k: KAPLAYCtx, target: GameObj, arena: { x: number, y
 export function spawnGreen(k: KAPLAYCtx, target: GameObj, arena: { x: number, y: number, w: number, h: number }) {
     const p = ENEMY_PRESETS.green;
     const e = commonEnemy(k, { target, arenaBounds: arena, size: p.size, color: p.color, speed: p.speed, hp: p.hp, damage: p.damage, type: "green" });
-    // walking/stop+shoot cycle: walk 1.2s, stop 0.6s and shoot towards player
     let timer = 0;
     let walking = true;
-    console.log('jdsakjaskl')
+    let shotCooldown = 0;
+    console.log(e)
+    // single collision handler for enemy bullets
+    k.onCollide("player", "enemy-bullet", (pl: any, bb: any) => { bb.destroy(); (pl as any).hp = Math.max(0, (pl as any).hp - 1); });
+
     e.onUpdate(() => {
-        timer += k.dt();
-        k.debug.log("Enemy timer", timer);
-        if (walking && timer >= 1.2) { walking = false; timer = 0; (e as any).speed = 0; }
-        else if (!walking && timer >= 0.6) { walking = true; timer = 0; (e as any).speed = ENEMY_PRESETS.green.speed; }
-        // shoot when stopped (every cycle start)
-        if (!walking && timer < 0.05) {
+        const spdComp = (e as any);
+        const dt = k.dt();
+        timer += dt;
+        shotCooldown = Math.max(0, shotCooldown - dt);
+        if (walking && timer >= 1.2) {
+            walking = false;
+            timer = 0;
+            spdComp.setSpeed ? spdComp.setSpeed(0) : (spdComp.speed = 0);
+        } else if (!walking && timer >= 0.6) {
+            walking = true;
+            timer = 0;
+            spdComp.setSpeed ? spdComp.setSpeed(p.speed) : (spdComp.speed = p.speed);
+        }
+        // shoot once when entering stop phase
+        if (!walking && timer < 0.05 && shotCooldown <= 0) {
+            shotCooldown = 0.6; // fire once per stop window
             const dir = target.pos.sub(e.pos).unit();
-            // simple bullet: small rect moving
             const b = k.add([k.rect(8, 8), k.pos(e.pos.x, e.pos.y), k.color(60, 200, 100), k.area(), { id: "enemy-bullet" }]);
             b.onUpdate(() => b.move(dir.scale(260)));
-            // damage on collide with player
-            k.onCollide("player", "enemy-bullet", (p: any, bb: any) => { bb.destroy(); (p as any).hp = Math.max(0, (p as any).hp - 1); });
         }
     });
     return e;

@@ -92,5 +92,13 @@ k.onCollide("player", "enemy", (p: any, e: any) => {
         k.addKaboom(p.pos.clone());
     }
 });
-
-k.onClick(() => k.addKaboom(k.mousePos()));
+k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
+    bb.destroy();
+    (p as any).hp = Math.max(0, (p as any).hp - 1);
+    ui.updateHearts((p as any).hp);
+    if ((p as any).hp <= 0) {
+        // simple kaboom on death
+        k.addKaboom(p.pos.clone());
+    }
+});
+//k.onClick(() => k.addKaboom(k.mousePos()));
