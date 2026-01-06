@@ -4,6 +4,8 @@ import { movimentable } from "./movimentable";
 import { spawnGoldDrop } from "./gold";
 import { Enemies, ENEMY_PRESETS } from "./enemies";
 import { applyGreenBehavior, applyRedBehavior } from "./behaviors";
+import { gameState } from "../state/gameState";
+import { getGoldWeightsByLuck, pickGoldTier, getGoldColor, getGoldScale } from "../state/luck";
 
 export type EnemyOptions = {
     pos?: Vec2,
@@ -100,8 +102,16 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     });
 
     enemy.onDestroy(() => {
-        // spawn a gold drop at enemy position
-        spawnGoldDrop(k, enemy.pos.clone(), 1);
+        // Compute gold drop based on luck table
+        const luck = gameState.luck;
+        const weights = getGoldWeightsByLuck(luck);
+        const tier = pickGoldTier(weights, k.rand);
+        const amount = tier;
+        const drop = spawnGoldDrop(k, enemy.pos.clone(), amount);
+        // Apply color and scale based on tier
+        const [r, g, b] = getGoldColor(tier);
+        drop.color = k.rgb(r, g, b);
+        drop.scale = k.vec2(getGoldScale(tier), getGoldScale(tier));
     });
 
     return enemy;

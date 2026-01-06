@@ -23,7 +23,7 @@ export type GameState = {
 
 export const gameState: GameState = {
   moveSpeed: 360,
-  reloadSpeed: 0.33,
+  reloadSpeed: 5,
   reloadMovePenalty: 0.5,
   maxHealth: 5,
   cooldown: 0,

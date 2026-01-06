@@ -64,7 +64,8 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     onReload: () => {
       if (!canUpgrade("reloadSpeed")) return;
       if (!spendAndLevel("reloadSpeed")) return;
-      gameState.reloadSpeed = Math.max(0.2, gameState.reloadSpeed - 0.05);
+      // Treat reloadSpeed as reload time (seconds). Upgrading should increase rate by reducing time multiplicatively.
+      gameState.reloadSpeed = Math.max(0.1, Number((gameState.reloadSpeed * 0.9).toFixed(3)));
       ui.refreshShopStats({
         moveSpeed: gameState.moveSpeed,
         maxHealth: gameState.maxHealth,

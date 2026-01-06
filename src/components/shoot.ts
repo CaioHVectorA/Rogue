@@ -121,7 +121,9 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
             k.onUpdate(() => {
                 const still = isStationary(this);
                 // charge even while moving (slower when moving)
-                const base = gameState.reloadSpeed; // e.g., 1.0
+                // Interpret reloadSpeed as reload time (seconds). Convert to a rate.
+                const reloadTime = Math.max(0.0001, gameState.reloadSpeed);
+                const base = 1 / reloadTime; // higher when reload time is lower
                 const movePenalty = gameState.reloadMovePenalty; // e.g., 0.5
                 const rate = still ? base : base * movePenalty;
                 channeling = true;
