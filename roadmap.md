@@ -30,9 +30,10 @@
     - Roxo -> Inimigo com dash/pulo
 
 ## 💰 Ouro + Drops
-- [ ] UI simples de ouro
-- [ ] Inimigos dropam ouro
-- [ ] Magnetismo leve
+- [X] UI simples de ouro
+- [X] Inimigos dropam ouro
+- [X] Mercado de atributos
+- [ ] Sorte afeta drops
 
 ## 🌊 Sistema de waves (estilo enxame)
 - [ ] Waves temporizadas
