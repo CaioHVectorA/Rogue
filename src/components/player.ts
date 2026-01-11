@@ -43,7 +43,8 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
         size({ width: s, height: s }),
         speed({ value: spd }),
         movimentable(k),
-        shoot(k, { outlineSize: outline, chargeTime: 0.2, projectileSpeed: 560 }),
+        // Use default projectile speed from gameState inside shoot
+        shoot(k, { outlineSize: outline, chargeTime: 0.2 }),
         {
             id: "player", hp: baseHP,
             update(this: GameObj & { hp: number }) {

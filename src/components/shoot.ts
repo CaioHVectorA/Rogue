@@ -11,7 +11,7 @@ export type ShootOptions = {
 
 export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     const chargeTime = opts.chargeTime ?? 1.0; // seconds to charge
-    const projSpeed = opts.projectileSpeed ?? 500;
+    // const projSpeed = opts.projectileSpeed ?? 500; // do not cache; read at fire time
     const projSize = opts.projectileSize ?? 8;
     const projColor = opts.projectileColor ?? [255, 255, 0];
 
@@ -46,13 +46,15 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         const target = findNearestEnemy(self.pos);
         if (!target) return;
         const dir = target.pos.sub(self.pos).unit();
+        // Read projectile speed at fire time to reflect upgrades
+        const speed = (typeof opts.projectileSpeed === 'number') ? opts.projectileSpeed : gameState.projectileSpeed;
         const p = k.add([
             k.rect(projSize, projSize),
             k.pos(self.pos.x, self.pos.y),
             k.color(projColor[0], projColor[1], projColor[2]),
             k.outline(2, k.rgb(255, 255, 255)),
             k.area(),
-            { id: "projectile", vel: dir.scale(projSpeed) },
+            { id: "projectile", vel: dir.scale(speed) },
         ]);
         p.onUpdate(() => {
             p.move(p.vel);

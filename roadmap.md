@@ -33,7 +33,7 @@
 - [X] UI simples de ouro
 - [X] Inimigos dropam ouro
 - [X] Mercado de atributos
-- [ ] Sorte afeta drops
+- [X] Sorte afeta drops
 
 ## 🌊 Sistema de waves (estilo enxame)
 - [ ] Waves temporizadas
