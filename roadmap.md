@@ -23,11 +23,11 @@
 - [X] Colisão inimigo → player
 - [X] Morte e restart
 - [ ] Cada cor = comportamento
-    - Preto -> Neutro
-    - Verde -> Inimigo Que atira
-    - Azul -> Inimigo tank
-    - Vermelho -> Imigo Veloz
-    - Roxo -> Inimigo com dash/pulo
+    [ ] Preto -> Neutro
+    [X] Verde -> Inimigo Que atira
+    [X] Azul -> Inimigo tank
+    [X] Vermelho -> Inimigo Veloz, pequeno, agrupa
+    [ ] Roxo -> Inimigo com dash/pulo
 
 ## 💰 Ouro + Drops
 - [X] UI simples de ouro
