@@ -5,6 +5,7 @@ import { createEnemy } from "./components/enemy";
 import { setupUI } from "./components/ui";
 import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
+import { useSkill } from "./components/skills";
 
 const k = kaplay();
 
@@ -101,4 +102,12 @@ k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
         k.addKaboom(p.pos.clone());
     }
 });
-//k.onClick(() => k.addKaboom(k.mousePos()));
+
+// Set only cone-shot as current skill (requested)
+gameState.skills.skill1 = "shockwave";
+
+k.onKeyPress("q", () => {
+  const id = gameState.skills.skill1;
+  if (!id) return;
+  useSkill(id, k, player);
+});

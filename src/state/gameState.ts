@@ -19,6 +19,15 @@ export type GameState = {
   waves: typeof waves,
   projectileSpeed: number,
   upgrades: typeof upgrades,
+  // Skills
+  skills: {
+    skill1?: string,
+    skill2?: string,
+    ultimate?: string,
+    levels: { [key: string]: number },
+    cooldowns: { [key: string]: number },
+    lastUsedAt: { [key: string]: number },
+  },
 };
 
 export const gameState: GameState = {
@@ -38,4 +47,12 @@ export const gameState: GameState = {
   waves,
   projectileSpeed: 560,
   upgrades,
+  skills: {
+    skill1: undefined,
+    skill2: undefined,
+    ultimate: undefined,
+    levels: {},
+    cooldowns: {},
+    lastUsedAt: {},
+  },
 };

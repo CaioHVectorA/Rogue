@@ -1,5 +1,6 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import { gameState } from "../state/gameState";
+import { skillsRegistry } from "./skills";
 
 export type UIHandles = {
     updateHearts: (count: number) => void,
@@ -307,43 +308,87 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
         { id: "ui-quick-heal-text" },
     ]);
 
-    function positionShop() {
-        shopPanel.height = k.height() - 40;
-        const newH = shopPanel.height;
-        title.pos = k.vec2(shopPanel.pos.x + 16, shopPanel.pos.y + 16);
-        closeBtn.pos = k.vec2(shopPanel.pos.x + panelW - 48, shopPanel.pos.y + 12);
-        closeTxt.pos = k.vec2(closeBtn.pos.x + 8, closeBtn.pos.y + 4);
-        subtitle.pos = k.vec2(shopPanel.pos.x + 16, shopPanel.pos.y + 54);
-        const baseYNew = shopPanel.pos.y + 100;
-        lvMoveLbl.pos = k.vec2(shopPanel.pos.x + 8, baseYNew + 6);
-        iconMove.pos = k.vec2(shopPanel.pos.x + 40, baseYNew);
-        statMove.pos = k.vec2(shopPanel.pos.x + 90, baseYNew + 4);
-        btnMove.pos = k.vec2(shopPanel.pos.x + panelW - 180, baseYNew - 6);
-        btnMoveText.pos = k.vec2(btnMove.pos.x + 20, btnMove.pos.y + 6);
-        lvHPLbl.pos = k.vec2(shopPanel.pos.x + 8, baseYNew + rowGap + 6);
-        iconHP.pos = k.vec2(shopPanel.pos.x + 40, baseYNew + rowGap);
-        statHP.pos = k.vec2(shopPanel.pos.x + 90, baseYNew + rowGap + 4);
-        btnHP.pos = k.vec2(shopPanel.pos.x + panelW - 180, baseYNew + rowGap - 6);
-        btnHPText.pos = k.vec2(btnHP.pos.x + 20, btnHP.pos.y + 6);
-        lvRelLbl.pos = k.vec2(shopPanel.pos.x + 8, baseYNew + rowGap * 2 + 6);
-        iconRel.pos = k.vec2(shopPanel.pos.x + 40, baseYNew + rowGap * 2);
-        statRel.pos = k.vec2(shopPanel.pos.x + 90, baseYNew + rowGap * 2 + 4);
-        btnRel.pos = k.vec2(shopPanel.pos.x + panelW - 180, baseYNew + rowGap * 2 - 6);
-        btnRelText.pos = k.vec2(btnRel.pos.x + 20, btnRel.pos.y + 6);
-        lvLuckLbl.pos = k.vec2(shopPanel.pos.x + 8, baseYNew + rowGap * 3 + 6);
-        iconLuck.pos = k.vec2(shopPanel.pos.x + 40, baseYNew + rowGap * 3);
-        statLuck.pos = k.vec2(shopPanel.pos.x + 90, baseYNew + rowGap * 3 + 4);
-        btnLuck.pos = k.vec2(shopPanel.pos.x + panelW - 180, baseYNew + rowGap * 3 - 6);
-        btnLuckText.pos = k.vec2(btnLuck.pos.x + 20, btnLuck.pos.y + 6);
-        // projectile row
-        lvProjLbl.pos = k.vec2(shopPanel.pos.x + 8, baseYNew + rowGap * 4 + 6);
-        iconProj.pos = k.vec2(shopPanel.pos.x + 40, baseYNew + rowGap * 4);
-        statProj.pos = k.vec2(shopPanel.pos.x + 90, baseYNew + rowGap * 4 + 4);
-        btnProj.pos = k.vec2(shopPanel.pos.x + panelW - 180, baseYNew + rowGap * 4 - 6);
-        btnProjText.pos = k.vec2(btnProj.pos.x + 20, btnProj.pos.y + 6);
+    // Bottom-right skill cooldown indicator (for current skill1)
+    const skillSize = 64;
+    const skillBg = k.add([
+        k.rect(skillSize, skillSize, { radius: 8 }),
+        k.pos(k.width() - skillSize - 20, k.height() - skillSize - 20),
+        k.color(24, 24, 28),
+        k.outline(3, k.rgb(255, 255, 255)),
+        k.fixed(),
+        k.z(1200),
+        { id: "ui-skill-bg" },
+    ]);
+    const skillKey = k.add([
+        k.text("Q", { size: 28 }),
+        k.pos(skillBg.pos.x + skillSize / 2 - 8, skillBg.pos.y + skillSize - 34),
+        k.color(220, 220, 220),
+        k.fixed(),
+        k.z(1202),
+        { id: "ui-skill-key" },
+    ]);
+    const cdText = k.add([
+        k.text("", { size: 22 }),
+        k.pos(skillBg.pos.x + 10, skillBg.pos.y + 10),
+        k.color(255, 255, 255),
+        k.fixed(),
+        k.z(1203),
+        { id: "ui-skill-cd-text" },
+    ]);
+    const cdMask = k.add([
+        k.rect(skillSize, skillSize),
+        k.pos(skillBg.pos.x, skillBg.pos.y),
+        k.color(0, 0, 0),
+        k.opacity(0.55),
+        k.fixed(),
+        k.z(1201),
+        { id: "ui-skill-cd-mask" },
+    ]);
+    function positionSkillUI() {
+        const x = k.width() - skillSize - 20;
+        const y = k.height() - skillSize - 20;
+        skillBg.pos = k.vec2(x, y);
+        cdMask.pos = k.vec2(x, y);
+        skillKey.pos = k.vec2(x + skillSize / 2 - 8, y + skillSize - 34);
+        cdText.pos = k.vec2(x + 10, y + 10);
     }
-    k.onResize(() => { positionShop(); positionTopButtons(); });
-    positionShop();
+    k.onResize(() => positionSkillUI());
+    positionSkillUI();
+
+    k.onUpdate(() => {
+        const skillId = gameState.skills.skill1;
+        if (!skillId || !skillsRegistry[skillId]) {
+            skillBg.hidden = true;
+            skillKey.hidden = true;
+            cdText.hidden = true;
+            cdMask.hidden = true;
+            return;
+        }
+        skillBg.hidden = false;
+        skillKey.hidden = false;
+        const lvl = gameState.skills.levels[skillId] ?? 1;
+        const cd = skillsRegistry[skillId].getCooldown ? skillsRegistry[skillId].getCooldown!(lvl) : 3000;
+        const last = gameState.skills.lastUsedAt[skillId] ?? 0;
+        const elapsed = Date.now() - last;
+        const remaining = Math.max(0, cd - elapsed);
+        const ratio = remaining / cd;
+        if (remaining > 0) {
+            (cdText as any).text = (remaining / 1000).toFixed(1) + "s";
+            cdText.hidden = false;
+            cdMask.hidden = false;
+            // Adjust mask height from bottom to top proportionally
+            cdMask.height = skillSize * ratio;
+            cdMask.width = skillSize;
+            cdMask.pos = k.vec2(skillBg.pos.x, skillBg.pos.y + (skillSize - cdMask.height));
+            // dim outline while on cooldown
+            skillBg.outline.color = k.rgb(180, 180, 180);
+        } else {
+            cdText.hidden = true;
+            cdMask.hidden = true;
+            // bright outline when ready
+            skillBg.outline.color = k.rgb(80, 220, 120);
+        }
+    });
 
     // Helpers
     const costForLevel = (n: number) => 5 + (n - 1) * (n - 1) + n;
