@@ -6,6 +6,10 @@ import { setupUI } from "./components/ui";
 import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
 import { useSkill } from "./components/skills";
+// Register skills
+import "./components/skills/coneShot";
+import "./components/skills/ricochetShot";
+import "./components/skills/shockwave";
 
 const k = kaplay();
 

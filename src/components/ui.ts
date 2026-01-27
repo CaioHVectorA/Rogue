@@ -1,6 +1,6 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
-import { gameState } from "../state/gameState";
 import { skillsRegistry } from "./skills";
+import { gameState } from "../state/gameState";
 
 export type UIHandles = {
     updateHearts: (count: number) => void,
@@ -377,16 +377,12 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
             cdText.hidden = false;
             cdMask.hidden = false;
             // Adjust mask height from bottom to top proportionally
-            cdMask.height = skillSize * ratio;
-            cdMask.width = skillSize;
-            cdMask.pos = k.vec2(skillBg.pos.x, skillBg.pos.y + (skillSize - cdMask.height));
-            // dim outline while on cooldown
-            skillBg.outline.color = k.rgb(180, 180, 180);
+            (cdMask as any).width = skillSize;
+            (cdMask as any).height = Math.floor(skillSize * ratio);
+            cdMask.pos = k.vec2(skillBg.pos.x, skillBg.pos.y + (skillSize - (cdMask as any).height));
         } else {
             cdText.hidden = true;
             cdMask.hidden = true;
-            // bright outline when ready
-            skillBg.outline.color = k.rgb(80, 220, 120);
         }
     });
 
