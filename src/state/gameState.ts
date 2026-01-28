@@ -2,6 +2,13 @@ import { waves } from "./waves";
 import { upgrades } from "./upgrades";
 import { debug } from "./debug";
 
+// Exponential XP requirement: base and growth factor
+function xpRequiredFor(level: number) {
+  const base = 10; // base XP for level 1
+  const factor = 1.25; // 25% more per level
+  return Math.floor(base * Math.pow(factor, Math.max(0, level - 1)));
+}
+
 export type GameState = {
   moveSpeed: number,
   reloadSpeed: number,
@@ -39,9 +46,9 @@ export const gameState: GameState = {
   luck: 1.0,
   wave: debug.INITIAL_WAVE ?? 1,
   gold: debug.INITIAL_GOLD ?? 0,
-  xp: 0,
-  level: 1,
-  xpToLevel: 10,
+  xp: debug.INITIAL_XP ?? 0,
+  level: debug.INITIAL_LEVEL ?? 1,
+  xpToLevel: xpRequiredFor(debug.INITIAL_LEVEL ?? 1),
   playerHealth: 5,
   enemyDamageCooldownMs: 1000,
   waves,
@@ -56,3 +63,8 @@ export const gameState: GameState = {
     lastUsedAt: {},
   },
 };
+
+// Helper to be called whenever level changes
+export function recalcXpToLevel() {
+  gameState.xpToLevel = xpRequiredFor(gameState.level);
+}
