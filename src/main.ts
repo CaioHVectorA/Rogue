@@ -108,7 +108,7 @@ k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
 });
 
 // Set only cone-shot as current skill (requested)
-gameState.skills.skill1 = "shockwave";
+gameState.skills.skill1 = "";
 
 k.onKeyPress("q", () => {
   const id = gameState.skills.skill1;
