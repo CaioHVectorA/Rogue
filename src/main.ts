@@ -10,6 +10,14 @@ import { useSkill } from "./components/skills";
 import "./components/skills/coneShot";
 import "./components/skills/ricochetShot";
 import "./components/skills/shockwave";
+import "./components/skills/chainLightning";
+import "./components/skills/arcMine";
+import "./components/skills/poisonPool";
+import "./components/skills/boomerangBolt";
+import "./components/skills/summonedTotem";
+import "./components/skills/markedShot";
+import "./components/skills/orbitalOrbs";
+import "./components/skills/attackBuff";
 
 const k = kaplay();
 
@@ -107,8 +115,8 @@ k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
     }
 });
 
-// Set only cone-shot as current skill (requested)
-gameState.skills.skill1 = "";
+// Remove forcing empty skill; rely on UI overlay gating
+// gameState.skills.skill1 = "";
 
 k.onKeyPress("q", () => {
   const id = gameState.skills.skill1;

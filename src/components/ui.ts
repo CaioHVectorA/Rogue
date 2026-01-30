@@ -386,6 +386,143 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
         }
     });
 
+    // Skill selection overlay
+    const overlayBg = k.add([
+      k.rect(k.width(), k.height()),
+      k.pos(0, 0),
+      k.color(0, 0, 0),
+      k.opacity(0.6),
+      k.fixed(),
+      k.z(3000),
+      { id: "ui-skill-overlay" },
+    ]);
+    overlayBg.hidden = true;
+
+    function wrapText(text: string, max: number = 28): string {
+      const words = text.split(/\s+/);
+      const lines: string[] = [];
+      let line = "";
+      for (const w of words) {
+        if ((line + (line ? " " : "") + w).length > max) {
+          if (line) lines.push(line);
+          line = w;
+        } else {
+          line = line ? line + " " + w : w;
+        }
+      }
+      if (line) lines.push(line);
+      return lines.join("\n");
+    }
+
+    function makeCard(x: number, y: number, w: number, h: number) {
+      const card = k.add([k.rect(w, h), k.pos(x, y), k.color(32, 32, 40), k.outline(4, k.rgb(255,255,255)), k.area(), k.fixed(), k.z(3001), { id: "ui-skill-card", skillId: "", desc: "" }]);
+      const title = k.add([k.text("Skill", { size: 28 }), k.pos(x + 20, y + 20), k.color(255, 255, 255), k.fixed(), k.z(3002), { id: "ui-skill-title" }]);
+      const desc = k.add([k.text("", { size: 20 }), k.pos(x + 20, y + 60), k.color(200, 200, 220), k.fixed(), k.z(3002), { id: "ui-skill-desc" }]);
+      // Choose button
+      const choose = k.add([k.rect(160, 44), k.pos(x + 20, y + h - 120), k.color(30, 140, 30), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-choose" }]);
+      const chooseText = k.add([k.text("Escolher", { size: 22 }), k.pos(choose.pos.x + 24, choose.pos.y + 6), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-choose-text" }]);
+      // Reroll button
+      const reroll = k.add([k.rect(120, 40), k.pos(x + w - 140, y + h - 60), k.color(80, 60, 160), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-reroll" }]);
+      const rerollText = k.add([k.text("Reroll", { size: 22 }), k.pos(reroll.pos.x + 14, reroll.pos.y + 6), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-reroll-text" }]);
+      return { card, title, desc, choose, chooseText, reroll, rerollText };
+    }
+
+    const cardW = 320; const cardH = 420;
+    const gap = 40;
+    let cards = [
+      makeCard(Math.floor(k.width()/2 - cardW*1.5 - gap), Math.floor(60), cardW, cardH),
+      makeCard(Math.floor(k.width()/2 - cardW/2), Math.floor(60), cardW, cardH),
+      makeCard(Math.floor(k.width()/2 + cardW/2 + gap), Math.floor(60), cardW, cardH),
+    ];
+    function positionCards() {
+      cards[0].card.pos = k.vec2(Math.floor(k.width()/2 - cardW*1.5 - gap), 60);
+      cards[0].title.pos = cards[0].card.pos.add(k.vec2(20, 20));
+      cards[0].desc.pos = cards[0].card.pos.add(k.vec2(20, 60));
+      cards[0].choose.pos = cards[0].card.pos.add(k.vec2(20, cardH - 120));
+      cards[0].chooseText.pos = cards[0].choose.pos.add(k.vec2(24, 6));
+      cards[0].reroll.pos = cards[0].card.pos.add(k.vec2(cardW - 140, cardH - 60));
+      cards[0].rerollText.pos = cards[0].reroll.pos.add(k.vec2(14, 6));
+      cards[1].card.pos = k.vec2(Math.floor(k.width()/2 - cardW/2), 60);
+      cards[1].title.pos = cards[1].card.pos.add(k.vec2(20, 20));
+      cards[1].desc.pos = cards[1].card.pos.add(k.vec2(20, 60));
+      cards[1].choose.pos = cards[1].card.pos.add(k.vec2(20, cardH - 120));
+      cards[1].chooseText.pos = cards[1].choose.pos.add(k.vec2(24, 6));
+      cards[1].reroll.pos = cards[1].card.pos.add(k.vec2(cardW - 140, cardH - 60));
+      cards[1].rerollText.pos = cards[1].reroll.pos.add(k.vec2(14, 6));
+      cards[2].card.pos = k.vec2(Math.floor(k.width()/2 + cardW/2 + gap), 60);
+      cards[2].title.pos = cards[2].card.pos.add(k.vec2(20, 20));
+      cards[2].desc.pos = cards[2].card.pos.add(k.vec2(20, 60));
+      cards[2].choose.pos = cards[2].card.pos.add(k.vec2(20, cardH - 120));
+      cards[2].chooseText.pos = cards[2].choose.pos.add(k.vec2(24, 6));
+      cards[2].reroll.pos = cards[2].card.pos.add(k.vec2(cardW - 140, cardH - 60));
+      cards[2].rerollText.pos = cards[2].reroll.pos.add(k.vec2(14, 6));
+    }
+    k.onResize(() => positionCards());
+    positionCards();
+
+    const skillInfos: { id: string; name: string; desc: string }[] = [
+      { id: "shockwave", name: "Shockwave", desc: "Onda que empurra inimigos ao ficar parado e disparar." },
+      { id: "ricochet-shot", name: "Ricochet", desc: "Projétil quica e busca novos alvos próximos." },
+      { id: "cone-shot", name: "Cone Shot", desc: "Vários projéteis em cone seguindo a mira." },
+      { id: "chain-lightning", name: "Chain Lightning", desc: "Raio elétrico salta entre inimigos próximos." },
+      { id: "arc-mine", name: "Arc Mine", desc: "Minas que explodem ao aproximar inimigos." },
+      { id: "poison-pool", name: "Poison Pool", desc: "Poças estáticas aplicam veneno por tempo." },
+      { id: "boomerang-bolt", name: "Boomerang Bolt", desc: "Projétil vai e retorna, causando dano duplo." },
+      { id: "summoned-totem", name: "Summoned Totem", desc: "Totem atira automaticamente em inimigos." },
+      { id: "marked-shot", name: "Marked Shot", desc: "Acertos marcam inimigos; levam dano extra." },
+      { id: "orbital-orbs", name: "Orbital Orbs", desc: "Orbes orbitam e colidem; ativação acelera." },
+      { id: "attack-buff", name: "Buff de Ataque", desc: "Buff temporário no ataque básico." },
+    ];
+
+    function sample3(): { id: string; name: string; desc: string }[] {
+      const pool = [...skillInfos];
+      // exclude if already chosen
+      const chosen = gameState.skills.skill1;
+      const out: any[] = [];
+      while (out.length < 3 && pool.length > 0) {
+        const idx = Math.floor(Math.random() * pool.length);
+        const pick = pool.splice(idx, 1)[0];
+        if (!chosen || pick.id !== chosen) out.push(pick);
+      }
+      return out;
+    }
+
+    function setOverlayVisible(visible: boolean) {
+      overlayBg.hidden = !visible;
+      for (const C of cards) {
+        C.card.hidden = !visible;
+        C.title.hidden = !visible;
+        C.desc.hidden = !visible;
+        C.choose.hidden = !visible;
+        C.chooseText.hidden = !visible;
+        C.reroll.hidden = !visible;
+        C.rerollText.hidden = !visible;
+      }
+    }
+    setOverlayVisible(false);
+
+    function showSkillOverlay() {
+      setOverlayVisible(true);
+      setShopVisibleInternal(false);
+      const options = sample3();
+      for (let i = 0; i < 3; i++) {
+        const opt = options[i];
+        (cards[i].card as any).skillId = opt.id;
+        (cards[i].title as any).text = opt.name;
+        (cards[i].desc as any).text = wrapText(opt.desc, 30);
+      }
+    }
+    function hideSkillOverlay() { setOverlayVisible(false); }
+
+    let overlayOpen = false;
+    k.onUpdate(() => {
+      const noWave = (k.get("enemy") as GameObj[]).length === 0;
+      const needSkill = !gameState.skills.skill1;
+      const shouldOpen = noWave && needSkill && gameState.level >= 2;
+      if (shouldOpen && !overlayOpen) { overlayOpen = true; showSkillOverlay(); }
+      if (!shouldOpen && overlayOpen) { overlayOpen = false; hideSkillOverlay(); }
+    });
+
     // Helpers
     const costForLevel = (n: number) => 5 + (n - 1) * (n - 1) + n;
     const setButtonEnabled = (btn: GameObj, label: GameObj, enabled: boolean) => {
@@ -456,6 +593,49 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
     btnRel.onClick(() => { if (upgradeHandlers) upgradeHandlers.onReload(); });
     btnLuck.onClick(() => { if (upgradeHandlers) upgradeHandlers.onLuck(); });
     btnProj.onClick(() => { if (upgradeHandlers?.onProjectile) upgradeHandlers.onProjectile(); });
+
+    function wireButtonClick(btn: GameObj, handler: () => void) {
+      // Keep standard onClick
+      btn.onClick(handler);
+      // Fallback: fire on mouse release when hovering (some setups miss onClick on fixed UI)
+      k.onMouseRelease(() => {
+        const isH = (btn as any).isHovering && (btn as any).isHovering();
+        if (!overlayBg.hidden && !btn.hidden && isH) handler();
+      });
+    }
+
+    // Rewire buttons using hover-based fallback
+    for (const C of cards) {
+      // ensure buttons have area (already set in creation)
+      wireButtonClick(C.card, () => {
+        const id = (C.card as any).skillId as string;
+        if (!id) return;
+        gameState.skills.skill1 = id;
+        gameState.skills.levels[id] = 1;
+        hideSkillOverlay();
+      });
+      wireButtonClick(C.choose, () => {
+        const id = (C.card as any).skillId as string;
+        if (!id) return;
+        gameState.skills.skill1 = id;
+        gameState.skills.levels[id] = 1;
+        hideSkillOverlay();
+      });
+      wireButtonClick(C.reroll, () => {
+        const thisId = (C.card as any).skillId as string;
+        const otherIds = new Set(cards.filter(cc => cc !== C).map(cc => (cc.card as any).skillId as string));
+        const pool = skillInfos.filter(s => !otherIds.has(s.id));
+        if (pool.length === 0) return;
+        let pick = pool[Math.floor(Math.random() * pool.length)];
+        if (pool.length > 1 && pick.id === thisId) {
+          const alt = pool.filter(p => p.id !== thisId);
+          if (alt.length > 0) pick = alt[Math.floor(Math.random() * alt.length)];
+        }
+        (C.card as any).skillId = pick.id;
+        (C.title as any).text = pick.name;
+        (C.desc as any).text = wrapText(pick.desc, 30);
+      });
+    }
 
     return {
         updateHearts: (count: number) => ensureHearts(count),
