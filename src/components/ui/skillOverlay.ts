@@ -4,30 +4,128 @@ import { skillsRegistry } from "../skills";
 import { skillInfos } from "../../state/skillData";
 import { centerCardsLayout, wrapText } from "./helpers";
 
-export type SkillOverlayHandles = { show: () => void, hide: () => void, update: () => void };
+export type SkillOverlayHandles = {
+  show: () => void;
+  hide: () => void;
+  update: () => void;
+};
 
 export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
-  const overlayBg = k.add([k.rect(k.width(), k.height()), k.pos(0, 0), k.color(0, 0, 0), k.opacity(0.6), k.fixed(), k.z(3000), { id: "ui-skill-overlay" }]);
+  const overlayBg = k.add([
+    k.rect(k.width(), k.height()),
+    k.pos(0, 0),
+    k.color(0, 0, 0),
+    k.opacity(0.6),
+    k.fixed(),
+    k.z(3000),
+    { id: "ui-skill-overlay" },
+  ]);
   overlayBg.hidden = true;
 
-  const cardW = 400; const cardH = 600; const gap = 32; // requested sizes
+  const cardW = 400;
+  const cardH = 680;
+  const gap = 32; // requested sizes
   const textWrap = 26; // narrower wrap to avoid overflow
 
-  type Card = { card: GameObj, title: GameObj, desc: GameObj, meta: GameObj, choose: GameObj, chooseText: GameObj, reroll: GameObj, rerollText: GameObj, rerolled?: boolean };
+  type Card = {
+    card: GameObj;
+    title: GameObj;
+    desc: GameObj;
+    meta: GameObj;
+    choose: GameObj;
+    chooseText: GameObj;
+    reroll: GameObj;
+    rerollText: GameObj;
+    rerolled?: boolean;
+  };
 
   function buildCard(x: number, y: number): Card {
-    const card = k.add([k.rect(cardW, cardH), k.pos(x, y), k.color(32, 32, 40), k.outline(4, k.rgb(255,255,255)), k.area(), k.fixed(), k.z(3001), { id: "ui-skill-card", skillId: "" }]);
-    const title = k.add([k.text("Skill", { size: 28 }), k.pos(x + 20, y + 20), k.color(255, 255, 255), k.fixed(), k.z(3002), { id: "ui-skill-title" }]);
-    const desc = k.add([k.text("", { size: 18 }), k.pos(x + 20, y + 60), k.color(200, 200, 220), k.fixed(), k.z(3002), { id: "ui-skill-desc" }]);
-    const meta = k.add([k.text("", { size: 18 }), k.pos(x + 20, y + cardH - 180), k.color(220, 220, 220), k.fixed(), k.z(3002), { id: "ui-skill-meta" }]);
-    const choose = k.add([k.rect(cardW - 40, 48), k.pos(x + 20, y + cardH - 110), k.color(30, 140, 30), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-choose" }]);
-    const chooseText = k.add([k.text("Escolher", { size: 22 }), k.pos(choose.pos.x + Math.floor((cardW - 40) / 2) - 48, choose.pos.y + 8), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-choose-text" }]);
-    const reroll = k.add([k.rect(cardW - 40, 44), k.pos(x + 20, y + cardH - 68), k.color(80, 60, 160), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-reroll" }]);
-    const rerollText = k.add([k.text("Reroll", { size: 22 }), k.pos(reroll.pos.x + Math.floor((cardW - 40) / 2) - 36, reroll.pos.y + 8), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-reroll-text" }]);
-    return { card, title, desc, meta, choose, chooseText, reroll, rerollText, rerolled: false };
+    const card = k.add([
+      k.rect(cardW, cardH),
+      k.pos(x, y),
+      k.color(32, 32, 40),
+      k.outline(4, k.rgb(255, 255, 255)),
+      k.area(),
+      k.fixed(),
+      k.z(3001),
+      { id: "ui-skill-card", skillId: "" },
+    ]);
+    const title = k.add([
+      k.text("Skill", { size: 28 }),
+      k.pos(x + 20, y + 20),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-title" },
+    ]);
+    const desc = k.add([
+      k.text("", { size: 22 }),
+      k.pos(x + 20, y + 60),
+      k.color(200, 200, 220),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-desc" },
+    ]);
+    const meta = k.add([
+      k.text("", { size: 18 }),
+      k.pos(x + 20, y + cardH - 180),
+      k.color(220, 220, 220),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-meta" },
+    ]);
+    const choose = k.add([
+      k.rect(cardW - 40, 48),
+      k.pos(x + 20, y + cardH - 110),
+      k.color(30, 140, 30),
+      k.outline(3),
+      k.area(),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-choose" },
+    ]);
+    const chooseText = k.add([
+      k.text("Escolher", { size: 22 }),
+      k.pos(choose.pos.x + Math.floor((cardW - 40) / 2) - 48, choose.pos.y + 8),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(3003),
+      { id: "ui-skill-choose-text" },
+    ]);
+    const reroll = k.add([
+      k.rect(cardW - 40, 44),
+      k.pos(x + 20, y + cardH - 30),
+      k.color(80, 60, 160),
+      k.outline(3),
+      k.area(),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-reroll" },
+    ]);
+    const rerollText = k.add([
+      k.text("Trocar", { size: 22 }),
+      k.pos(reroll.pos.x + Math.floor((cardW - 40) / 2) - 36, reroll.pos.y + 8),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(3003),
+      { id: "ui-skill-reroll-text" },
+    ]);
+    return {
+      card,
+      title,
+      desc,
+      meta,
+      choose,
+      chooseText,
+      reroll,
+      rerollText,
+      rerolled: false,
+    };
   }
 
-  let cards = centerCardsLayout(k, cardW, cardH, gap).map((p) => buildCard(p.x, p.y));
+  let cards = centerCardsLayout(k, cardW, cardH, gap).map((p) =>
+    buildCard(p.x, p.y),
+  );
 
   function positionCards() {
     const positions = centerCardsLayout(k, cardW, cardH, gap);
@@ -37,11 +135,15 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       C.card.pos = p;
       C.title.pos = p.add(k.vec2(20, 20));
       C.desc.pos = p.add(k.vec2(20, 60));
-      C.meta.pos = p.add(k.vec2(20, cardH - 180));
-      C.choose.pos = p.add(k.vec2(20, cardH - 110));
-      C.chooseText.pos = C.choose.pos.add(k.vec2(Math.floor((cardW - 40) / 2) - 48, 8));
-      C.reroll.pos = p.add(k.vec2(20, cardH - 68));
-      C.rerollText.pos = C.reroll.pos.add(k.vec2(Math.floor((cardW - 40) / 2) - 36, 8));
+      C.meta.pos = p.add(k.vec2(20, cardH - 220));
+      C.choose.pos = p.add(k.vec2(20, cardH - 116));
+      C.chooseText.pos = C.choose.pos.add(
+        k.vec2(Math.floor((cardW - 40) / 2) - 48, 8),
+      );
+      C.reroll.pos = p.add(k.vec2(20, cardH - 60));
+      C.rerollText.pos = C.reroll.pos.add(
+        k.vec2(Math.floor((cardW - 40) / 2) - 36, 8),
+      );
     }
   }
   k.onResize(() => positionCards());
@@ -60,7 +162,9 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     }
   };
 
-  const wireButtonClick = (btn: GameObj, handler: () => void) => { btn.onClick(handler); };
+  const wireButtonClick = (btn: GameObj, handler: () => void) => {
+    btn.onClick(handler);
+  };
 
   for (const C of cards) {
     wireButtonClick(C.choose, () => {
@@ -73,19 +177,24 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     wireButtonClick(C.reroll, () => {
       if (C.rerolled) return;
       const thisId = (C.card as any).skillId as string;
-      const otherIds = new Set(cards.filter(cc => cc !== C).map(cc => (cc.card as any).skillId as string));
-      const pool = skillInfos.filter(s => !otherIds.has(s.id));
+      const otherIds = new Set(
+        cards
+          .filter((cc) => cc !== C)
+          .map((cc) => (cc.card as any).skillId as string),
+      );
+      const pool = skillInfos.filter((s) => !otherIds.has(s.id));
       if (pool.length === 0) return;
       let pick = pool[Math.floor(Math.random() * pool.length)];
       if (pool.length > 1 && pick.id === thisId) {
-        const alt = pool.filter(p => p.id !== thisId);
+        const alt = pool.filter((p) => p.id !== thisId);
         if (alt.length > 0) pick = alt[Math.floor(Math.random() * alt.length)];
       }
       (C.card as any).skillId = pick.id;
       (C.title as any).text = pick.name;
       (C.desc as any).text = wrapText(pick.desc, textWrap);
       const dmgWrapped = wrapText(pick.damage, textWrap);
-      (C.meta as any).text = `CD: ${(pick.cooldownMs/1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
+      (C.meta as any).text =
+        `CD: ${(pick.cooldownMs / 1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
       C.rerolled = true;
       C.reroll.outline.width = 1;
       (C.reroll as any).color = k.rgb(50, 50, 50);
@@ -118,14 +227,18 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       (C.title as any).text = opt.name;
       (C.desc as any).text = wrapText(opt.desc, textWrap);
       const dmgWrapped = wrapText(opt.damage, textWrap);
-      (C.meta as any).text = `Tempo de recarga inicial: ${(opt.cooldownMs/1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
+      (C.meta as any).text =
+        `Tempo de recarga inicial: ${(opt.cooldownMs / 1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
       C.rerolled = false;
       C.reroll.outline.width = 3;
       (C.reroll as any).color = k.rgb(80, 60, 160);
       (C.rerollText as any).color = k.rgb(255, 255, 255);
     }
   };
-  const hide = () => { overlayBg.hidden = true; setCardsVisible(false); };
+  const hide = () => {
+    overlayBg.hidden = true;
+    setCardsVisible(false);
+  };
 
   const update = () => {
     const noWave = (k.get("enemy") as GameObj[]).length === 0;
