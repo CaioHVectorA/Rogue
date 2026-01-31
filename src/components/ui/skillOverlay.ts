@@ -162,6 +162,9 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     }
   };
 
+  // Ensure cards start hidden until overlay opens
+  setCardsVisible(false);
+
   const wireButtonClick = (btn: GameObj, handler: () => void) => {
     btn.onClick(handler);
   };
@@ -194,7 +197,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       (C.desc as any).text = wrapText(pick.desc, textWrap);
       const dmgWrapped = wrapText(pick.damage, textWrap);
       (C.meta as any).text =
-        `CD: ${(pick.cooldownMs / 1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
+        `CD: ${(pick.cooldownMs / 1000).toFixed(1)}s\ ${dmgWrapped}`;
       C.rerolled = true;
       C.reroll.outline.width = 1;
       (C.reroll as any).color = k.rgb(50, 50, 50);
@@ -228,7 +231,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       (C.desc as any).text = wrapText(opt.desc, textWrap);
       const dmgWrapped = wrapText(opt.damage, textWrap);
       (C.meta as any).text =
-        `Tempo de recarga inicial: ${(opt.cooldownMs / 1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
+        `Tempo de recarga inicial: ${(opt.cooldownMs / 1000).toFixed(1)}s\n${dmgWrapped}`;
       C.rerolled = false;
       C.reroll.outline.width = 3;
       (C.reroll as any).color = k.rgb(80, 60, 160);
@@ -244,6 +247,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     const noWave = (k.get("enemy") as GameObj[]).length === 0;
     const needSkill = !gameState.skills.skill1;
     const shouldOpen = noWave && needSkill && gameState.level >= 2;
+    k.debug.log(`SkillOverlay update: noWave=${noWave} needSkill=${needSkill} => shouldOpen=${shouldOpen}`);
     if (shouldOpen && overlayBg.hidden) show();
     if (!shouldOpen && !overlayBg.hidden) hide();
   };

@@ -75,7 +75,7 @@ export const skillInfos: SkillInfo[] = [
     name: "Orbitais",
     desc: "Passivamente, orbes orbitam ao redor do jogador, colidindo com inimigos. Ativação acelera a rotação dos orbes por um curto período. Com níveis, mais orbes.",
     cooldownMs: 7200,
-    damage: "Dano por orb; múltiplos contatos ao orbitar",
+    damage: "Dano leve por cada colisão.",
   },
   {
     id: "attack-buff",
