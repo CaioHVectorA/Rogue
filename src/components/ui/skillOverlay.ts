@@ -22,7 +22,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     const meta = k.add([k.text("", { size: 18 }), k.pos(x + 20, y + cardH - 180), k.color(220, 220, 220), k.fixed(), k.z(3002), { id: "ui-skill-meta" }]);
     const choose = k.add([k.rect(cardW - 40, 48), k.pos(x + 20, y + cardH - 110), k.color(30, 140, 30), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-choose" }]);
     const chooseText = k.add([k.text("Escolher", { size: 22 }), k.pos(choose.pos.x + Math.floor((cardW - 40) / 2) - 48, choose.pos.y + 8), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-choose-text" }]);
-    const reroll = k.add([k.rect(cardW - 40, 44), k.pos(x + 20, y + cardH - 52), k.color(80, 60, 160), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-reroll" }]);
+    const reroll = k.add([k.rect(cardW - 40, 44), k.pos(x + 20, y + cardH - 68), k.color(80, 60, 160), k.outline(3), k.area(), k.fixed(), k.z(3002), { id: "ui-skill-reroll" }]);
     const rerollText = k.add([k.text("Reroll", { size: 22 }), k.pos(reroll.pos.x + Math.floor((cardW - 40) / 2) - 36, reroll.pos.y + 8), k.color(255,255,255), k.fixed(), k.z(3003), { id: "ui-skill-reroll-text" }]);
     return { card, title, desc, meta, choose, chooseText, reroll, rerollText, rerolled: false };
   }
@@ -40,7 +40,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       C.meta.pos = p.add(k.vec2(20, cardH - 180));
       C.choose.pos = p.add(k.vec2(20, cardH - 110));
       C.chooseText.pos = C.choose.pos.add(k.vec2(Math.floor((cardW - 40) / 2) - 48, 8));
-      C.reroll.pos = p.add(k.vec2(20, cardH - 52));
+      C.reroll.pos = p.add(k.vec2(20, cardH - 68));
       C.rerollText.pos = C.reroll.pos.add(k.vec2(Math.floor((cardW - 40) / 2) - 36, 8));
     }
   }
