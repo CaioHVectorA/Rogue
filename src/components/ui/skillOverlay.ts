@@ -118,7 +118,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       (C.title as any).text = opt.name;
       (C.desc as any).text = wrapText(opt.desc, textWrap);
       const dmgWrapped = wrapText(opt.damage, textWrap);
-      (C.meta as any).text = `CD: ${(opt.cooldownMs/1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
+      (C.meta as any).text = `Tempo de recarga inicial: ${(opt.cooldownMs/1000).toFixed(1)}s\nDano: ${dmgWrapped}`;
       C.rerolled = false;
       C.reroll.outline.width = 3;
       (C.reroll as any).color = k.rgb(80, 60, 160);
