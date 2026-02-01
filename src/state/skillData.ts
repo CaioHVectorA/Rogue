@@ -6,7 +6,7 @@ export type SkillInfo = {
   damage: string; // texto livre para dano, ex.: "25 por acerto" ou "escala com level"
 };
 
-export const skillInfos: SkillInfo[] = [
+export const skillInfos = [
   {
     id: "shockwave",
     name: "Onda de choque",
@@ -33,7 +33,8 @@ export const skillInfos: SkillInfo[] = [
     name: "Corrente Elétrica",
     desc: "Lança um disparo elétrico rápido que acerta um inimigo e eletrocuta ele e inimigos próximos, que por sua vez também podem eletrocutar outros.",
     cooldownMs: 3200,
-    damage: "Causa dano médio e aplica 5 acúmulos de choque no inimigo inicial e os acúmulos nos outros depende do número de saltos.",
+    damage:
+      "Causa dano médio e aplica 5 acúmulos de choque no inimigo inicial e os acúmulos nos outros depende do número de saltos.",
   },
   {
     id: "arc-mine",
@@ -84,4 +85,6 @@ export const skillInfos: SkillInfo[] = [
     cooldownMs: 9000,
     damage: "Aumenta o dano do ataque básico e a velocidade de recarga.",
   },
-];
+] as const satisfies readonly SkillInfo[];
+
+export type skillsName = (typeof skillInfos)[number]["id"];

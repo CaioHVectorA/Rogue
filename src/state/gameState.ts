@@ -10,31 +10,34 @@ function xpRequiredFor(level: number) {
 }
 
 export type GameState = {
-  moveSpeed: number,
-  reloadSpeed: number,
-  reloadMovePenalty: number,
-  maxHealth: number,
-  cooldown: number,
-  luck: number,
-  wave: number,
-  gold: number,
-  xp: number,
-  level: number,
-  xpToLevel: number,
-  playerHealth: number,
-  enemyDamageCooldownMs: number,
-  waves: typeof waves,
-  projectileSpeed: number,
-  upgrades: typeof upgrades,
+  moveSpeed: number;
+  reloadSpeed: number;
+  reloadMovePenalty: number;
+  maxHealth: number;
+  cooldown: number;
+  luck: number;
+  wave: number;
+  gold: number;
+  xp: number;
+  level: number;
+  xpToLevel: number;
+  playerHealth: number;
+  enemyDamageCooldownMs: number;
+  waves: typeof waves;
+  projectileSpeed: number;
+  upgrades: typeof upgrades;
   // Skills
   skills: {
-    skill1?: string,
-    skill2?: string,
-    ultimate?: string,
-    levels: { [key: string]: number },
-    cooldowns: { [key: string]: number },
-    lastUsedAt: { [key: string]: number },
-  },
+    skill1?: string;
+    skill2?: string;
+    ultimate?: string;
+    levels: { [key: string]: number };
+    cooldowns: { [key: string]: number };
+    lastUsedAt: { [key: string]: number };
+    charges: { [key: string]: number }; // cargas atuais
+    maxCharges: { [key: string]: number }; // cargas máximas
+    chargeRegenTimers: { [key: string]: number }; // timestamp de quando começou a regenerar
+  };
 };
 
 export const gameState: GameState = {
@@ -55,12 +58,17 @@ export const gameState: GameState = {
   projectileSpeed: 560,
   upgrades,
   skills: {
-    skill1: undefined,
+    skill1: debug.INITIAL_SKILL1 ?? undefined,
     skill2: undefined,
     ultimate: undefined,
-    levels: {},
+    levels: debug.INITIAL_SKILL1
+      ? { [debug.INITIAL_SKILL1]: debug.INITIAL_SKILL1_LEVEL ?? 1 }
+      : {},
     cooldowns: {},
     lastUsedAt: {},
+    charges: {},
+    maxCharges: {},
+    chargeRegenTimers: {},
   },
 };
 
