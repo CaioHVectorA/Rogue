@@ -38,6 +38,12 @@ export type GameState = {
     maxCharges: { [key: string]: number }; // cargas máximas
     chargeRegenTimers: { [key: string]: number }; // timestamp de quando começou a regenerar
   };
+  // Multiplicadores de buff (valores base = 1.0)
+  buffs: {
+    damageMul: number;      // multiplicador de dano
+    reloadSpeedMul: number; // multiplicador de velocidade de recarga
+    activeUntil: number;    // timestamp de quando o buff expira (0 = sem buff)
+  };
 };
 
 export const gameState: GameState = {
@@ -69,6 +75,11 @@ export const gameState: GameState = {
     charges: {},
     maxCharges: {},
     chargeRegenTimers: {},
+  },
+  buffs: {
+    damageMul: 1.0,
+    reloadSpeedMul: 1.0,
+    activeUntil: 0,
   },
 };
 

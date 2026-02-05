@@ -1,20 +1,55 @@
 import type { GameObj } from "kaplay";
 import { registerSkill } from "./registry";
+import { gameState } from "../../state/gameState";
+
+const BUFF_CONFIG = {
+  baseDuration: 10000, // 10 segundos
+  durationPerLevel: 500, // +0.5s por level
+  baseDamageMul: 1.3, // +30% de dano base
+  damagePerLevel: 0.1, // +10% por level
+  baseReloadSpeedMul: 1.4, // +40% de velocidade de recarga base
+  reloadSpeedPerLevel: 0.1, // +10% por level
+} as const;
+
+function getDuration(level: number): number {
+  return BUFF_CONFIG.baseDuration + (level - 1) * BUFF_CONFIG.durationPerLevel;
+}
+
+function getDamageMul(level: number): number {
+  return BUFF_CONFIG.baseDamageMul + (level - 1) * BUFF_CONFIG.damagePerLevel;
+}
+
+function getReloadSpeedMul(level: number): number {
+  return (
+    BUFF_CONFIG.baseReloadSpeedMul +
+    (level - 1) * BUFF_CONFIG.reloadSpeedPerLevel
+  );
+}
 
 registerSkill({
   id: "attack-buff",
-  getCooldown: () => 7000,
+  getCooldown: () => 9000,
   use: ({ k, player }) => {
-    // Simple global flags for demo: increase projectile speed and damage for a few seconds
-    const dur = 3.5;
-    (k as any)._attackBuff = { speedMul: 1.4, dmgPlus: 1 };
-    const msg = k.add([
-      k.text("Buff de Ataque", { size: 18 }),
-      k.pos(player.pos.x + 16, player.pos.y - 50),
-      k.color(255, 255, 255),
-      { id: "skill-attack-buff-msg", life: dur },
-    ]) as GameObj & { life: number };
-    msg.onUpdate(() => { msg.life -= k.dt(); if (msg.life <= 0) msg.destroy(); });
-    k.wait(dur, () => { (k as any)._attackBuff = null; });
-  }
+    const level = gameState.skills.levels["attack-buff"] ?? 1;
+    const duration = getDuration(level);
+    const damageMul = getDamageMul(level);
+    const reloadSpeedMul = getReloadSpeedMul(level);
+
+    // Aplicar buffs ao gameState
+    gameState.buffs.damageMul = damageMul;
+    gameState.buffs.reloadSpeedMul = reloadSpeedMul;
+    gameState.buffs.activeUntil = Date.now() + duration;
+
+    // Efeito visual no player (brilho amarelo/dourado)
+    const originalColor = player.color?.clone?.() ?? k.rgb(255, 255, 255);
+    player.color = k.rgb(255, 220, 100);
+
+    // Timer para remover o buff
+    k.wait(duration / 1000, () => {
+      gameState.buffs.damageMul = 1.0;
+      gameState.buffs.reloadSpeedMul = 1.0;
+      gameState.buffs.activeUntil = 0;
+      player.color = originalColor;
+    });
+  },
 });

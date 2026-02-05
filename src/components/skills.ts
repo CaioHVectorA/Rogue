@@ -32,5 +32,6 @@ import "./skills/coneShot";
 import "./skills/ricochetShot";
 import "./skills/shockwave";
 import "./skills/arcMine";
+import "./skills/attackBuff";
 
 export {};

@@ -65,7 +65,9 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         p.onCollide("enemy", (e: GameObj & { hp?: number }) => {
             // Apply damage: reduce HP and destroy on 0
             if (typeof e.hp === "number") {
-                e.hp -= 1;
+                const baseDamage = 1;
+                const damage = baseDamage * gameState.buffs.damageMul;
+                e.hp -= damage;
                 if (e.hp <= 0) e.destroy();
             }
             p.destroy();
@@ -124,10 +126,16 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
                 const still = isStationary(this);
                 // charge even while moving (slower when moving)
                 // Interpret reloadSpeed as reload time (seconds). Convert to a rate.
-                const reloadTime = Math.max(0.0001, gameState.reloadSpeed);
+                // Apply buff multiplier to reload speed
+                const baseReloadTime = Math.max(0.0001, gameState.reloadSpeed);
+                const reloadTime = baseReloadTime / gameState.buffs.reloadSpeedMul; // Buff diminui o tempo
                 const base = 1 / reloadTime; // higher when reload time is lower
                 const movePenalty = gameState.reloadMovePenalty; // e.g., 0.5
-                const rate = still ? base : base * movePenalty;
+                
+                // Se o buff está ativo, não há penalidade por movimento
+                const buffActive = gameState.buffs.activeUntil > Date.now();
+                const rate = (still || buffActive) ? base : base * movePenalty;
+                
                 channeling = true;
                 charge += k.dt() * rate;
                 const percentToShoot = Math.min(1, charge / chargeTime) * 100; // 0-100

@@ -37,6 +37,60 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
   const shop = createShopPanel(k);
   const skillOverlay = createSkillOverlay(k);
 
+  // ===========================================
+  // Barra de buff no canto superior direito
+  // ===========================================
+  const buffBarWidth = 120;
+  const buffBarHeight = 16;
+  const buffBarMargin = 20;
+
+  const buffBarBg = k.add([
+    k.rect(buffBarWidth, buffBarHeight, { radius: 4 }),
+    k.pos(k.width() - buffBarWidth - buffBarMargin, buffBarMargin + 40),
+    k.color(30, 30, 35),
+    k.outline(2, k.rgb(100, 100, 100)),
+    k.fixed(),
+    k.z(1300),
+    { id: "ui-buff-bar-bg" },
+  ]);
+
+  const buffBarFill = k.add([
+    k.rect(buffBarWidth - 4, buffBarHeight - 4, { radius: 2 }),
+    k.pos(buffBarBg.pos.x + 2, buffBarBg.pos.y + 2),
+    k.color(255, 200, 50), // Amarelo/dourado
+    k.fixed(),
+    k.z(1301),
+    { id: "ui-buff-bar-fill" },
+  ]);
+
+  const buffBarLabel = k.add([
+    k.text("⚡", { size: 14 }),
+    k.pos(buffBarBg.pos.x - 20, buffBarBg.pos.y),
+    k.color(255, 220, 100),
+    k.fixed(),
+    k.z(1302),
+    { id: "ui-buff-bar-label" },
+  ]);
+
+  // Inicialmente escondido
+  buffBarBg.hidden = true;
+  buffBarFill.hidden = true;
+  buffBarLabel.hidden = true;
+
+  // Variável para guardar duração total do buff (para calcular %)
+  let buffTotalDuration = 0;
+  let buffStartTime = 0;
+
+  const positionBuffBar = () => {
+    const x = k.width() - buffBarWidth - buffBarMargin;
+    const y = buffBarMargin + 40;
+    buffBarBg.pos = k.vec2(x, y);
+    buffBarFill.pos = k.vec2(x + 2, y + 2);
+    buffBarLabel.pos = k.vec2(x - 20, y);
+  };
+  k.onResize(positionBuffBar);
+  positionBuffBar();
+
   // Bottom-right skill cooldown indicator
   const skillSize = 64;
   const skillBg = k.add([
@@ -85,6 +139,51 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
   positionSkillUI();
 
   k.onUpdate(() => {
+    // ===========================================
+    // Atualização da barra de buff
+    // ===========================================
+    const now = Date.now();
+    const buffActive = gameState.buffs.activeUntil > now;
+
+    if (buffActive) {
+      buffBarBg.hidden = false;
+      buffBarFill.hidden = false;
+      buffBarLabel.hidden = false;
+
+      // Detectar início de novo buff
+      if (
+        buffStartTime === 0 ||
+        gameState.buffs.activeUntil !== buffStartTime + buffTotalDuration
+      ) {
+        buffStartTime = now;
+        buffTotalDuration = gameState.buffs.activeUntil - now;
+      }
+
+      // Calcular progresso restante
+      const remaining = gameState.buffs.activeUntil - now;
+      const ratio = Math.max(0, remaining / buffTotalDuration);
+      const fillWidth = (buffBarWidth - 4) * ratio;
+      (buffBarFill as any).width = Math.max(0, fillWidth);
+
+      // Mudar cor conforme tempo restante (amarelo → laranja → vermelho)
+      if (ratio > 0.5) {
+        buffBarFill.color = k.rgb(255, 200, 50); // Amarelo
+      } else if (ratio > 0.2) {
+        buffBarFill.color = k.rgb(255, 140, 30); // Laranja
+      } else {
+        buffBarFill.color = k.rgb(255, 60, 60); // Vermelho
+      }
+    } else {
+      buffBarBg.hidden = true;
+      buffBarFill.hidden = true;
+      buffBarLabel.hidden = true;
+      buffStartTime = 0;
+      buffTotalDuration = 0;
+    }
+
+    // ===========================================
+    // Atualização do indicador de skill
+    // ===========================================
     const skillId = gameState.skills.skill1;
     if (!skillId || !skillsRegistry[skillId]) {
       skillBg.hidden = true;

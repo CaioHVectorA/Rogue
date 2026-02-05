@@ -247,7 +247,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     const noWave = (k.get("enemy") as GameObj[]).length === 0;
     const needSkill = !gameState.skills.skill1;
     const shouldOpen = noWave && needSkill && gameState.level >= 2;
-    k.debug.log(`SkillOverlay update: noWave=${noWave} needSkill=${needSkill} => shouldOpen=${shouldOpen}`);
+    //k.debug.log(`SkillOverlay update: noWave=${noWave} needSkill=${needSkill} => shouldOpen=${shouldOpen}`);
     if (shouldOpen && overlayBg.hidden) show();
     if (!shouldOpen && !overlayBg.hidden) hide();
   };
