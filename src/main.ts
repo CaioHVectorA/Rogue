@@ -50,29 +50,13 @@ ui.setPlayVisible(true);
 
 // Shop setup
 setupShop(k, ui, player);
-ui.refreshShopStats({
-  moveSpeed: gameState.moveSpeed,
-  maxHealth: gameState.maxHealth,
-  reloadSpeed: gameState.reloadSpeed,
-  luck: gameState.luck,
-  gold: gameState.gold,
-  projectileSpeed: gameState.projectileSpeed,
-  abilityHaste: gameState.abilityHaste,
-});
+ui.refreshShopStats();
 
 // Collect gold drops on overlap with player
 k.onCollide("player", "gold-drop", (p: any, drop: any) => {
   gameState.gold += drop.value ?? 1;
   ui.updateGold(gameState.gold);
-  ui.refreshShopStats({
-    moveSpeed: gameState.moveSpeed,
-    maxHealth: gameState.maxHealth,
-    reloadSpeed: gameState.reloadSpeed,
-    luck: gameState.luck,
-    gold: gameState.gold,
-    projectileSpeed: gameState.projectileSpeed,
-    abilityHaste: gameState.abilityHaste,
-  });
+  ui.refreshShopStats();
   drop.destroy();
 });
 

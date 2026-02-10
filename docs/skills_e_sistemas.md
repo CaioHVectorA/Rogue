@@ -40,6 +40,7 @@
 Sistema central de registro e gerenciamento de skills. Toda skill é registrada via `registerSkill()` e gerenciada por este módulo.
 
 **Funcionalidades:**
+
 - **Registro:** `registerSkill(skill)` — registra uma skill com `id`, `use()`, `getCooldown()`, etc.
 - **Cargas:** Skills podem ter sistema de cargas (`getMaxCharges`). Ex: Mina Terrestre e Orbitais.
 - **Regeneração de cargas:** `updateChargeRegen(skillId)` — regenera cargas com base no cooldown.
@@ -49,6 +50,7 @@ Sistema central de registro e gerenciamento de skills. Toda skill é registrada 
 - **`addImpactFlash()`:** Helper visual para flash de impacto ao acertar inimigos.
 
 **Tipos:**
+
 ```ts
 type Skill = {
   id: string;
@@ -77,6 +79,7 @@ Sistema **desacoplado** de veneno — pode ser usado por qualquer skill via `add
 | Max bolhas visuais | 8 |
 
 **Como funciona:**
+
 1. Qualquer skill chama `addPoisonStacks(k, enemy, amount)`.
 2. O sistema inicializa o tracking no inimigo (se ainda não tem).
 3. A cada tick (1s), causa `stacks × 1` de dano.
@@ -84,14 +87,16 @@ Sistema **desacoplado** de veneno — pode ser usado por qualquer skill via `add
 5. Resetar o timer ao receber novos stacks garante que stacks novos não disparem dano imediatamente.
 
 **Visuais:**
+
 - Flash verde ao receber veneno.
 - Bolhas verdes orbitando o inimigo (quantidade proporcional aos stacks, máx 8).
 - Números de dano flutuantes verdes subindo.
 
 **API pública:**
+
 ```ts
-addPoisonStacks(k, enemy, stacks)  // Aplica stacks
-getPoisonStacks(enemy)             // Consulta stacks atuais
+addPoisonStacks(k, enemy, stacks); // Aplica stacks
+getPoisonStacks(enemy); // Consulta stacks atuais
 ```
 
 ---
@@ -114,6 +119,7 @@ Sistema **desacoplado** de choque — pode ser usado por qualquer skill via `add
 | Intervalo entre arcos visuais | 0.15s |
 
 **Como funciona:**
+
 1. Qualquer skill chama `addShockStacks(k, enemy, amount)`.
 2. Stacks acumulam sem efeito até atingir o limiar (6).
 3. Ao atingir 6+ stacks:
@@ -125,10 +131,12 @@ Sistema **desacoplado** de choque — pode ser usado por qualquer skill via `add
 5. Ao terminar o stun, velocidade e cor do inimigo são restauradas.
 
 **Callbacks de eletrocução:**
+
 - `onElectrocution(k, callback)` — registra uma função chamada sempre que um inimigo é eletrocutado.
 - Usado pela **Corrente Elétrica** para sua passiva de redução de cooldown.
 
 **Visuais:**
+
 - **Flash elétrico amarelo** ao receber stack (círculo expandindo).
 - **Explosão de eletrocução:** anel expandindo + 8 faíscas radiais + label "⚡ SHOCK!" com punch-in.
 - **Durante stun:** shake contínuo, flicker amarelo/branco, mini-arcos elétricos periódicos.
@@ -136,10 +144,11 @@ Sistema **desacoplado** de choque — pode ser usado por qualquer skill via `add
 - **Número de dano** flutuante "⚡3" ao eletrocutar.
 
 **API pública:**
+
 ```ts
-addShockStacks(k, enemy, stacks)   // Aplica stacks
-getShockStacks(enemy)              // Consulta stacks atuais
-onElectrocution(k, callback)       // Registra callback de eletrocução
+addShockStacks(k, enemy, stacks); // Aplica stacks
+getShockStacks(enemy); // Consulta stacks atuais
+onElectrocution(k, callback); // Registra callback de eletrocução
 ```
 
 ---
@@ -170,6 +179,7 @@ Define as ondas de inimigos. Cada wave é um array de `{ type, count }`.
 **Tipos de inimigos disponíveis:** `stone`, `red`, `blue`, `yellow`, `green`
 
 **Exemplo:**
+
 ```ts
 Wave 1: [{ type: "stone", count: 3 }, { type: "stone", count: 12 }]
 Wave 2: [{ type: "red", count: 6 }, { type: "blue", count: 2 }]
@@ -202,6 +212,7 @@ Controla a tabela de drop de gold com tiers influenciados pela sorte do player.
 **Arquivo:** `src/state/upgrades.ts`
 
 Atributos melhoráveis do player:
+
 - `moveSpeed` — Velocidade de movimento (+20 por nível)
 - `maxHealth` — Vida máxima (+1 por nível)
 - `reloadSpeed` — Velocidade de recarga (×0.9 multiplicativo por nível)
@@ -212,6 +223,7 @@ Atributos melhoráveis do player:
 
 **Ability Haste:**
 Cada nível de ability haste aplica uma redução percentual nos cooldowns de todas as skills.
+
 - Fórmula: `cooldownEfetivo = cooldownBase × (1 - abilityHaste%)`
 - O valor é cumulativo por nível: Lv1 = 5%, Lv2 = 10%, ..., Lv10 = 50%.
 - Aplicado automaticamente no registry ao calcular cooldowns.
@@ -236,6 +248,7 @@ Todos os inimigos são criados via `commonEnemy()` que adiciona componentes padr
 | `stone` | Pedrão | 44 | 35 | 20 | Marrom |
 
 **Comportamento padrão:**
+
 - Persegue o player continuamente.
 - Respeita limites da arena.
 - Dropa gold ao morrer.
@@ -254,9 +267,10 @@ Estado global centralizado do jogo.
 |---|---|---|
 | `moveSpeed` | 360 | Velocidade de movimento |
 | `reloadSpeed` | 5 | Velocidade de recarga |
-| `maxHealth` | 5 | Vida máxima |
+| `maxHealth` | 500 | Vida máxima |
 | `projectileSpeed` | 560 | Velocidade dos projéteis |
-| `abilityHaste` | 0.0 | Aceleração de habilidade (%) |
+| `abilityHaste` | 0.0 | Aceleração de habilidade (%) — reduz cooldowns |
+| `shotDamage` | 1 | Dano de tiro — escala skills de tiro alternativo (cone, ricochete, bumerangue) |
 | `luck` | 1.0 | Sorte |
 | `wave` | 1 | Wave atual |
 | `gold` | 0 | Gold acumulado |
@@ -264,6 +278,7 @@ Estado global centralizado do jogo.
 | `xp` / `xpToLevel` | 0 / 10 | XP atual e necessário (escala exponencial ×1.25) |
 
 **Skills no state:**
+
 - `skill1`, `skill2`, `ultimate` — Slots de skills equipadas
 - `levels` — Nível de cada skill
 - `cooldowns`, `lastUsedAt` — Tracking de cooldown
@@ -306,12 +321,12 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/shockwave.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 3000ms - 150ms × level (mín 2000ms) |
-| Dano | 2 (por inimigo, uma vez) |
-| Raio | 80 + 10 × level |
-| Knockback | 120 de força, 0.6s de duração |
+| Propriedade | Valor                               |
+| ----------- | ----------------------------------- |
+| Cooldown    | 3000ms - 150ms × level (mín 2000ms) |
+| Dano        | 2 (por inimigo, uma vez)            |
+| Raio        | 80 + 10 × level                     |
+| Knockback   | 120 de força, 0.6s de duração       |
 
 **Mecânica:** Expande um anel circular do player que empurra e causa dano em inimigos. Cada inimigo só toma dano uma vez por onda. O knockback é um impulso único com decaimento suave.
 
@@ -323,15 +338,15 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/ricochetShot.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 2200ms - 120ms × level (mín 1200ms) |
-| Dano principal | 2 |
-| Dano ricochete | 1 |
-| Forks | 2 projéteis filhos |
-| Velocidade | 1.5× projectileSpeed |
+| Propriedade    | Valor                                 |
+| -------------- | ------------------------------------- |
+| Cooldown       | 2200ms - 120ms × level (mín 1200ms)   |
+| Dano principal | `gameState.shotDamage` (Dano de Tiro) |
+| Dano ricochete | 60% do `gameState.shotDamage` (mín 1) |
+| Forks          | 2 projéteis filhos                    |
+| Velocidade     | 1.5× projectileSpeed                  |
 
-**Mecânica:** Lança um projétil azul no inimigo mais próximo. Ao acertar, cria 2 projéteis menores que buscam os inimigos mais próximos.
+**Mecânica:** Lança um projétil azul no inimigo mais próximo. Ao acertar, cria 2 projéteis menores que buscam os inimigos mais próximos. Dano escala com o atributo **Dano de Tiro** (`shotDamage`).
 
 **Visual:** Quadrado azul com outline branco. Filhos menores e mais claros.
 
@@ -341,17 +356,34 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/coneShot.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 1600ms - 100ms × level (mín 800ms) |
-| Dano | 2 por projétil |
-| Projéteis | 3 + floor(level / 2) |
-| Arco | 60° |
-| Velocidade | 0.9× projectileSpeed |
+**Tabela de escalamento por nível:**
 
-**Mecânica:** Dispara múltiplos projéteis em leque na direção do movimento do player (ou do inimigo mais próximo se parado). Mais projéteis com mais nível.
+| Nível | Projéteis | Arco | Cooldown | Vel. Mult. | Trail Life |
+| ----- | --------- | ---- | -------- | ---------- | ---------- |
+| 1     | 3         | 50°  | 2400ms   | 0.95×      | 0.18s      |
+| 2     | 5         | 55°  | 2200ms   | 0.95×      | 0.20s      |
+| 3     | 7         | 60°  | 2000ms   | 1.0×       | 0.22s      |
+| 4     | 9         | 65°  | 1800ms   | 1.0×       | 0.24s      |
+| 5     | 11        | 70°  | 1600ms   | 1.05×      | 0.26s      |
 
-**Visual:** Quadrados laranjas com outline branco + flash de impacto.
+**Propriedades fixas:**
+
+| Propriedade         | Valor                                 |
+| ------------------- | ------------------------------------- |
+| Dano por projétil   | `gameState.shotDamage` (Dano de Tiro) |
+| Alcance máximo      | 1.2× largura da tela                  |
+| Tamanho do projétil | 9px                                   |
+| Trail interval      | 0.025s                                |
+
+**Mecânica:** Dispara múltiplos projéteis flamejantes em leque na direção do movimento do player (ou do inimigo mais próximo se parado). A cada nível, ganha +2 projéteis adicionais. O arco se expande, a velocidade aumenta sutilmente e os projéteis recebem trails mais longos. O dano de cada projétil escala com o atributo **Dano de Tiro** (`shotDamage`), compartilhado com outros tiros alternativos.
+
+**Visual:**
+
+- **Projéteis:** Diamantes rotacionando com gradiente de cor (amarelo brilhante no centro, laranja-avermelhado nas bordas), outline branco.
+- **Muzzle Flash:** Flash retangular branco-dourado na boca do tiro que se expande e desvanece.
+- **Onda de Cone:** Arco de pontos dourados que se expandem e desvanecem, mostrando a área de disparo.
+- **Trails:** Partículas alaranjadas que seguem cada projétil, com vida escalonada por nível.
+- **Impacto:** Flash de impacto + sparks brancos que se dispersam radialmente ao acertar inimigos.
 
 ---
 
@@ -362,12 +394,12 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 **Tabela de escalamento por nível:**
 
 | Nível | Dano | Raio | Max Targets | Shock (hit) | Shock (chain) | Cooldown | CD Redução/Eletrocução |
-|---|---|---|---|---|---|---|---|
-| 1 | 2 | 400 | 2 | 3 | 1 | 3000ms | 600ms |
-| 2 | 2 | 450 | 3 | 4 | 2 | 2800ms | 800ms |
-| 3 | 3 | 500 | 3 | 5 | 2 | 2600ms | 1000ms |
-| 4 | 3 | 550 | 4 | 5 | 3 | 2400ms | 1000ms |
-| 5 | 4 | 600 | 4 | 6 | 3 | 2200ms | 1000ms |
+| ----- | ---- | ---- | ----------- | ----------- | ------------- | -------- | ---------------------- |
+| 1     | 2    | 400  | 2           | 3           | 1             | 3000ms   | 600ms                  |
+| 2     | 2    | 450  | 3           | 4           | 2             | 2800ms   | 800ms                  |
+| 3     | 3    | 500  | 3           | 5           | 2             | 2600ms   | 1000ms                 |
+| 4     | 3    | 550  | 4           | 5           | 3             | 2400ms   | 1000ms                 |
+| 5     | 4    | 600  | 4           | 6           | 3             | 2200ms   | 1000ms                 |
 
 **Propriedades fixas:**
 | Propriedade | Valor |
@@ -389,24 +421,26 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/arcMine.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 3000ms (regen de cargas) |
-| Cargas | level + 1 (2 no lv1, 3 no lv2...) |
-| Dano | 3 |
-| Raio detecção | 60px |
-| Raio explosão | 90px |
-| Tempo de vida | 6s |
+| Propriedade   | Valor                             |
+| ------------- | --------------------------------- |
+| Cooldown      | 3000ms (regen de cargas)          |
+| Cargas        | level + 1 (2 no lv1, 3 no lv2...) |
+| Dano          | 3                                 |
+| Raio detecção | 60px                              |
+| Raio explosão | 90px                              |
+| Tempo de vida | 6s                                |
 
 **Mecânica:** Coloca uma mina na posição do player. Quando um inimigo entra no raio de detecção, a mina entra em sequência: **azul → amarelo (200ms) → vermelho (200ms) → explosão**. Minas podem encadear explosões entre si!
 
 **Fases visuais:**
+
 1. `idle` — Círculo azul com glow pulsante, anel de alcance sutil, partículas de spawn
 2. `warning` — Amarelo com shake, glow dourado, anel de range visível
 3. `danger` — Vermelho com shake intenso, glow pulsando rápido
 4. `exploding` — Explosão multi-camadas com efeitos especiais (ver abaixo)
 
 **Visuais da explosão:**
+
 - Flash branco central que decai para a cor da cadeia
 - Anel de onda de choque expandindo (ease-out cúbico)
 - Segundo anel mais lento com glow
@@ -414,6 +448,7 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 - Resíduo de glow no chão que desvanece
 
 **Sistema de explosão em cadeia:**
+
 - Quando uma mina explode e outra está no raio, a segunda encadeia
 - **Linha de conexão** com shake elétrico liga as duas minas
 - **Faísca viajante** percorre a linha de uma mina à outra
@@ -429,18 +464,19 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/poisonPool.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 8000ms |
-| Raio | 70px (circular 2D) |
-| Duração | 10s + 3s × (level - 1) |
+| Propriedade    | Valor                   |
+| -------------- | ----------------------- |
+| Cooldown       | 8000ms                  |
+| Raio           | 70px (circular 2D)      |
+| Duração        | 10s + 3s × (level - 1)  |
 | Slow por level | 10%, 15%, 20%, 25%, 35% |
-| Veneno | 1 stack a cada 0.8s |
-| Spawn distance | 110px do player |
+| Veneno         | 1 stack a cada 0.8s     |
+| Spawn distance | 110px do player         |
 
 **Mecânica:** Lança uma única poça roxa grande na direção do inimigo mais próximo (ou para cima se não há inimigos). Inimigos dentro da poça recebem slow e acumulam stacks de veneno (via sistema desacoplado de veneno).
 
 **Visual:**
+
 - **Projétil:** Círculo roxo com arco parabólico + trail de partículas roxas
 - **Cast:** Anel roxo expandindo do player
 - **Poça:** Camadas circulares 2D:
@@ -461,18 +497,18 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/boomerangBolt.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 4000ms |
-| Dano ida | 2 |
-| Dano volta | 5 |
-| Distância máx | 450px |
-| Vel ida | 340 |
-| Vel volta | 420 |
-| Raio de catch | 24px |
-| Redução de CD ao pegar | 50% |
+| Propriedade            | Valor                                 |
+| ---------------------- | ------------------------------------- |
+| Cooldown               | 4000ms                                |
+| Dano ida               | `gameState.shotDamage` (Dano de Tiro) |
+| Dano volta             | 2× `gameState.shotDamage`             |
+| Distância máx          | 450px                                 |
+| Vel ida                | 340                                   |
+| Vel volta              | 420                                   |
+| Raio de catch          | 24px                                  |
+| Redução de CD ao pegar | 50%                                   |
 
-**Mecânica:** Lança um projétil retangular amarelo na direção do movimento (ou do inimigo mais próximo). Ao atingir a distância máxima, retorna em linha reta para a **posição predita** do player (baseado no movimento atual). Se o player "apanhar" o bumerangue (ficar próximo), o cooldown é reduzido em 50%.
+**Mecânica:** Lança um projétil retangular amarelo na direção do movimento (ou do inimigo mais próximo). Ao atingir a distância máxima, retorna em linha reta para a **posição predita** do player (baseado no movimento atual). Se o player "apanhar" o bumerangue (ficar próximo), o cooldown é reduzido em 50%. O dano escala com o atributo **Dano de Tiro** (`shotDamage`).
 
 **Recall:** Usar a skill novamente enquanto o bumerangue está ativo força o retorno imediato.
 
@@ -486,17 +522,18 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Tabela de escalamento por nível:**
 
-| Nível | HP | Duração | Tiros/s | Dano | Vel. Proj. | Alcance | Cooldown |
-|---|---|---|---|---|---|---|---|
-| 1 | 4 | 6s | 1.2 | 1 | 380 | 350px | 14s |
-| 2 | 5 | 8s | 1.6 | 1 | 400 | 400px | 13s |
-| 3 | 6 | 10s | 2.0 | 2 | 420 | 450px | 12s |
-| 4 | 7 | 12s | 2.8 | 2 | 440 | 500px | 11s |
-| 5 | 8 | 15s | 3.5 | 2 | 460 | 550px | 10s |
+| Nível | HP  | Duração | Tiros/s | Dano | Vel. Proj. | Alcance | Cooldown |
+| ----- | --- | ------- | ------- | ---- | ---------- | ------- | -------- |
+| 1     | 4   | 6s      | 1.2     | 1    | 380        | 350px   | 14s      |
+| 2     | 5   | 8s      | 1.6     | 1    | 400        | 400px   | 13s      |
+| 3     | 6   | 10s     | 2.0     | 2    | 420        | 450px   | 12s      |
+| 4     | 7   | 12s     | 2.8     | 2    | 440        | 500px   | 11s      |
+| 5     | 8   | 15s     | 3.5     | 2    | 460        | 550px   | 10s      |
 
 **Mecânica:** Posiciona um totem perto do player (posição aleatória ±60px). O totem atira automaticamente no inimigo mais próximo dentro do alcance. Pode ser destruído por inimigos ou expira ao fim da duração.
 
 **Visuais:**
+
 - **Corpo:** Retângulo escuro (marrom escuro) com contorno dourado.
 - **Chapéu rúnico:** Losango dourado no topo, rotacionado 45°.
 - **Olho rúnico:** Quadrado dourado central pulsante com glow.
@@ -517,18 +554,19 @@ Substituiu o sistema de corações por uma barra de vida moderna e numérica.
 
 **Arquivo:** `src/components/skills/markedShot.ts`
 
-| Propriedade | Valor |
-|---|---|
-| Cooldown | 10000ms |
-| Marcas para explodir | 5 (4 no lv4+) |
-| Dano explosão | 3 + 1 × (level - 1) |
-| Raio explosão | 150 + 15 × (level - 1) |
-| Duração do buff | 8s + 1s × (level - 1) |
-| Marcas da explosão | 2 (3 no lv4+) |
+| Propriedade          | Valor                  |
+| -------------------- | ---------------------- |
+| Cooldown             | 10000ms                |
+| Marcas para explodir | 5 (4 no lv4+)          |
+| Dano explosão        | 3 + 1 × (level - 1)    |
+| Raio explosão        | 150 + 15 × (level - 1) |
+| Duração do buff      | 8s + 1s × (level - 1)  |
+| Marcas da explosão   | 2 (3 no lv4+)          |
 
 **Mecânica:** Ativa um buff que faz tiros normais marcarem inimigos. Ao acumular 5 marcas (4 no lv4+), o inimigo explode em área, causando dano e aplicando 2 marcas (3 no lv4+) nos inimigos atingidos — permitindo **explosões em cadeia**!
 
 **Visual:**
+
 - Player fica rosa/vermelho durante o buff
 - Flash rosa ao marcar inimigos
 - Anel rosa expandindo na explosão
@@ -582,8 +620,8 @@ export const debug = {
   INITIAL_WAVE: 1,
   INITIAL_LEVEL: 3,
   INITIAL_XP: 9,
-  INITIAL_SKILL1: "poison-pool",   // skill equipada no slot 1
-  INITIAL_SKILL1_LEVEL: 5,         // nível da skill
+  INITIAL_SKILL1: "poison-pool", // skill equipada no slot 1
+  INITIAL_SKILL1_LEVEL: 5, // nível da skill
 };
 ```
 

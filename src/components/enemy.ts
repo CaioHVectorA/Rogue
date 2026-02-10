@@ -76,8 +76,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
       maxHp: maxHP,
       marks: 0,
       marksDecayTimer: 0, // tempo desde última marca (reseta ao estacar)
-      poisonStacks: 0,     // acúmulos de veneno (sistema desacoplado)
-      poisonTickTimer: 0,  // timer interno do sistema de veneno
+      poisonStacks: 0, // acúmulos de veneno (sistema desacoplado)
+      poisonTickTimer: 0, // timer interno do sistema de veneno
       damage: dmg,
       lastDamageTime: 0,
       defaultSpeed: spd,

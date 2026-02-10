@@ -39,8 +39,8 @@ const CHAIN_COLORS: [number, number, number][] = [
   [120, 160, 255], // azul (explosão normal)
   [200, 200, 255], // branco-azulado (chain 1)
   [255, 220, 100], // dourado (chain 2)
-  [255, 160, 50],  // laranja (chain 3)
-  [255, 80, 40],   // vermelho-fogo (chain 4+)
+  [255, 160, 50], // laranja (chain 3)
+  [255, 80, 40], // vermelho-fogo (chain 4+)
 ];
 
 function getChainColor(depth: number): [number, number, number] {
@@ -158,7 +158,13 @@ function spawnExplosionVisuals(
       k.color(sparkColor[0], sparkColor[1], sparkColor[2]),
       k.opacity(0.8),
       k.z(901),
-      { id: "mine-spark", t: 0, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life },
+      {
+        id: "mine-spark",
+        t: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number; life: number };
     spark.onUpdate(() => {
       spark.t += k.dt();
@@ -386,7 +392,12 @@ registerSkill({
         k.color(160, 160, 255),
         k.opacity(0.6),
         k.z(101),
-        { id: "mine-spawn-p", t: 0, vx: Math.cos(angle) * 40, vy: Math.sin(angle) * 40 },
+        {
+          id: "mine-spawn-p",
+          t: 0,
+          vx: Math.cos(angle) * 40,
+          vy: Math.sin(angle) * 40,
+        },
       ]) as GameObj & { t: number; vx: number; vy: number };
       sp.onUpdate(() => {
         sp.t += k.dt();
@@ -528,7 +539,7 @@ registerSkill({
       if (mine.state === "idle") {
         // Pulso suave do glow
         glow.t += k.dt();
-        const pulse = 0.10 + Math.sin(glow.t * 2.5) * 0.05;
+        const pulse = 0.1 + Math.sin(glow.t * 2.5) * 0.05;
         glow.opacity = pulse;
         const glowScale = 1 + Math.sin(glow.t * 2) * 0.1;
         glow.scale = k.vec2(glowScale);
@@ -543,7 +554,8 @@ registerSkill({
 
       // Shake em warning/danger
       if (mine.state === "warning" || mine.state === "danger") {
-        const intensity = mine.state === "danger" ? shakeIntensity * 1.8 : shakeIntensity;
+        const intensity =
+          mine.state === "danger" ? shakeIntensity * 1.8 : shakeIntensity;
         const spd = mine.state === "danger" ? shakeSpeed * 1.5 : shakeSpeed;
         const shakeX = Math.sin(k.time() * spd) * intensity;
         const shakeY = Math.cos(k.time() * spd * 1.3) * intensity;

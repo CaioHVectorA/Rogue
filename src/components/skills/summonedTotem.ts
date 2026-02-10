@@ -5,25 +5,65 @@ import { gameState } from "../../state/gameState";
 // ===== Tabela de escalamento por nível =====
 type TotemLevelData = {
   hp: number;
-  lifetime: number;       // segundos
-  fireRate: number;        // tiros por segundo
-  damage: number;          // dano por tiro
-  bulletSpeed: number;     // velocidade do projétil
-  range: number;           // alcance de detecção
-  cooldown: number;        // cooldown da skill (ms)
+  lifetime: number; // segundos
+  fireRate: number; // tiros por segundo
+  damage: number; // dano por tiro
+  bulletSpeed: number; // velocidade do projétil
+  range: number; // alcance de detecção
+  cooldown: number; // cooldown da skill (ms)
 };
 
 const TOTEM_LEVELS: TotemLevelData[] = [
   // nível 1 — básico, lento
-  { hp: 4, lifetime: 6,  fireRate: 1.2, damage: 1, bulletSpeed: 380, range: 350, cooldown: 14000 },
+  {
+    hp: 4,
+    lifetime: 6,
+    fireRate: 1.2,
+    damage: 1,
+    bulletSpeed: 380,
+    range: 350,
+    cooldown: 14000,
+  },
   // nível 2 — mais resistente, atira um pouco mais rápido
-  { hp: 5, lifetime: 8,  fireRate: 1.6, damage: 1, bulletSpeed: 400, range: 400, cooldown: 13000 },
+  {
+    hp: 5,
+    lifetime: 8,
+    fireRate: 1.6,
+    damage: 1,
+    bulletSpeed: 400,
+    range: 400,
+    cooldown: 13000,
+  },
   // nível 3 — mais dano, mais tempo
-  { hp: 6, lifetime: 10, fireRate: 2.0, damage: 2, bulletSpeed: 420, range: 450, cooldown: 12000 },
+  {
+    hp: 6,
+    lifetime: 10,
+    fireRate: 2.0,
+    damage: 2,
+    bulletSpeed: 420,
+    range: 450,
+    cooldown: 12000,
+  },
   // nível 4 — cadência alta
-  { hp: 7, lifetime: 12, fireRate: 2.8, damage: 2, bulletSpeed: 440, range: 500, cooldown: 11000 },
+  {
+    hp: 7,
+    lifetime: 12,
+    fireRate: 2.8,
+    damage: 2,
+    bulletSpeed: 440,
+    range: 500,
+    cooldown: 11000,
+  },
   // nível 5 — metralhadora rúnica
-  { hp: 8, lifetime: 15, fireRate: 3.5, damage: 2, bulletSpeed: 460, range: 550, cooldown: 10000 },
+  {
+    hp: 8,
+    lifetime: 15,
+    fireRate: 3.5,
+    damage: 2,
+    bulletSpeed: 460,
+    range: 550,
+    cooldown: 10000,
+  },
 ];
 
 function getLevelData(): TotemLevelData {
@@ -46,7 +86,11 @@ const TOTEM_COLORS = {
 
 // ===== Helpers =====
 
-function nearestEnemy(k: KAPLAYCtx, from: { x: number; y: number }, range: number): GameObj | null {
+function nearestEnemy(
+  k: KAPLAYCtx,
+  from: { x: number; y: number },
+  range: number,
+): GameObj | null {
   const enemies = k.get("enemy") as GameObj[];
   if (!enemies || enemies.length === 0) return null;
   let nearest: GameObj | null = null;
@@ -128,7 +172,11 @@ function spawnSummonEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
   }
 }
 
-function spawnMuzzleFlash(k: KAPLAYCtx, pos: { x: number; y: number }, dir: { x: number; y: number }): void {
+function spawnMuzzleFlash(
+  k: KAPLAYCtx,
+  pos: { x: number; y: number },
+  dir: { x: number; y: number },
+): void {
   const flash = k.add([
     k.circle(5),
     k.pos(pos.x + dir.x * 14, pos.y + dir.y * 14),
@@ -148,7 +196,10 @@ function spawnMuzzleFlash(k: KAPLAYCtx, pos: { x: number; y: number }, dir: { x:
   });
 }
 
-function spawnBulletHitEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
+function spawnBulletHitEffect(
+  k: KAPLAYCtx,
+  pos: { x: number; y: number },
+): void {
   for (let i = 0; i < 3; i++) {
     const angle = Math.random() * Math.PI * 2;
     const sp = k.add([
@@ -158,7 +209,12 @@ function spawnBulletHitEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void
       k.color(255, 220, 80),
       k.opacity(0.6),
       k.z(301),
-      { id: "totem-hit-p", t: 0, vx: Math.cos(angle) * 50, vy: Math.sin(angle) * 50 },
+      {
+        id: "totem-hit-p",
+        t: 0,
+        vx: Math.cos(angle) * 50,
+        vy: Math.sin(angle) * 50,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number };
     sp.onUpdate(() => {
       sp.t += k.dt();
@@ -186,7 +242,13 @@ function spawnDestroyEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
       k.color(color[0], color[1], color[2]),
       k.opacity(0.8),
       k.z(500),
-      { id: "totem-frag", t: 0, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 0.4 + Math.random() * 0.4 },
+      {
+        id: "totem-frag",
+        t: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.4 + Math.random() * 0.4,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number; life: number };
     sp.onUpdate(() => {
       sp.t += k.dt();
@@ -239,7 +301,8 @@ function spawnDestroyEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
 
 registerSkill({
   id: "summoned-totem",
-  getCooldown: (level) => TOTEM_LEVELS[Math.min(level, TOTEM_LEVELS.length) - 1].cooldown,
+  getCooldown: (level) =>
+    TOTEM_LEVELS[Math.min(level, TOTEM_LEVELS.length) - 1].cooldown,
   use: ({ k, player }) => {
     const data = getLevelData();
     const cx = player.pos.x + (Math.random() - 0.5) * 60;
@@ -271,7 +334,14 @@ registerSkill({
       k.pos(cx, cy),
       k.anchor("center"),
       k.color(TOTEM_COLORS.body[0], TOTEM_COLORS.body[1], TOTEM_COLORS.body[2]),
-      k.outline(2, k.rgb(TOTEM_COLORS.accent[0], TOTEM_COLORS.accent[1], TOTEM_COLORS.accent[2])),
+      k.outline(
+        2,
+        k.rgb(
+          TOTEM_COLORS.accent[0],
+          TOTEM_COLORS.accent[1],
+          TOTEM_COLORS.accent[2],
+        ),
+      ),
       k.area(),
       k.scale(1),
       k.z(100),
@@ -303,7 +373,11 @@ registerSkill({
       k.pos(cx, cy - bodyH / 2 - 3),
       k.anchor("center"),
       k.rotate(45),
-      k.color(TOTEM_COLORS.accent[0], TOTEM_COLORS.accent[1], TOTEM_COLORS.accent[2]),
+      k.color(
+        TOTEM_COLORS.accent[0],
+        TOTEM_COLORS.accent[1],
+        TOTEM_COLORS.accent[2],
+      ),
       k.outline(1, k.rgb(255, 255, 200)),
       k.opacity(1),
       k.scale(1),
@@ -317,7 +391,11 @@ registerSkill({
     const hpBarBg = k.add([
       k.rect(hpBarW, hpBarH),
       k.pos(cx - hpBarW / 2, cy + bodyH / 2 + 5),
-      k.color(TOTEM_COLORS.healthBarBg[0], TOTEM_COLORS.healthBarBg[1], TOTEM_COLORS.healthBarBg[2]),
+      k.color(
+        TOTEM_COLORS.healthBarBg[0],
+        TOTEM_COLORS.healthBarBg[1],
+        TOTEM_COLORS.healthBarBg[2],
+      ),
       k.outline(1, k.rgb(0, 0, 0)),
       k.opacity(0.6),
       k.z(103),
@@ -326,7 +404,11 @@ registerSkill({
     const hpBar = k.add([
       k.rect(hpBarW, hpBarH),
       k.pos(cx - hpBarW / 2, cy + bodyH / 2 + 5),
-      k.color(TOTEM_COLORS.healthBar[0], TOTEM_COLORS.healthBar[1], TOTEM_COLORS.healthBar[2]),
+      k.color(
+        TOTEM_COLORS.healthBar[0],
+        TOTEM_COLORS.healthBar[1],
+        TOTEM_COLORS.healthBar[2],
+      ),
       k.opacity(0.8),
       k.z(104),
       { id: "totem-hp-fill" },
@@ -349,14 +431,26 @@ registerSkill({
       k.circle(data.range),
       k.pos(cx, cy),
       k.anchor("center"),
-      k.outline(1, k.rgb(TOTEM_COLORS.rune[0], TOTEM_COLORS.rune[1], TOTEM_COLORS.rune[2])),
+      k.outline(
+        1,
+        k.rgb(TOTEM_COLORS.rune[0], TOTEM_COLORS.rune[1], TOTEM_COLORS.rune[2]),
+      ),
       k.color(0, 0, 0),
       k.opacity(0),
       k.z(94),
       { id: "totem-range" },
     ]);
 
-    const allParts = [glow, body, runeEye, hat, hpBarBg, hpBar, timerBar, rangeRing];
+    const allParts = [
+      glow,
+      body,
+      runeEye,
+      hat,
+      hpBarBg,
+      hpBar,
+      timerBar,
+      rangeRing,
+    ];
 
     let destroyed = false;
 
@@ -382,8 +476,16 @@ registerSkill({
 
       setTimeout(() => {
         if (body.exists()) {
-          body.color = k.rgb(TOTEM_COLORS.body[0], TOTEM_COLORS.body[1], TOTEM_COLORS.body[2]);
-          runeEye.color = k.rgb(TOTEM_COLORS.rune[0], TOTEM_COLORS.rune[1], TOTEM_COLORS.rune[2]);
+          body.color = k.rgb(
+            TOTEM_COLORS.body[0],
+            TOTEM_COLORS.body[1],
+            TOTEM_COLORS.body[2],
+          );
+          runeEye.color = k.rgb(
+            TOTEM_COLORS.rune[0],
+            TOTEM_COLORS.rune[1],
+            TOTEM_COLORS.rune[2],
+          );
         }
       }, 100);
 
@@ -435,21 +537,33 @@ registerSkill({
       const hpRatio = Math.max(0, body.hp / body.maxHp);
       hpBar.width = hpBarW * hpRatio;
       if (hpRatio < 0.35) {
-        hpBar.color = k.rgb(TOTEM_COLORS.dying[0], TOTEM_COLORS.dying[1], TOTEM_COLORS.dying[2]);
+        hpBar.color = k.rgb(
+          TOTEM_COLORS.dying[0],
+          TOTEM_COLORS.dying[1],
+          TOTEM_COLORS.dying[2],
+        );
       } else {
-        hpBar.color = k.rgb(TOTEM_COLORS.healthBar[0], TOTEM_COLORS.healthBar[1], TOTEM_COLORS.healthBar[2]);
+        hpBar.color = k.rgb(
+          TOTEM_COLORS.healthBar[0],
+          TOTEM_COLORS.healthBar[1],
+          TOTEM_COLORS.healthBar[2],
+        );
       }
 
       // --- Timer bar ---
       const timeRatio = Math.max(0, timeLeft / lifetime);
       timerBar.width = timerBarW * timeRatio;
       if (timeRatio < 0.2) {
-        timerBar.color = k.rgb(TOTEM_COLORS.dying[0], TOTEM_COLORS.dying[1], TOTEM_COLORS.dying[2]);
+        timerBar.color = k.rgb(
+          TOTEM_COLORS.dying[0],
+          TOTEM_COLORS.dying[1],
+          TOTEM_COLORS.dying[2],
+        );
       }
 
       // --- Últimos 2s: shake e pisca de urgência ---
       if (timeLeft < 2 && timeLeft > 0) {
-        const urgency = 1 - (timeLeft / 2);
+        const urgency = 1 - timeLeft / 2;
         const shake = Math.sin(k.time() * 25) * urgency * 2;
         body.pos.x = cx + shake;
         runeEye.pos.x = cx + shake;
@@ -460,7 +574,11 @@ registerSkill({
         if (Math.sin(k.time() * 15) > 0) {
           body.outline.color = k.rgb(255, 80, 40);
         } else {
-          body.outline.color = k.rgb(TOTEM_COLORS.accent[0], TOTEM_COLORS.accent[1], TOTEM_COLORS.accent[2]);
+          body.outline.color = k.rgb(
+            TOTEM_COLORS.accent[0],
+            TOTEM_COLORS.accent[1],
+            TOTEM_COLORS.accent[2],
+          );
         }
 
         // Fade out gradual
@@ -500,7 +618,11 @@ registerSkill({
             k.circle(bulletSize + 3),
             k.pos(cx + dir.x * 14, cy + dir.y * 14),
             k.anchor("center"),
-            k.color(TOTEM_COLORS.bulletGlow[0], TOTEM_COLORS.bulletGlow[1], TOTEM_COLORS.bulletGlow[2]),
+            k.color(
+              TOTEM_COLORS.bulletGlow[0],
+              TOTEM_COLORS.bulletGlow[1],
+              TOTEM_COLORS.bulletGlow[2],
+            ),
             k.opacity(0.25),
             k.z(149),
             { id: "totem-bullet-glow", t: 0 },
@@ -511,7 +633,11 @@ registerSkill({
             k.pos(cx + dir.x * 14, cy + dir.y * 14),
             k.anchor("center"),
             k.rotate(k.rad2deg(Math.atan2(dir.y, dir.x))),
-            k.color(TOTEM_COLORS.bullet[0], TOTEM_COLORS.bullet[1], TOTEM_COLORS.bullet[2]),
+            k.color(
+              TOTEM_COLORS.bullet[0],
+              TOTEM_COLORS.bullet[1],
+              TOTEM_COLORS.bullet[2],
+            ),
             k.outline(1, k.rgb(255, 255, 200)),
             k.area(),
             k.z(150),
@@ -544,7 +670,11 @@ registerSkill({
                 k.pos(bullet.pos.x, bullet.pos.y),
                 k.anchor("center"),
                 k.rotate(bullet.angle),
-                k.color(TOTEM_COLORS.bullet[0], TOTEM_COLORS.bullet[1], TOTEM_COLORS.bullet[2]),
+                k.color(
+                  TOTEM_COLORS.bullet[0],
+                  TOTEM_COLORS.bullet[1],
+                  TOTEM_COLORS.bullet[2],
+                ),
                 k.opacity(0.3),
                 k.z(148),
                 { id: "totem-trail", t: 0 },

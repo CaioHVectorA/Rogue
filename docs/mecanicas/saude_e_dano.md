@@ -1,9 +1,11 @@
 # Saúde e Dano
 
 ## Visão Geral
+
 O jogador possui HP numérico com um máximo configurável, exibido em uma barra de vida moderna com feedback visual dinâmico. Inimigos e projéteis inimigos causam dano ao colidir com o player. Existe um cooldown por inimigo para evitar dano contínuo por frame.
 
 ## Barra de Vida (HP Bar)
+
 - **Design:** Barra horizontal com fundo escuro, preenchimento colorido, glow overlay e texto numérico centralizado ("HP / MaxHP").
 - **Cores dinâmicas:**
   - Verde (> 60% HP)
@@ -14,6 +16,7 @@ O jogador possui HP numérico com um máximo configurável, exibido em uma barra
 - **Ícone:** Coração ❤ ao lado da barra.
 
 ## Fluxo de Dano
+
 1. Ao colidir `player` com `enemy`:
    - Verifica `enemy.lastDamageTime` vs `gameState.enemyDamageCooldownMs`.
    - Se liberado, aplica `dmg` (do preset do inimigo) ao `player.hp`.
@@ -23,14 +26,17 @@ O jogador possui HP numérico com um máximo configurável, exibido em uma barra
 4. Se `hp <= 0`, executa kaboom e estado de morte simples.
 
 ## Health Máximo e Cura
+
 - Upgrade `onHealth`: incrementa `maxHealth` e cura 1 imediatamente.
 - `Quick Heal`: compra cura por 20 gold, apenas se `hp < maxHealth`.
 
 ## Cooldown por Inimigo
+
 - `enemyDamageCooldownMs` define o tempo mínimo entre danos do mesmo inimigo.
 - Esse tempo é verificado usando `Date.now()` e armazenado em `e.lastDamageTime`.
 
 ## Referências de Código
+
 - Estado: `src/state/gameState.ts` – `maxHealth`, `enemyDamageCooldownMs`.
 - Main: `src/main.ts` – handlers de colisão e atualização da UI.
 - Loja: `src/components/shop.ts` – upgrades e quick heal.

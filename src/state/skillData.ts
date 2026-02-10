@@ -19,14 +19,16 @@ export const skillInfos = [
     name: "Ricochete",
     desc: "Lança um tiro alternativo que acerta um inimigo e ricocheteia em inimigos próximos. Pode ser aprimorado para mais ricochetes.",
     cooldownMs: 2500,
-    damage: "TIRO ALTERNATIVO: Dano do projétil base por quique.",
+    damage:
+      "TIRO ALTERNATIVO: Dano de Tiro por quique (ricochete = 60% do Dano de Tiro).",
   },
   {
     id: "cone-shot",
     name: "Tiro em cone",
-    desc: "Projéteis em cone seguindo a direção do movimento. Uma ótima pedida para grandes grupos ou um grandão de perto.",
-    cooldownMs: 2800,
-    damage: "TIRO ALTERNATIVO: Dano do tiro base em cada projétil.",
+    desc: "Dispara um leque de projéteis flamejantes na direção do movimento. +2 projéteis por nível, arco e velocidade aumentam. O dano escala com Dano de Tiro.",
+    cooldownMs: 2400,
+    damage:
+      "TIRO ALTERNATIVO: Dano de Tiro por projétil. +2 projéteis por nível.",
   },
   {
     id: "chain-lightning",
@@ -48,14 +50,15 @@ export const skillInfos = [
     name: "Poça Venenosa",
     desc: "Lança uma grande poça roxa na direção do inimigo mais próximo. Inimigos dentro dela recebem acúmulos de veneno e ficam lentos. A lentidão e duração escalam com nível.",
     cooldownMs: 8000,
-    damage: "Aplica 1 acúmulo de veneno a cada 0.8s. Lentidão: 10%–35% conforme nível.",
+    damage:
+      "Aplica 1 acúmulo de veneno a cada 0.8s. Lentidão: 10%–35% conforme nível.",
   },
   {
     id: "boomerang-bolt",
     name: "Bumerangue",
     desc: "Lança um projétil que retorna ao jogador num arco, acertando vários inimigos na ida e na volta. Apanhar o projétil de volta zera o tempo de recarga. A velocidade da volta aumenta com níveis.",
     cooldownMs: 4000,
-    damage: "TIRO ALTERNATIVO: Dano do tiro padrão na ida e 2x na volta.",
+    damage: "TIRO ALTERNATIVO: Dano de Tiro na ida e 2× Dano de Tiro na volta.",
   },
   {
     id: "summoned-totem",

@@ -13,14 +13,14 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 
 const SHOCK_CONFIG = {
-  stacksToTrigger: 6,       // stacks necessários para eletrocutar
-  triggerDamage: 3,          // dano ao eletrocutar
-  baseStunDuration: 1.0,    // duração base do stun (segundos)
-  extraStunPerStack: 0.1,   // +0.1s por stack acima do limiar
-  shakeIntensity: 3,        // intensidade do shake visual
-  shakeSpeed: 40,            // velocidade do shake
-  maxVisualArcs: 6,          // máximo de arcos visuais
-  arcInterval: 0.15,         // intervalo entre arcos durante stun
+  stacksToTrigger: 6, // stacks necessários para eletrocutar
+  triggerDamage: 3, // dano ao eletrocutar
+  baseStunDuration: 1.0, // duração base do stun (segundos)
+  extraStunPerStack: 0.1, // +0.1s por stack acima do limiar
+  shakeIntensity: 3, // intensidade do shake visual
+  shakeSpeed: 40, // velocidade do shake
+  maxVisualArcs: 6, // máximo de arcos visuais
+  arcInterval: 0.15, // intervalo entre arcos durante stun
 } as const;
 
 // Rastreia inimigos que já têm o sistema de choque ativo
@@ -34,7 +34,10 @@ const electrocutionCallbacks: ElectrocutionCallback[] = [];
  * Registra um callback que é chamado sempre que um inimigo é eletrocutado.
  * Útil para passivas como redução de cooldown.
  */
-export function onElectrocution(_k: KAPLAYCtx, cb: ElectrocutionCallback): void {
+export function onElectrocution(
+  _k: KAPLAYCtx,
+  cb: ElectrocutionCallback,
+): void {
   electrocutionCallbacks.push(cb);
 }
 
@@ -42,7 +45,11 @@ export function onElectrocution(_k: KAPLAYCtx, cb: ElectrocutionCallback): void 
  * Adiciona stacks de choque a um inimigo.
  * Se o inimigo ainda não tem o sistema, inicializa.
  */
-export function addShockStacks(k: KAPLAYCtx, enemy: GameObj, stacks: number = 1): void {
+export function addShockStacks(
+  k: KAPLAYCtx,
+  enemy: GameObj,
+  stacks: number = 1,
+): void {
   const e = enemy as any;
   if (typeof e.shockStacks !== "number") {
     e.shockStacks = 0;
@@ -87,7 +94,9 @@ export function getShockStacks(enemy: GameObj): number {
 function triggerElectrocution(k: KAPLAYCtx, enemy: GameObj): void {
   const e = enemy as any;
   const extraStacks = Math.max(0, e.shockStacks - SHOCK_CONFIG.stacksToTrigger);
-  const stunDuration = SHOCK_CONFIG.baseStunDuration + extraStacks * SHOCK_CONFIG.extraStunPerStack;
+  const stunDuration =
+    SHOCK_CONFIG.baseStunDuration +
+    extraStacks * SHOCK_CONFIG.extraStunPerStack;
 
   // Aplica dano
   if (typeof e.hp === "number") {
@@ -182,7 +191,12 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
       k.color(255, 255, 140 + Math.random() * 115),
       k.opacity(0.8),
       k.z(801),
-      { id: "shock-spark", t: 0, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed },
+      {
+        id: "shock-spark",
+        t: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number };
     spark.onUpdate(() => {
       spark.t += k.dt();
@@ -255,7 +269,12 @@ function spawnMiniArc(k: KAPLAYCtx, enemy: GameObj): void {
     k.opacity(0.7),
     k.z(700),
     { id: "shock-arc", t: 0, baseMx: midX, baseMy: midY, arcAngle: angle },
-  ]) as GameObj & { t: number; baseMx: number; baseMy: number; arcAngle: number };
+  ]) as GameObj & {
+    t: number;
+    baseMx: number;
+    baseMy: number;
+    arcAngle: number;
+  };
 
   arc.onUpdate(() => {
     arc.t += k.dt();
@@ -270,7 +289,11 @@ function spawnMiniArc(k: KAPLAYCtx, enemy: GameObj): void {
   });
 }
 
-function spawnShockDamageNumber(k: KAPLAYCtx, enemy: GameObj, dmg: number): void {
+function spawnShockDamageNumber(
+  k: KAPLAYCtx,
+  enemy: GameObj,
+  dmg: number,
+): void {
   const eSize = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
   const cx = enemy.pos.x + eSize.width / 2;
   const cy = enemy.pos.y;
@@ -295,7 +318,11 @@ function spawnShockDamageNumber(k: KAPLAYCtx, enemy: GameObj, dmg: number): void
 
 // ===== Stack counter visual =====
 
-function updateShockCounter(k: KAPLAYCtx, enemy: GameObj, counter: GameObj | null): GameObj | null {
+function updateShockCounter(
+  k: KAPLAYCtx,
+  enemy: GameObj,
+  counter: GameObj | null,
+): GameObj | null {
   const e = enemy as any;
   const stacks = e.shockStacks ?? 0;
 
@@ -327,11 +354,7 @@ function updateShockCounter(k: KAPLAYCtx, enemy: GameObj, counter: GameObj | nul
 
   // Intensidade da cor com base nos stacks
   const intensity = Math.min(stacks / SHOCK_CONFIG.stacksToTrigger, 1);
-  counter.color = k.rgb(
-    255,
-    255 - intensity * 100,
-    100 - intensity * 60,
-  );
+  counter.color = k.rgb(255, 255 - intensity * 100, 100 - intensity * 60);
 
   return counter;
 }

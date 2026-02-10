@@ -9,13 +9,21 @@ function findNearestEnemy(k: KAPLAYCtx, from: any): GameObj | null {
   let best = Number.POSITIVE_INFINITY;
   for (const e of enemies) {
     const d = from.dist(e.pos);
-    if (d < best) { best = d; nearest = e; }
+    if (d < best) {
+      best = d;
+      nearest = e;
+    }
   }
   return nearest;
 }
 
-function findNearestEnemies(k: KAPLAYCtx, from: any, count: number, exclude?: GameObj): GameObj[] {
-  const enemies = (k.get("enemy") as GameObj[]).filter(e => e !== exclude);
+function findNearestEnemies(
+  k: KAPLAYCtx,
+  from: any,
+  count: number,
+  exclude?: GameObj,
+): GameObj[] {
+  const enemies = (k.get("enemy") as GameObj[]).filter((e) => e !== exclude);
   enemies.sort((a, b) => from.dist(a.pos) - from.dist(b.pos));
   return enemies.slice(0, count);
 }
@@ -44,7 +52,7 @@ registerSkill({
     });
     p.onCollide("enemy", (e: any) => {
       if (typeof e.hp === "number") {
-        e.hp -= 2;
+        e.hp -= gameState.shotDamage;
         if (e.hp <= 0) e.destroy();
       }
       const forks = findNearestEnemies(k, p.pos.clone(), 2, e);
@@ -56,7 +64,10 @@ registerSkill({
           k.color(120, 200, 255),
           k.outline(2, k.rgb(255, 255, 255)),
           k.area(),
-          { id: "skill-ricochet-child", vel: d.scale(gameState.projectileSpeed * 1.4) },
+          {
+            id: "skill-ricochet-child",
+            vel: d.scale(gameState.projectileSpeed * 1.4),
+          },
         ]);
         child.onUpdate(() => {
           child.move((child as any).vel);
@@ -64,10 +75,13 @@ registerSkill({
         });
         child.onCollide("enemy", (ee: any) => {
           if (typeof ee.hp === "number") {
-            ee.hp -= 1;
+            ee.hp -= Math.max(1, Math.floor(gameState.shotDamage * 0.6));
             if (ee.hp <= 0) ee.destroy();
           }
-          addImpactFlash(k, child.pos.clone(), [120, 200, 255], { target: ee, size: 18 });
+          addImpactFlash(k, child.pos.clone(), [120, 200, 255], {
+            target: ee,
+            size: 18,
+          });
           child.destroy();
         });
         child.onCollide("arena-wall", () => child.destroy());
@@ -76,5 +90,5 @@ registerSkill({
       p.destroy();
     });
     p.onCollide("arena-wall", () => p.destroy());
-  }
+  },
 });

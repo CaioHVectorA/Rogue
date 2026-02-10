@@ -17,6 +17,8 @@ export type GameState = {
   cooldown: number;
   luck: number;
   abilityHaste: number; // % cooldown reduction (0.0 = 0%, 0.5 = 50%)
+  shotDamage: number; // base shot damage (affects shot-based skills)
+  elevationPoints: number; // pontos de elevação para comprar atributos e upar skills
   wave: number;
   gold: number;
   xp: number;
@@ -59,6 +61,8 @@ export const gameState: GameState = {
   cooldown: 0,
   luck: 1.0,
   abilityHaste: 0.0,
+  shotDamage: 1,
+  elevationPoints: 25,
   wave: debug.INITIAL_WAVE ?? 1,
   gold: debug.INITIAL_GOLD ?? 0,
   xp: debug.INITIAL_XP ?? 0,

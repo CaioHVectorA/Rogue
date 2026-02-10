@@ -6,31 +6,43 @@ const BOOMERANG_CONFIG = {
   maxDistance: 450,
   outSpeed: 340,
   returnSpeed: 420,
-  size: 14,                  // raio do bumerangue
+  size: 14, // raio do bumerangue
   baseDamage: 2,
   returnDamage: 5,
   rotationSpeed: 8,
   catchRadius: 28,
   cooldownReduction: 0.5,
   predictionTime: 0.4,
-  trailInterval: 0.03,      // intervalo entre partículas de trail
-  trailLife: 0.25,           // duração de cada partícula
+  trailInterval: 0.03, // intervalo entre partículas de trail
+  trailLife: 0.25, // duração de cada partícula
 } as const;
 
 // Cores do bumerangue por fase
 const BOOMERANG_COLORS = {
-  out: { body: [255, 240, 80], outline: [255, 255, 180], glow: [255, 220, 40], trail: [255, 230, 100] },
-  back: { body: [255, 160, 60], outline: [255, 220, 140], glow: [255, 120, 20], trail: [255, 140, 50] },
+  out: {
+    body: [255, 240, 80],
+    outline: [255, 255, 180],
+    glow: [255, 220, 40],
+    trail: [255, 230, 100],
+  },
+  back: {
+    body: [255, 160, 60],
+    outline: [255, 220, 140],
+    glow: [255, 120, 20],
+    trail: [255, 140, 50],
+  },
 } as const;
 
-let activeBoomerang: (GameObj & {
-  vel: any;
-  phase: "out" | "back";
-  traveled: number;
-  rotation: number;
-  returnTarget: { x: number; y: number } | null;
-  forceReturn: () => void;
-}) | null = null;
+let activeBoomerang:
+  | (GameObj & {
+      vel: any;
+      phase: "out" | "back";
+      traveled: number;
+      rotation: number;
+      returnTarget: { x: number; y: number } | null;
+      forceReturn: () => void;
+    })
+  | null = null;
 
 function findNearestEnemy(k: KAPLAYCtx, from: any): GameObj | null {
   const enemies = k.get("enemy") as GameObj[];
@@ -39,12 +51,18 @@ function findNearestEnemy(k: KAPLAYCtx, from: any): GameObj | null {
   let best = Number.POSITIVE_INFINITY;
   for (const e of enemies) {
     const d = from.dist(e.pos);
-    if (d < best) { best = d; nearest = e; }
+    if (d < best) {
+      best = d;
+      nearest = e;
+    }
   }
   return nearest;
 }
 
-function getPlayerDirection(k: KAPLAYCtx, player: GameObj): { x: number; y: number } {
+function getPlayerDirection(
+  k: KAPLAYCtx,
+  player: GameObj,
+): { x: number; y: number } {
   let moveX = 0;
   let moveY = 0;
   if (k.isKeyDown("a") || k.isKeyDown("left")) moveX -= 1;
@@ -77,10 +95,16 @@ function getPredictedPlayerPosition(
 ): { x: number; y: number } {
   const currentPos = player.pos;
   let isMoving = false;
-  if (k.isKeyDown("a") || k.isKeyDown("left") ||
-      k.isKeyDown("d") || k.isKeyDown("right") ||
-      k.isKeyDown("w") || k.isKeyDown("up") ||
-      k.isKeyDown("s") || k.isKeyDown("down")) {
+  if (
+    k.isKeyDown("a") ||
+    k.isKeyDown("left") ||
+    k.isKeyDown("d") ||
+    k.isKeyDown("right") ||
+    k.isKeyDown("w") ||
+    k.isKeyDown("up") ||
+    k.isKeyDown("s") ||
+    k.isKeyDown("down")
+  ) {
     isMoving = true;
   }
   if (!isMoving) return { x: currentPos.x, y: currentPos.y };
@@ -148,7 +172,12 @@ function spawnCatchEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
       k.color(255, 230, 80),
       k.opacity(0.7),
       k.z(801),
-      { id: "boom-catch-p", t: 0, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80 },
+      {
+        id: "boom-catch-p",
+        t: 0,
+        vx: Math.cos(angle) * 80,
+        vy: Math.sin(angle) * 80,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number };
     sp.onUpdate(() => {
       sp.t += k.dt();
@@ -160,7 +189,11 @@ function spawnCatchEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
   }
 }
 
-function spawnHitEffect(k: KAPLAYCtx, pos: { x: number; y: number }, isReturn: boolean): void {
+function spawnHitEffect(
+  k: KAPLAYCtx,
+  pos: { x: number; y: number },
+  isReturn: boolean,
+): void {
   const color = isReturn ? [255, 160, 60] : [255, 240, 80];
   const size = isReturn ? 18 : 14;
 
@@ -192,7 +225,12 @@ function spawnHitEffect(k: KAPLAYCtx, pos: { x: number; y: number }, isReturn: b
       k.color(255, 255, 180),
       k.opacity(0.6),
       k.z(701),
-      { id: "boom-hit-spark", t: 0, vx: Math.cos(angle) * 60, vy: Math.sin(angle) * 60 },
+      {
+        id: "boom-hit-spark",
+        t: 0,
+        vx: Math.cos(angle) * 60,
+        vy: Math.sin(angle) * 60,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number };
     sp.onUpdate(() => {
       sp.t += k.dt();
@@ -204,7 +242,10 @@ function spawnHitEffect(k: KAPLAYCtx, pos: { x: number; y: number }, isReturn: b
   }
 }
 
-function spawnWallBreakEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void {
+function spawnWallBreakEffect(
+  k: KAPLAYCtx,
+  pos: { x: number; y: number },
+): void {
   for (let i = 0; i < 8; i++) {
     const angle = Math.random() * Math.PI * 2;
     const sp = k.add([
@@ -215,7 +256,12 @@ function spawnWallBreakEffect(k: KAPLAYCtx, pos: { x: number; y: number }): void
       k.color(200, 180, 100),
       k.opacity(0.6),
       k.z(700),
-      { id: "boom-wall-p", t: 0, vx: Math.cos(angle) * 70, vy: Math.sin(angle) * 70 },
+      {
+        id: "boom-wall-p",
+        t: 0,
+        vx: Math.cos(angle) * 70,
+        vy: Math.sin(angle) * 70,
+      },
     ]) as GameObj & { t: number; vx: number; vy: number };
     sp.onUpdate(() => {
       sp.t += k.dt();
@@ -242,10 +288,18 @@ registerSkill({
 
     const origin = player.pos.clone();
     const {
-      maxDistance, outSpeed, returnSpeed, size,
-      baseDamage, returnDamage, rotationSpeed,
-      catchRadius, cooldownReduction, predictionTime,
-      trailInterval, trailLife,
+      maxDistance,
+      outSpeed,
+      returnSpeed,
+      size,
+      baseDamage,
+      returnDamage,
+      rotationSpeed,
+      catchRadius,
+      cooldownReduction,
+      predictionTime,
+      trailInterval,
+      trailLife,
     } = BOOMERANG_CONFIG;
 
     const playerSpeed = gameState.moveSpeed;
@@ -277,7 +331,11 @@ registerSkill({
       k.circle(size + 6),
       k.pos(origin.x, origin.y),
       k.anchor("center"),
-      k.color(BOOMERANG_COLORS.out.glow[0], BOOMERANG_COLORS.out.glow[1], BOOMERANG_COLORS.out.glow[2]),
+      k.color(
+        BOOMERANG_COLORS.out.glow[0],
+        BOOMERANG_COLORS.out.glow[1],
+        BOOMERANG_COLORS.out.glow[2],
+      ),
       k.opacity(0.2),
       k.scale(1),
       k.z(498),
@@ -289,8 +347,19 @@ registerSkill({
       k.rect(size * 2, size * 0.6),
       k.pos(origin.x, origin.y),
       k.anchor("center"),
-      k.color(BOOMERANG_COLORS.out.body[0], BOOMERANG_COLORS.out.body[1], BOOMERANG_COLORS.out.body[2]),
-      k.outline(2, k.rgb(BOOMERANG_COLORS.out.outline[0], BOOMERANG_COLORS.out.outline[1], BOOMERANG_COLORS.out.outline[2])),
+      k.color(
+        BOOMERANG_COLORS.out.body[0],
+        BOOMERANG_COLORS.out.body[1],
+        BOOMERANG_COLORS.out.body[2],
+      ),
+      k.outline(
+        2,
+        k.rgb(
+          BOOMERANG_COLORS.out.outline[0],
+          BOOMERANG_COLORS.out.outline[1],
+          BOOMERANG_COLORS.out.outline[2],
+        ),
+      ),
       k.area(),
       k.rotate(0),
       k.z(500),
@@ -310,18 +379,37 @@ registerSkill({
     const startReturn = () => {
       if (proj!.phase === "out") {
         proj!.phase = "back";
-        const predicted = getPredictedPlayerPosition(k, player, predictionTime, playerSpeed);
+        const predicted = getPredictedPlayerPosition(
+          k,
+          player,
+          predictionTime,
+          playerSpeed,
+        );
         proj!.returnTarget = predicted;
-        const back = k.vec2(
-          proj!.returnTarget.x - proj!.pos.x,
-          proj!.returnTarget.y - proj!.pos.y,
-        ).unit();
+        const back = k
+          .vec2(
+            proj!.returnTarget.x - proj!.pos.x,
+            proj!.returnTarget.y - proj!.pos.y,
+          )
+          .unit();
         proj!.vel = back.scale(returnSpeed);
 
         // Muda cores para fase de volta
-        proj!.color = k.rgb(BOOMERANG_COLORS.back.body[0], BOOMERANG_COLORS.back.body[1], BOOMERANG_COLORS.back.body[2]);
-        proj!.outline.color = k.rgb(BOOMERANG_COLORS.back.outline[0], BOOMERANG_COLORS.back.outline[1], BOOMERANG_COLORS.back.outline[2]);
-        glow.color = k.rgb(BOOMERANG_COLORS.back.glow[0], BOOMERANG_COLORS.back.glow[1], BOOMERANG_COLORS.back.glow[2]);
+        proj!.color = k.rgb(
+          BOOMERANG_COLORS.back.body[0],
+          BOOMERANG_COLORS.back.body[1],
+          BOOMERANG_COLORS.back.body[2],
+        );
+        proj!.outline.color = k.rgb(
+          BOOMERANG_COLORS.back.outline[0],
+          BOOMERANG_COLORS.back.outline[1],
+          BOOMERANG_COLORS.back.outline[2],
+        );
+        glow.color = k.rgb(
+          BOOMERANG_COLORS.back.glow[0],
+          BOOMERANG_COLORS.back.glow[1],
+          BOOMERANG_COLORS.back.glow[2],
+        );
 
         // Flash de inversão
         const turnFlash = k.add([
@@ -371,7 +459,10 @@ registerSkill({
       trailT += dt;
       if (trailT >= trailInterval) {
         trailT -= trailInterval;
-        const colors = proj!.phase === "out" ? BOOMERANG_COLORS.out.trail : BOOMERANG_COLORS.back.trail;
+        const colors =
+          proj!.phase === "out"
+            ? BOOMERANG_COLORS.out.trail
+            : BOOMERANG_COLORS.back.trail;
         const trail = k.add([
           k.rect(size * 1.2, size * 0.3),
           k.pos(proj!.pos.x, proj!.pos.y),
@@ -402,7 +493,7 @@ registerSkill({
 
         // Indicador visual de proximidade (quanto mais perto, mais brilhante o glow)
         if (distToPlayer < catchRadius * 3) {
-          const proximity = 1 - (distToPlayer / (catchRadius * 3));
+          const proximity = 1 - distToPlayer / (catchRadius * 3);
           glow.opacity = 0.2 + proximity * 0.4;
           glow.scale = k.vec2(1 + proximity * 0.5);
         }
@@ -432,7 +523,10 @@ registerSkill({
       hitEnemies.add(e);
 
       if (typeof e.hp === "number") {
-        const damage = proj!.phase === "back" ? returnDamage : baseDamage;
+        const damage =
+          proj!.phase === "back"
+            ? gameState.shotDamage * 2
+            : gameState.shotDamage;
         e.hp -= damage;
 
         spawnHitEffect(k, { x: e.pos.x, y: e.pos.y }, proj!.phase === "back");

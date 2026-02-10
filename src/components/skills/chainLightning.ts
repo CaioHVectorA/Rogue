@@ -16,15 +16,55 @@ type ChainLevelData = {
 
 const CHAIN_LEVELS: ChainLevelData[] = [
   // level 1
-  { damage: 2, initialRadius: 400, maxChainTargets: 2, baseShockStacks: 3, chainShockStacks: 1, cooldown: 3000, cdReductionPerElectrocute: 600 },
+  {
+    damage: 2,
+    initialRadius: 400,
+    maxChainTargets: 2,
+    baseShockStacks: 3,
+    chainShockStacks: 1,
+    cooldown: 3000,
+    cdReductionPerElectrocute: 600,
+  },
   // level 2
-  { damage: 2, initialRadius: 450, maxChainTargets: 3, baseShockStacks: 4, chainShockStacks: 2, cooldown: 2800, cdReductionPerElectrocute: 800 },
+  {
+    damage: 2,
+    initialRadius: 450,
+    maxChainTargets: 3,
+    baseShockStacks: 4,
+    chainShockStacks: 2,
+    cooldown: 2800,
+    cdReductionPerElectrocute: 800,
+  },
   // level 3
-  { damage: 3, initialRadius: 500, maxChainTargets: 3, baseShockStacks: 5, chainShockStacks: 2, cooldown: 2600, cdReductionPerElectrocute: 1000 },
+  {
+    damage: 3,
+    initialRadius: 500,
+    maxChainTargets: 3,
+    baseShockStacks: 5,
+    chainShockStacks: 2,
+    cooldown: 2600,
+    cdReductionPerElectrocute: 1000,
+  },
   // level 4
-  { damage: 3, initialRadius: 550, maxChainTargets: 4, baseShockStacks: 5, chainShockStacks: 3, cooldown: 2400, cdReductionPerElectrocute: 1000 },
+  {
+    damage: 3,
+    initialRadius: 550,
+    maxChainTargets: 4,
+    baseShockStacks: 5,
+    chainShockStacks: 3,
+    cooldown: 2400,
+    cdReductionPerElectrocute: 1000,
+  },
   // level 5
-  { damage: 4, initialRadius: 600, maxChainTargets: 4, baseShockStacks: 6, chainShockStacks: 3, cooldown: 2200, cdReductionPerElectrocute: 1000 },
+  {
+    damage: 4,
+    initialRadius: 600,
+    maxChainTargets: 4,
+    baseShockStacks: 6,
+    chainShockStacks: 3,
+    cooldown: 2200,
+    cdReductionPerElectrocute: 1000,
+  },
 ];
 
 function getLevelData(): ChainLevelData {
@@ -49,7 +89,11 @@ function ensurePassive(k: KAPLAYCtx): void {
   onElectrocution(k, (_enemy) => {
     // Só funciona se chain-lightning está equipada
     const skillId = "chain-lightning";
-    if (gameState.skills.skill1 !== skillId && gameState.skills.skill2 !== skillId) return;
+    if (
+      gameState.skills.skill1 !== skillId &&
+      gameState.skills.skill2 !== skillId
+    )
+      return;
 
     const last = gameState.skills.lastUsedAt[skillId] ?? 0;
     if (last <= 0) return; // já disponível
@@ -327,13 +371,15 @@ function chainFromEnemy(
 
 registerSkill({
   id: "chain-lightning",
-  getCooldown: (level) => CHAIN_LEVELS[Math.min(level, CHAIN_LEVELS.length) - 1].cooldown,
+  getCooldown: (level) =>
+    CHAIN_LEVELS[Math.min(level, CHAIN_LEVELS.length) - 1].cooldown,
   use: ({ k, player }) => {
     // Registra passiva na primeira utilização
     ensurePassive(k);
 
     const levelData = getLevelData();
-    const { damage, initialRadius, maxChainTargets, baseShockStacks } = levelData;
+    const { damage, initialRadius, maxChainTargets, baseShockStacks } =
+      levelData;
     const { projectileSpeed, projectileSize } = CHAIN_CONFIG;
 
     const origin = player.pos.clone();

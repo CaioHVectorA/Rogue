@@ -1,9 +1,15 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
-import { skillsRegistry, updateChargeRegen, getCharges, getEffectiveCooldown } from "./skills";
+import {
+  skillsRegistry,
+  updateChargeRegen,
+  getCharges,
+  getEffectiveCooldown,
+} from "./skills";
 import { gameState } from "../state/gameState";
 import { createTopBar } from "./ui/topBar";
 import { createShopPanel } from "./ui/shopPanel";
 import { createSkillOverlay } from "./ui/skillOverlay";
+import { createSkillUpgradeOverlay } from "./ui/skillSelection";
 
 export type UIHandles = {
   updateHearts: (count: number) => void;
@@ -14,30 +20,17 @@ export type UIHandles = {
   setPlayVisible: (visible: boolean) => void;
   onShopToggle: (open: boolean) => void;
   setShopVisible: (visible: boolean) => void;
-  setUpgradeHandlers: (handlers: {
-    onMoveSpeed: () => void;
-    onHealth: () => void;
-    onReload: () => void;
-    onLuck: () => void;
-    onProjectile?: () => void;
-    onAbilityHaste?: () => void;
-  }) => void;
+  setUpgradeHandlers: (handlers: Record<string, () => void>) => void;
   setQuickHealHandler: (handler: () => void) => void;
-  refreshShopStats: (stats: {
-    moveSpeed: number;
-    maxHealth: number;
-    reloadSpeed: number;
-    luck: number;
-    gold: number;
-    projectileSpeed?: number;
-    abilityHaste?: number;
-  }) => void;
+  setSkillUpgradeHandler: (handler: () => void) => void;
+  refreshShopStats: () => void;
 };
 
 export function setupUI(k: KAPLAYCtx): UIHandles {
   const topBar = createTopBar(k);
   const shop = createShopPanel(k);
   const skillOverlay = createSkillOverlay(k);
+  const skillUpgradeOverlay = createSkillUpgradeOverlay(k);
 
   // ===========================================
   // Barra de buff no canto superior direito
@@ -342,10 +335,14 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
       }
     }
     skillOverlay.update();
+    skillUpgradeOverlay.update();
   });
 
   // Wire shop toggle via TopBar's shopBtn
   topBar.shopBtn.onClick(() => shop.toggle());
+
+  // Skill upgrade handler (stored here for external wiring)
+  let _skillUpgradeHandler: (() => void) | null = null;
 
   return {
     updateHearts: topBar.updateHearts,
@@ -360,6 +357,9 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
     setShopVisible: (visible) => shop.setVisible(visible),
     setUpgradeHandlers: (handlers) => shop.setUpgradeHandlers(handlers),
     setQuickHealHandler: (handler) => shop.setQuickHealHandler(handler),
-    refreshShopStats: (stats) => shop.refreshStats(stats),
+    setSkillUpgradeHandler: (handler) => {
+      _skillUpgradeHandler = handler;
+    },
+    refreshShopStats: () => shop.refreshStats(),
   };
 }

@@ -2,88 +2,94 @@ import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../state/gameState";
 import type { UIHandles } from "./ui";
 
-function costForLevel(n: number) { return 5 + (n - 1) * (n - 1) + n; }
-
-function makeStats() {
-  return {
-    moveSpeed: gameState.moveSpeed,
-    maxHealth: gameState.maxHealth,
-    reloadSpeed: gameState.reloadSpeed,
-    luck: gameState.luck,
-    gold: gameState.gold,
-    projectileSpeed: gameState.projectileSpeed,
-    abilityHaste: gameState.abilityHaste,
-  };
-}
+const ATTR_COST = 1; // pontos de elevação por atributo
+const SKILL_COST = 3; // pontos de elevação por nível de skill
+const MAX_ATTR_LEVEL = 10;
+const MAX_SKILL_LEVEL = 5;
 
 export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
-  // Apply debug initial values
   if (typeof gameState.gold === "number") ui.updateGold(gameState.gold);
   if (typeof gameState.wave === "number") ui.updateWave(gameState.wave);
 
-  const canUpgrade = (key: keyof typeof gameState.upgrades) => {
+  const canUpgradeAttr = (key: keyof typeof gameState.upgrades) => {
     const lv = gameState.upgrades[key] as number;
-    if (lv >= 10) return false;
-    const isChosen = lv > 0;
-    if (!isChosen && gameState.upgrades.chosenCount >= 3) return false;
-    const cost = costForLevel(lv + 1);
-    return gameState.gold >= cost;
+    return lv < MAX_ATTR_LEVEL && gameState.elevationPoints >= ATTR_COST;
   };
 
-  const spendAndLevel = (key: keyof typeof gameState.upgrades) => {
+  const spendAttr = (key: keyof typeof gameState.upgrades) => {
     const lv = gameState.upgrades[key] as number;
-    const nextCost = costForLevel(lv + 1);
-    if (gameState.gold < nextCost || lv >= 10) return false;
-    if (lv === 0 && gameState.upgrades.chosenCount < 3) {
-      gameState.upgrades.chosenCount += 1;
-    }
-    gameState.gold -= nextCost;
+    if (lv >= MAX_ATTR_LEVEL || gameState.elevationPoints < ATTR_COST)
+      return false;
+    gameState.elevationPoints -= ATTR_COST;
     (gameState.upgrades as any)[key] = lv + 1;
-    ui.updateGold(gameState.gold);
     return true;
   };
 
   ui.setUpgradeHandlers({
     onMoveSpeed: () => {
-      if (!canUpgrade("moveSpeed")) return;
-      if (!spendAndLevel("moveSpeed")) return;
+      if (!canUpgradeAttr("moveSpeed")) return;
+      if (!spendAttr("moveSpeed")) return;
       gameState.moveSpeed += 20;
       (player as any).speed = gameState.moveSpeed;
-      ui.refreshShopStats(makeStats());
+      ui.refreshShopStats();
     },
     onHealth: () => {
-      if (!canUpgrade("maxHealth")) return;
-      if (!spendAndLevel("maxHealth")) return;
+      if (!canUpgradeAttr("maxHealth")) return;
+      if (!spendAttr("maxHealth")) return;
       gameState.maxHealth += 100;
-      (player as any).hp = Math.min((player as any).hp + 100, gameState.maxHealth);
+      (player as any).hp = Math.min(
+        (player as any).hp + 100,
+        gameState.maxHealth,
+      );
       ui.updateHearts((player as any).hp);
-      ui.refreshShopStats(makeStats());
+      ui.refreshShopStats();
     },
     onReload: () => {
-      if (!canUpgrade("reloadSpeed")) return;
-      if (!spendAndLevel("reloadSpeed")) return;
-      // Treat reloadSpeed as reload time (seconds). Upgrading should increase rate by reducing time multiplicatively.
-      gameState.reloadSpeed = Math.max(0.1, Number((gameState.reloadSpeed * 0.9).toFixed(3)));
-      ui.refreshShopStats(makeStats());
+      if (!canUpgradeAttr("reloadSpeed")) return;
+      if (!spendAttr("reloadSpeed")) return;
+      gameState.reloadSpeed = Math.max(
+        0.1,
+        Number((gameState.reloadSpeed * 0.9).toFixed(3)),
+      );
+      ui.refreshShopStats();
     },
     onLuck: () => {
-      if (!canUpgrade("luck")) return;
-      if (!spendAndLevel("luck")) return;
+      if (!canUpgradeAttr("luck")) return;
+      if (!spendAttr("luck")) return;
       gameState.luck = Number((gameState.luck + 0.1).toFixed(2));
-      ui.refreshShopStats(makeStats());
+      ui.refreshShopStats();
     },
     onProjectile: () => {
-      if (!canUpgrade("projectileSpeed")) return;
-      if (!spendAndLevel("projectileSpeed")) return;
+      if (!canUpgradeAttr("projectileSpeed")) return;
+      if (!spendAttr("projectileSpeed")) return;
       gameState.projectileSpeed += 40;
-      ui.refreshShopStats(makeStats());
+      ui.refreshShopStats();
     },
     onAbilityHaste: () => {
-      if (!canUpgrade("abilityHaste")) return;
-      if (!spendAndLevel("abilityHaste")) return;
-      gameState.abilityHaste = Number((gameState.abilityHaste + 0.05).toFixed(2)); // +5% per level
-      ui.refreshShopStats(makeStats());
+      if (!canUpgradeAttr("abilityHaste")) return;
+      if (!spendAttr("abilityHaste")) return;
+      gameState.abilityHaste = Number(
+        (gameState.abilityHaste + 0.05).toFixed(2),
+      );
+      ui.refreshShopStats();
     },
+    onShotDamage: () => {
+      if (!canUpgradeAttr("shotDamage")) return;
+      if (!spendAttr("shotDamage")) return;
+      gameState.shotDamage += 1;
+      ui.refreshShopStats();
+    },
+  });
+
+  // Skill upgrade handler
+  ui.setSkillUpgradeHandler(() => {
+    const skillId = gameState.skills.skill1;
+    if (!skillId) return;
+    const lv = gameState.skills.levels[skillId] ?? 1;
+    if (lv >= MAX_SKILL_LEVEL) return;
+    if (gameState.elevationPoints < SKILL_COST) return;
+    gameState.elevationPoints -= SKILL_COST;
+    gameState.skills.levels[skillId] = lv + 1;
   });
 
   // Quick heal
@@ -92,12 +98,15 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     if (gameState.gold < cost) return;
     if ((player as any).hp >= gameState.maxHealth) return;
     gameState.gold -= cost;
-    (player as any).hp = Math.min((player as any).hp + 100, gameState.maxHealth);
+    (player as any).hp = Math.min(
+      (player as any).hp + 100,
+      gameState.maxHealth,
+    );
     ui.updateHearts((player as any).hp);
     ui.updateGold(gameState.gold);
-    ui.refreshShopStats(makeStats());
+    ui.refreshShopStats();
   });
 
   // Initial refresh
-  ui.refreshShopStats(makeStats());
+  ui.refreshShopStats();
 }

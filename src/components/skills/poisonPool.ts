@@ -4,14 +4,14 @@ import { gameState } from "../../state/gameState";
 import { addPoisonStacks } from "./poison";
 
 const POOL_CONFIG = {
-  poolRadius: 70,           // raio grande
-  baseDuration: 10,         // 10s base
-  durationPerLevel: 3,      // +3s por nível
-  spawnDistance: 110,        // distância do player
-  stacksPerTick: 1,         // acúmulos por tick
-  tickInterval: 0.8,        // aplica veneno a cada 0.8s
-  slowPerLevel: [0.10, 0.15, 0.20, 0.25, 0.35], // slow menor por nível (1-5)
-  bubbleInterval: 0.3,      // intervalo entre bolhas brotando
+  poolRadius: 70, // raio grande
+  baseDuration: 10, // 10s base
+  durationPerLevel: 3, // +3s por nível
+  spawnDistance: 110, // distância do player
+  stacksPerTick: 1, // acúmulos por tick
+  tickInterval: 0.8, // aplica veneno a cada 0.8s
+  slowPerLevel: [0.1, 0.15, 0.2, 0.25, 0.35], // slow menor por nível (1-5)
+  bubbleInterval: 0.3, // intervalo entre bolhas brotando
 } as const;
 
 function getDuration(level: number): number {
@@ -23,7 +23,10 @@ function getSlowFactor(level: number): number {
   return POOL_CONFIG.slowPerLevel[idx];
 }
 
-function getPlayerCenter(k: KAPLAYCtx, player: GameObj): { x: number; y: number } {
+function getPlayerCenter(
+  k: KAPLAYCtx,
+  player: GameObj,
+): { x: number; y: number } {
   const size = player.getSize ? player.getSize() : { width: 60, height: 60 };
   return {
     x: player.pos.x + size.width / 2,
@@ -34,7 +37,10 @@ function getPlayerCenter(k: KAPLAYCtx, player: GameObj): { x: number; y: number 
 /**
  * Direção da poça: inimigo mais próximo, ou pra cima se sem inimigos.
  */
-function getPoolDirection(k: KAPLAYCtx, center: { x: number; y: number }): { x: number; y: number } {
+function getPoolDirection(
+  k: KAPLAYCtx,
+  center: { x: number; y: number },
+): { x: number; y: number } {
   const enemies = k.get("enemy") as GameObj[];
   if (enemies.length === 0) {
     return { x: 0, y: -1 }; // pra cima
@@ -90,7 +96,13 @@ function createPool(
     k.anchor("center"),
     k.color(120, 40, 180),
     k.opacity(0),
-    k.area({ shape: new k.Rect(k.vec2(-poolRadius, -poolRadius), poolRadius * 2, poolRadius * 2) }),
+    k.area({
+      shape: new k.Rect(
+        k.vec2(-poolRadius, -poolRadius),
+        poolRadius * 2,
+        poolRadius * 2,
+      ),
+    }),
     k.z(96),
     { id: "poison-pool", t: 0, tickT: 0, duration },
   ]) as GameObj & { t: number; tickT: number; duration: number };
@@ -138,7 +150,11 @@ function createPool(
       k.circle(2.5 + Math.random() * 3),
       k.pos(px, py),
       k.anchor("center"),
-      k.color(140 + Math.random() * 60, 60 + Math.random() * 40, 200 + Math.random() * 55),
+      k.color(
+        140 + Math.random() * 60,
+        60 + Math.random() * 40,
+        200 + Math.random() * 55,
+      ),
       k.opacity(0.7),
       k.z(99),
       { id: "pool-spawn-particle", t: 0 },
@@ -193,7 +209,7 @@ function createPool(
     innerRing.t += dt;
     const iPulse = 0.5 + Math.sin(innerRing.t * 2.5) * 0.12;
     innerRing.scale = k.vec2(iPulse, iPulse);
-    innerRing.opacity = (0.10 + Math.sin(innerRing.t * 1.8) * 0.04) * fadeM;
+    innerRing.opacity = (0.1 + Math.sin(innerRing.t * 1.8) * 0.04) * fadeM;
 
     innerRing2.t += dt;
     const i2Pulse = 0.25 + Math.sin(innerRing2.t * 3.2) * 0.1;
@@ -226,7 +242,10 @@ function createPool(
         if (!enemiesInPool.has(enemy)) {
           enemiesInPool.add(enemy);
           const e = enemy as any;
-          if (typeof e.defaultSpeed === "number" && typeof e.speed === "number") {
+          if (
+            typeof e.defaultSpeed === "number" &&
+            typeof e.speed === "number"
+          ) {
             e.speed = e.defaultSpeed * (1 - slowFactor);
           }
         }
@@ -290,7 +309,11 @@ function spawnPoolBubble(
     k.circle(size),
     k.pos(bx, by),
     k.anchor("center"),
-    k.color(140 + Math.random() * 60, 50 + Math.random() * 50, 200 + Math.random() * 55),
+    k.color(
+      140 + Math.random() * 60,
+      50 + Math.random() * 50,
+      200 + Math.random() * 55,
+    ),
     k.opacity(0.45),
     k.z(100),
     { id: "pool-bubble", t: 0, maxLife: 0.6 + Math.random() * 0.6 },

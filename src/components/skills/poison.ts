@@ -1,19 +1,19 @@
 /**
  * Sistema de veneno desacoplado — pode ser usado por qualquer skill.
- * 
+ *
  * Acúmulos de veneno estacam infinitamente.
  * Cada acúmulo causa 1 de dano por tick (a cada 1s).
  * O veneno dura enquanto houver stacks, e decai 1 stack por tick.
- * 
+ *
  * Uso: addPoisonStacks(k, enemy, amount)
  */
 import type { GameObj, KAPLAYCtx } from "kaplay";
 
 const POISON_CONFIG = {
-  tickInterval: 1.0,      // dano a cada 1s
-  damagePerStack: 1,       // 1 dano por acúmulo por tick
-  stackDecayPerTick: 1,    // perde 1 stack por tick
-  maxVisualBubbles: 8,     // máximo de bolhas visuais
+  tickInterval: 1.0, // dano a cada 1s
+  damagePerStack: 1, // 1 dano por acúmulo por tick
+  stackDecayPerTick: 1, // perde 1 stack por tick
+  maxVisualBubbles: 8, // máximo de bolhas visuais
 } as const;
 
 // Rastreia inimigos que já têm o sistema de veneno ativo
@@ -23,7 +23,11 @@ const poisonedEnemies = new WeakSet<GameObj>();
  * Adiciona stacks de veneno a um inimigo.
  * Se o inimigo ainda não tem o sistema, inicializa.
  */
-export function addPoisonStacks(k: KAPLAYCtx, enemy: GameObj, stacks: number = 1): void {
+export function addPoisonStacks(
+  k: KAPLAYCtx,
+  enemy: GameObj,
+  stacks: number = 1,
+): void {
   const e = enemy as any;
   if (typeof e.poisonStacks !== "number") {
     e.poisonStacks = 0;
@@ -116,7 +120,11 @@ function initPoisonTick(k: KAPLAYCtx, enemy: GameObj): void {
 /**
  * Spawna/atualiza bolhas visuais de veneno ao redor do inimigo.
  */
-function updatePoisonBubbles(k: KAPLAYCtx, enemy: GameObj, bubbles: GameObj[]): void {
+function updatePoisonBubbles(
+  k: KAPLAYCtx,
+  enemy: GameObj,
+  bubbles: GameObj[],
+): void {
   const e = enemy as any;
   const stacks = e.poisonStacks ?? 0;
   const targetCount = Math.min(stacks, POISON_CONFIG.maxVisualBubbles);
@@ -129,7 +137,11 @@ function updatePoisonBubbles(k: KAPLAYCtx, enemy: GameObj, bubbles: GameObj[]): 
       k.circle(2 + Math.random() * 2),
       k.pos(enemy.pos.x, enemy.pos.y),
       k.anchor("center"),
-      k.color(60 + Math.random() * 40, 200 + Math.random() * 55, 40 + Math.random() * 30),
+      k.color(
+        60 + Math.random() * 40,
+        200 + Math.random() * 55,
+        40 + Math.random() * 30,
+      ),
       k.opacity(0.5 + Math.random() * 0.3),
       k.z(502),
       {
@@ -137,9 +149,14 @@ function updatePoisonBubbles(k: KAPLAYCtx, enemy: GameObj, bubbles: GameObj[]): 
         angle,
         floatSpeed: 0.8 + Math.random() * 1.2,
         floatT: Math.random() * 10,
-        orbitDist: (size.width / 2) + 4 + Math.random() * 8,
+        orbitDist: size.width / 2 + 4 + Math.random() * 8,
       },
-    ]) as GameObj & { angle: number; floatSpeed: number; floatT: number; orbitDist: number };
+    ]) as GameObj & {
+      angle: number;
+      floatSpeed: number;
+      floatT: number;
+      orbitDist: number;
+    };
 
     bubble.onUpdate(() => {
       if (!enemy.exists()) {
