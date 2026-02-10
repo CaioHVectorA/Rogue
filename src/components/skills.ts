@@ -33,5 +33,7 @@ import "./skills/ricochetShot";
 import "./skills/shockwave";
 import "./skills/arcMine";
 import "./skills/attackBuff";
+import "./skills/boomerangBolt";
+import "./skills/chainLightning";
 
 export {};

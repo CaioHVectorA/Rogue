@@ -2,6 +2,52 @@ import type { GameObj, KAPLAYCtx } from "kaplay";
 import { gameState } from "../../state/gameState";
 import { registerSkill, addImpactFlash } from "./registry";
 
+function findNearestEnemy(k: KAPLAYCtx, from: any): GameObj | null {
+  const enemies = k.get("enemy") as GameObj[];
+  if (!enemies || enemies.length === 0) return null;
+  let nearest: GameObj | null = null;
+  let best = Number.POSITIVE_INFINITY;
+  for (const e of enemies) {
+    const d = from.dist(e.pos);
+    if (d < best) {
+      best = d;
+      nearest = e;
+    }
+  }
+  return nearest;
+}
+
+function getPlayerDirection(
+  k: KAPLAYCtx,
+  player: GameObj,
+): { x: number; y: number } {
+  // Tenta detectar movimento pelas teclas
+  let moveX = 0;
+  let moveY = 0;
+  if (k.isKeyDown("a") || k.isKeyDown("left")) moveX -= 1;
+  if (k.isKeyDown("d") || k.isKeyDown("right")) moveX += 1;
+  if (k.isKeyDown("w") || k.isKeyDown("up")) moveY -= 1;
+  if (k.isKeyDown("s") || k.isKeyDown("down")) moveY += 1;
+
+  if (moveX !== 0 || moveY !== 0) {
+    const len = Math.sqrt(moveX * moveX + moveY * moveY);
+    return { x: moveX / len, y: moveY / len };
+  }
+
+  // Se parado, vai na direção do inimigo mais próximo
+  const nearestEnemy = findNearestEnemy(k, player.pos);
+  if (nearestEnemy) {
+    const dir = nearestEnemy.pos.sub(player.pos);
+    if (dir.len() > 0) {
+      const unit = dir.unit();
+      return { x: unit.x, y: unit.y };
+    }
+  }
+
+  // Fallback: direção para direita
+  return { x: 1, y: 0 };
+}
+
 // Skill 1: Tiro em cone (área)
 registerSkill({
   id: "cone-shot",
@@ -12,12 +58,14 @@ registerSkill({
     const level = gameState.skills.levels["cone-shot"] ?? 1;
     const count = baseCount + Math.floor(level / 2);
     const arc = Math.PI / 3; // 60 graus
-    const mouse = k.mousePos();
-    let dir = mouse.sub(center);
-    if (dir.len() === 0) dir = k.vec2(1, 0);
-    const dirUnit = dir.unit();
+
+    // Direção baseada no movimento do player ou inimigo mais próximo
+    const dir = getPlayerDirection(k, player);
+    const dirUnit = k.vec2(dir.x, dir.y);
+
     const baseAngle = Math.atan2(dirUnit.y, dirUnit.x);
-    const halfSize = Math.max((player as any).width ?? 18, (player as any).height ?? 18) / 2;
+    const halfSize =
+      Math.max((player as any).width ?? 18, (player as any).height ?? 18) / 2;
     const margin = 6;
     const spawnOrigin = center.add(dirUnit.scale(halfSize + margin));
 
@@ -44,10 +92,14 @@ registerSkill({
           e.hp -= 2;
           if (e.hp <= 0) e.destroy();
         }
-        addImpactFlash(k, c.pos.clone(), [255, 120, 0], { target: e, size: 28, duration: 0.5 });
+        addImpactFlash(k, c.pos.clone(), [255, 120, 0], {
+          target: e,
+          size: 28,
+          duration: 0.5,
+        });
         c.destroy();
       });
       c.onCollide("arena-wall", () => c.destroy());
     }
-  }
+  },
 });

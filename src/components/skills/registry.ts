@@ -11,6 +11,7 @@ export type Skill = {
   use(ctx: SkillContext): void;
   getCooldown?(level: number): number;
   getMaxCharges?(level: number): number; // para skills com cargas
+  canAlwaysUse?(): boolean; // permite usar mesmo em cooldown (ex: recall do bumerangue)
 };
 
 function now() {
@@ -86,6 +87,11 @@ export function getCharges(skillId: string): number {
 export function canUse(skillId: string): boolean {
   const skill = skillsRegistry[skillId];
 
+  // Se a skill permite uso sempre (ex: recall do bumerangue)
+  if (skill?.canAlwaysUse?.()) {
+    return true;
+  }
+
   // Skill com cargas
   if (skill?.getMaxCharges) {
     return getCharges(skillId) > 0;
@@ -102,6 +108,12 @@ export function useSkill(skillId: string, k: KAPLAYCtx, player: GameObj) {
   const skill = skillsRegistry[skillId];
   if (!skill) return;
   if (!canUse(skillId)) return;
+
+  // Se é um uso via canAlwaysUse (ex: recall), apenas executa sem atualizar cooldown
+  if (skill.canAlwaysUse?.()) {
+    skill.use({ k, player });
+    return;
+  }
 
   skill.use({ k, player });
 

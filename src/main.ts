@@ -141,7 +141,7 @@ k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
 });
 
 // Remove forcing empty skill; rely on UI overlay gating
-gameState.skills.skill1 = "attack-buff" satisfies skillsName | "";
+gameState.skills.skill1 = "chain-lightning" satisfies skillsName | "";
 
 k.onKeyPress("q", () => {
   const id = gameState.skills.skill1;

@@ -39,7 +39,7 @@ export const skillInfos = [
   {
     id: "arc-mine",
     name: "Mina Terrestre",
-    desc: "Lança uma mina terrestre que explodem quando um inimigo se aproxima. Tem cargas e pode ser aprimorada para mais cargas.",
+    desc: "Lança uma mina terrestre que explodem quando um inimigo se aproxima. Tem cargas e pode ser aprimorada para mais cargas. Uma mina pode explodir a outra, use isso com sabedoria, pois a explosão também te atinge!",
     cooldownMs: 3500,
     damage: "Alto dano em área na explosão.",
   },

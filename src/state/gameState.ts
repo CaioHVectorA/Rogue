@@ -40,9 +40,9 @@ export type GameState = {
   };
   // Multiplicadores de buff (valores base = 1.0)
   buffs: {
-    damageMul: number;      // multiplicador de dano
+    damageMul: number; // multiplicador de dano
     reloadSpeedMul: number; // multiplicador de velocidade de recarga
-    activeUntil: number;    // timestamp de quando o buff expira (0 = sem buff)
+    activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
   };
 };
 
