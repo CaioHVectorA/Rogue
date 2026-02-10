@@ -42,7 +42,7 @@ const arena = createArena(k, {
 
 // UI
 const ui = setupUI(k);
-ui.updateHearts((player as any).hp ?? 0);
+ui.updateHearts((player as any).hp ?? gameState.maxHealth);
 ui.updateGold(gameState.gold);
 ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
 ui.updateWave(gameState.wave);
@@ -56,6 +56,8 @@ ui.refreshShopStats({
   reloadSpeed: gameState.reloadSpeed,
   luck: gameState.luck,
   gold: gameState.gold,
+  projectileSpeed: gameState.projectileSpeed,
+  abilityHaste: gameState.abilityHaste,
 });
 
 // Collect gold drops on overlap with player
@@ -68,6 +70,8 @@ k.onCollide("player", "gold-drop", (p: any, drop: any) => {
     reloadSpeed: gameState.reloadSpeed,
     luck: gameState.luck,
     gold: gameState.gold,
+    projectileSpeed: gameState.projectileSpeed,
+    abilityHaste: gameState.abilityHaste,
   });
   drop.destroy();
 });
@@ -133,7 +137,7 @@ k.onCollide("player", "enemy", (p: any, e: any) => {
 });
 k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
   bb.destroy();
-  (p as any).hp = Math.max(0, (p as any).hp - 1);
+  (p as any).hp = Math.max(0, (p as any).hp - 30);
   ui.updateHearts((p as any).hp);
   if ((p as any).hp <= 0) {
     // simple kaboom on death

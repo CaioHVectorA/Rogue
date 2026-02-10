@@ -46,9 +46,9 @@ export const skillInfos = [
   {
     id: "poison-pool",
     name: "Poça Venenosa",
-    desc: "Poças são lançadas em três direções de inimigos e envenenam inimigos que passarem por cima. Causa lentidão que escala conforme níveis",
-    cooldownMs: 3000,
-    damage: "Aplica um acúmulo de veneno por segundo enquanto em cima da poça.",
+    desc: "Lança uma grande poça roxa na direção do inimigo mais próximo. Inimigos dentro dela recebem acúmulos de veneno e ficam lentos. A lentidão e duração escalam com nível.",
+    cooldownMs: 8000,
+    damage: "Aplica 1 acúmulo de veneno a cada 0.8s. Lentidão: 10%–35% conforme nível.",
   },
   {
     id: "boomerang-bolt",

@@ -76,6 +76,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
       maxHp: maxHP,
       marks: 0,
       marksDecayTimer: 0, // tempo desde última marca (reseta ao estacar)
+      poisonStacks: 0,     // acúmulos de veneno (sistema desacoplado)
+      poisonTickTimer: 0,  // timer interno do sistema de veneno
       damage: dmg,
       lastDamageTime: 0,
       defaultSpeed: spd,
@@ -178,6 +180,16 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     markDots.push(dot);
   }
 
+  // --- Indicador visual de veneno (ícone + contador) ---
+  const poisonLabel = enemy.add([
+    k.text("", { size: 10 }),
+    k.pos(s + 4, -2),
+    k.color(80, 230, 60),
+    k.z(12),
+    { id: "poison-label" },
+  ]);
+  poisonLabel.hidden = true;
+
   enemy.onUpdate(() => {
     const ratio = Math.max(0, (enemy as any).hp / (enemy as any).maxHp);
     // Sentido horário de preenchimento:
@@ -242,6 +254,22 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
           markDots[i].color = k.rgb(60, 60, 60);
         }
       }
+    }
+
+    // --- Atualizar indicador de veneno ---
+    const pStacks = e.poisonStacks ?? 0;
+    if (pStacks > 0) {
+      poisonLabel.hidden = false;
+      (poisonLabel as any).text = `☠${pStacks}`;
+      // Cor fica mais intensa com mais stacks
+      const intensity = Math.min(pStacks / 10, 1);
+      poisonLabel.color = k.rgb(
+        60 + intensity * 40,
+        180 + intensity * 75,
+        40 + intensity * 20,
+      );
+    } else {
+      poisonLabel.hidden = true;
     }
   });
 

@@ -1,17 +1,91 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import { registerSkill, addImpactFlash } from "./registry";
 import { gameState } from "../../state/gameState";
+import { addShockStacks, onElectrocution } from "./shock";
+
+// ===== Tabela de escalamento por nível =====
+type ChainLevelData = {
+  damage: number;
+  initialRadius: number;
+  maxChainTargets: number;
+  baseShockStacks: number;
+  chainShockStacks: number;
+  cooldown: number;
+  cdReductionPerElectrocute: number; // ms de CD reduzido por eletrocução (passiva)
+};
+
+const CHAIN_LEVELS: ChainLevelData[] = [
+  // level 1
+  { damage: 2, initialRadius: 400, maxChainTargets: 2, baseShockStacks: 3, chainShockStacks: 1, cooldown: 3000, cdReductionPerElectrocute: 600 },
+  // level 2
+  { damage: 2, initialRadius: 450, maxChainTargets: 3, baseShockStacks: 4, chainShockStacks: 2, cooldown: 2800, cdReductionPerElectrocute: 800 },
+  // level 3
+  { damage: 3, initialRadius: 500, maxChainTargets: 3, baseShockStacks: 5, chainShockStacks: 2, cooldown: 2600, cdReductionPerElectrocute: 1000 },
+  // level 4
+  { damage: 3, initialRadius: 550, maxChainTargets: 4, baseShockStacks: 5, chainShockStacks: 3, cooldown: 2400, cdReductionPerElectrocute: 1000 },
+  // level 5
+  { damage: 4, initialRadius: 600, maxChainTargets: 4, baseShockStacks: 6, chainShockStacks: 3, cooldown: 2200, cdReductionPerElectrocute: 1000 },
+];
+
+function getLevelData(): ChainLevelData {
+  const lvl = gameState.skills.levels["chain-lightning"] ?? 1;
+  return CHAIN_LEVELS[Math.min(lvl, CHAIN_LEVELS.length) - 1];
+}
 
 const CHAIN_CONFIG = {
-  damage: 2,
-  initialRadius: 500,
-  maxChainTargets: 3, // máx de vizinhos por nó do grafo
   boltWidth: 4, // largura da linha visual
   boltDuration: 0.8, // duração da linha visual (segundos)
   immunityDuration: 5000, // 5 segundos de imunidade
   projectileSpeed: 560, // velocidade do projétil inicial
   projectileSize: 10,
 } as const;
+
+// ===== Passiva: reduz cooldown ao eletrocutar =====
+let passiveRegistered = false;
+function ensurePassive(k: KAPLAYCtx): void {
+  if (passiveRegistered) return;
+  passiveRegistered = true;
+
+  onElectrocution(k, (_enemy) => {
+    // Só funciona se chain-lightning está equipada
+    const skillId = "chain-lightning";
+    if (gameState.skills.skill1 !== skillId && gameState.skills.skill2 !== skillId) return;
+
+    const last = gameState.skills.lastUsedAt[skillId] ?? 0;
+    if (last <= 0) return; // já disponível
+
+    const { cdReductionPerElectrocute } = getLevelData();
+    // Avança o timestamp de último uso, efetivamente reduzindo o cooldown restante
+    gameState.skills.lastUsedAt[skillId] = last - cdReductionPerElectrocute;
+
+    // Visual sutil de feedback: flash azul no HUD (via label flutuante no player)
+    spawnCooldownReductionLabel(k);
+  });
+}
+
+function spawnCooldownReductionLabel(k: KAPLAYCtx): void {
+  const player = k.get("player")[0];
+  if (!player) return;
+
+  const label = k.add([
+    k.text("⚡-1s CD", { size: 11 }),
+    k.pos(player.pos.x + (Math.random() - 0.5) * 30, player.pos.y - 30),
+    k.anchor("center"),
+    k.color(120, 200, 255),
+    k.outline(1, k.rgb(20, 40, 80)),
+    k.opacity(0.9),
+    k.z(900),
+    { id: "cd-reduce-label", t: 0 },
+  ]) as GameObj & { t: number };
+  label.onUpdate(() => {
+    label.t += k.dt();
+    label.pos.y -= 30 * k.dt();
+    if (label.t > 0.4) {
+      label.opacity = 0.9 * (1 - (label.t - 0.4) / 0.5);
+    }
+    if (label.t >= 0.9) label.destroy();
+  });
+}
 
 // Map para rastrear inimigos imunes (enemy -> timestamp de quando a imunidade expira)
 const immuneEnemies = new Map<GameObj, number>();
@@ -186,6 +260,7 @@ function drawLightningEdge(
 /**
  * Encadeia o raio recursivamente como um grafo instantâneo:
  * - Dano + imunidade em cada inimigo atingido
+ * - Aplica stacks de choque
  * - Desenha arestas (linhas) entre os nós (inimigos)
  * - Reduz o raio a cada nível de profundidade
  */
@@ -196,7 +271,7 @@ function chainFromEnemy(
   radius: number,
   depth: number = 0,
 ): void {
-  const { damage, maxChainTargets } = CHAIN_CONFIG;
+  const { damage, maxChainTargets, chainShockStacks } = getLevelData();
 
   // Se o inimigo já é imune ou não existe, não faz nada
   if (!enemy.exists() || isImmune(enemy)) return;
@@ -210,6 +285,12 @@ function chainFromEnemy(
 
   // Marca como imune
   markImmune(enemy);
+
+  // Aplica stacks de choque (mais stacks quanto mais perto da fonte)
+  const shockAmount = Math.max(1, chainShockStacks - Math.floor(depth / 2));
+  if (enemy.exists()) {
+    addShockStacks(k, enemy, shockAmount);
+  }
 
   // Desenha a aresta (linha) do source até este inimigo
   drawLightningEdge(k, source, { x: enemy.pos.x, y: enemy.pos.y }, depth);
@@ -246,15 +327,14 @@ function chainFromEnemy(
 
 registerSkill({
   id: "chain-lightning",
-  getCooldown: () => 2500,
+  getCooldown: (level) => CHAIN_LEVELS[Math.min(level, CHAIN_LEVELS.length) - 1].cooldown,
   use: ({ k, player }) => {
-    const {
-      projectileSpeed,
-      projectileSize,
-      damage,
-      initialRadius,
-      maxChainTargets,
-    } = CHAIN_CONFIG;
+    // Registra passiva na primeira utilização
+    ensurePassive(k);
+
+    const levelData = getLevelData();
+    const { damage, initialRadius, maxChainTargets, baseShockStacks } = levelData;
+    const { projectileSpeed, projectileSize } = CHAIN_CONFIG;
 
     const origin = player.pos.clone();
     const dir = getPlayerDirection(k, player);
@@ -295,6 +375,11 @@ registerSkill({
 
       // Marca como imune
       markImmune(enemy);
+
+      // Aplica stacks de choque no primeiro alvo (mais forte)
+      if (enemy.exists()) {
+        addShockStacks(k, enemy, baseShockStacks);
+      }
 
       // Flash visual no primeiro inimigo
       addImpactFlash(k, proj.pos.clone(), [255, 255, 170], {

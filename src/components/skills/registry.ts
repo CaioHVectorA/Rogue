@@ -18,6 +18,18 @@ function now() {
   return Date.now();
 }
 
+/**
+ * Returns the effective cooldown in ms for a skill, applying ability haste reduction.
+ * Formula: effectiveCD = baseCD × (1 - abilityHaste)
+ */
+export function getEffectiveCooldown(skillId: string): number {
+  const skill = skillsRegistry[skillId];
+  const lvl = gameState.skills.levels[skillId] ?? 1;
+  const baseCD = skill?.getCooldown?.(lvl) ?? 3000;
+  const haste = Math.min(gameState.abilityHaste, 0.75); // cap at 75%
+  return Math.max(100, Math.round(baseCD * (1 - haste)));
+}
+
 export const skillsRegistry: Record<string, Skill> = {};
 
 export function registerSkill(skill: Skill) {
@@ -52,7 +64,7 @@ export function updateChargeRegen(skillId: string) {
   // Se não há timer ativo, não regenera
   if (regenStartTime === 0) return;
 
-  const cd = skill.getCooldown?.(lvl) ?? 3000;
+  const cd = getEffectiveCooldown(skillId);
 
   // Verifica se passou tempo suficiente para regenerar uma carga
   if (now() - regenStartTime >= cd) {
@@ -99,8 +111,7 @@ export function canUse(skillId: string): boolean {
 
   // Skill normal (sem cargas)
   const last = gameState.skills.lastUsedAt[skillId] ?? 0;
-  const lvl = gameState.skills.levels[skillId] ?? 1;
-  const cd = skill?.getCooldown?.(lvl) ?? 3000;
+  const cd = getEffectiveCooldown(skillId);
   return now() - last >= cd;
 }
 

@@ -25,6 +25,7 @@ export {
   initCharges,
   updateChargeRegen,
   getCharges,
+  getEffectiveCooldown,
 } from "./skills/registry";
 
 // Import skill modules after exports to avoid TDZ on skillsRegistry
@@ -37,5 +38,7 @@ import "./skills/boomerangBolt";
 import "./skills/chainLightning";
 import "./skills/markedShot";
 import "./skills/orbitalOrbs";
+import "./skills/poisonPool";
+import "./skills/summonedTotem";
 
 export {};

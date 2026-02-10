@@ -4,6 +4,18 @@ import type { UIHandles } from "./ui";
 
 function costForLevel(n: number) { return 5 + (n - 1) * (n - 1) + n; }
 
+function makeStats() {
+  return {
+    moveSpeed: gameState.moveSpeed,
+    maxHealth: gameState.maxHealth,
+    reloadSpeed: gameState.reloadSpeed,
+    luck: gameState.luck,
+    gold: gameState.gold,
+    projectileSpeed: gameState.projectileSpeed,
+    abilityHaste: gameState.abilityHaste,
+  };
+}
+
 export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
   // Apply debug initial values
   if (typeof gameState.gold === "number") ui.updateGold(gameState.gold);
@@ -37,70 +49,40 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       if (!spendAndLevel("moveSpeed")) return;
       gameState.moveSpeed += 20;
       (player as any).speed = gameState.moveSpeed;
-      ui.refreshShopStats({
-        moveSpeed: gameState.moveSpeed,
-        maxHealth: gameState.maxHealth,
-        reloadSpeed: gameState.reloadSpeed,
-        luck: gameState.luck,
-        gold: gameState.gold,
-        projectileSpeed: gameState.projectileSpeed,
-      });
+      ui.refreshShopStats(makeStats());
     },
     onHealth: () => {
       if (!canUpgrade("maxHealth")) return;
       if (!spendAndLevel("maxHealth")) return;
-      gameState.maxHealth += 1;
-      (player as any).hp = Math.min((player as any).hp + 1, gameState.maxHealth);
+      gameState.maxHealth += 100;
+      (player as any).hp = Math.min((player as any).hp + 100, gameState.maxHealth);
       ui.updateHearts((player as any).hp);
-      ui.refreshShopStats({
-        moveSpeed: gameState.moveSpeed,
-        maxHealth: gameState.maxHealth,
-        reloadSpeed: gameState.reloadSpeed,
-        luck: gameState.luck,
-        gold: gameState.gold,
-        projectileSpeed: gameState.projectileSpeed,
-      });
+      ui.refreshShopStats(makeStats());
     },
     onReload: () => {
       if (!canUpgrade("reloadSpeed")) return;
       if (!spendAndLevel("reloadSpeed")) return;
       // Treat reloadSpeed as reload time (seconds). Upgrading should increase rate by reducing time multiplicatively.
       gameState.reloadSpeed = Math.max(0.1, Number((gameState.reloadSpeed * 0.9).toFixed(3)));
-      ui.refreshShopStats({
-        moveSpeed: gameState.moveSpeed,
-        maxHealth: gameState.maxHealth,
-        reloadSpeed: gameState.reloadSpeed,
-        luck: gameState.luck,
-        gold: gameState.gold,
-        projectileSpeed: gameState.projectileSpeed,
-      });
+      ui.refreshShopStats(makeStats());
     },
     onLuck: () => {
       if (!canUpgrade("luck")) return;
       if (!spendAndLevel("luck")) return;
       gameState.luck = Number((gameState.luck + 0.1).toFixed(2));
-      ui.refreshShopStats({
-        moveSpeed: gameState.moveSpeed,
-        maxHealth: gameState.maxHealth,
-        reloadSpeed: gameState.reloadSpeed,
-        luck: gameState.luck,
-        gold: gameState.gold,
-        projectileSpeed: gameState.projectileSpeed,
-      });
+      ui.refreshShopStats(makeStats());
     },
     onProjectile: () => {
       if (!canUpgrade("projectileSpeed")) return;
       if (!spendAndLevel("projectileSpeed")) return;
       gameState.projectileSpeed += 40;
-      // if your shoot component needs update, expose a setter or recreate it
-      ui.refreshShopStats({
-        moveSpeed: gameState.moveSpeed,
-        maxHealth: gameState.maxHealth,
-        reloadSpeed: gameState.reloadSpeed,
-        luck: gameState.luck,
-        gold: gameState.gold,
-        projectileSpeed: gameState.projectileSpeed,
-      });
+      ui.refreshShopStats(makeStats());
+    },
+    onAbilityHaste: () => {
+      if (!canUpgrade("abilityHaste")) return;
+      if (!spendAndLevel("abilityHaste")) return;
+      gameState.abilityHaste = Number((gameState.abilityHaste + 0.05).toFixed(2)); // +5% per level
+      ui.refreshShopStats(makeStats());
     },
   });
 
@@ -110,26 +92,12 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     if (gameState.gold < cost) return;
     if ((player as any).hp >= gameState.maxHealth) return;
     gameState.gold -= cost;
-    (player as any).hp = Math.min((player as any).hp + 1, gameState.maxHealth);
+    (player as any).hp = Math.min((player as any).hp + 100, gameState.maxHealth);
     ui.updateHearts((player as any).hp);
     ui.updateGold(gameState.gold);
-    ui.refreshShopStats({
-      moveSpeed: gameState.moveSpeed,
-      maxHealth: gameState.maxHealth,
-      reloadSpeed: gameState.reloadSpeed,
-      luck: gameState.luck,
-      gold: gameState.gold,
-      projectileSpeed: gameState.projectileSpeed,
-    });
+    ui.refreshShopStats(makeStats());
   });
 
   // Initial refresh
-  ui.refreshShopStats({
-    moveSpeed: gameState.moveSpeed,
-    maxHealth: gameState.maxHealth,
-    reloadSpeed: gameState.reloadSpeed,
-    luck: gameState.luck,
-    gold: gameState.gold,
-    projectileSpeed: gameState.projectileSpeed,
-  });
+  ui.refreshShopStats(makeStats());
 }

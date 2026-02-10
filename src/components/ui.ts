@@ -1,5 +1,5 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
-import { skillsRegistry, updateChargeRegen, getCharges } from "./skills";
+import { skillsRegistry, updateChargeRegen, getCharges, getEffectiveCooldown } from "./skills";
 import { gameState } from "../state/gameState";
 import { createTopBar } from "./ui/topBar";
 import { createShopPanel } from "./ui/shopPanel";
@@ -20,6 +20,7 @@ export type UIHandles = {
     onReload: () => void;
     onLuck: () => void;
     onProjectile?: () => void;
+    onAbilityHaste?: () => void;
   }) => void;
   setQuickHealHandler: (handler: () => void) => void;
   refreshShopStats: (stats: {
@@ -29,6 +30,7 @@ export type UIHandles = {
     luck: number;
     gold: number;
     projectileSpeed?: number;
+    abilityHaste?: number;
   }) => void;
 };
 
@@ -284,7 +286,7 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
       skillKey.hidden = false;
       const skill = skillsRegistry[skillId];
       const lvl = gameState.skills.levels[skillId] ?? 1;
-      const cd = skill.getCooldown ? skill.getCooldown(lvl) : 3000;
+      const cd = getEffectiveCooldown(skillId);
 
       // Skill com cargas
       if (skill.getMaxCharges) {

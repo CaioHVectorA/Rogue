@@ -16,6 +16,7 @@ export type GameState = {
   maxHealth: number;
   cooldown: number;
   luck: number;
+  abilityHaste: number; // % cooldown reduction (0.0 = 0%, 0.5 = 50%)
   wave: number;
   gold: number;
   xp: number;
@@ -54,15 +55,16 @@ export const gameState: GameState = {
   moveSpeed: 360,
   reloadSpeed: 5,
   reloadMovePenalty: 0.5,
-  maxHealth: 5,
+  maxHealth: 500,
   cooldown: 0,
   luck: 1.0,
+  abilityHaste: 0.0,
   wave: debug.INITIAL_WAVE ?? 1,
   gold: debug.INITIAL_GOLD ?? 0,
   xp: debug.INITIAL_XP ?? 0,
   level: debug.INITIAL_LEVEL ?? 1,
   xpToLevel: xpRequiredFor(debug.INITIAL_LEVEL ?? 1),
-  playerHealth: 5,
+  playerHealth: 500,
   enemyDamageCooldownMs: 1000,
   waves,
   projectileSpeed: 560,

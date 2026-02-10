@@ -1,7 +1,17 @@
 # Saúde e Dano
 
 ## Visão Geral
-O jogador possui corações (HP) com um máximo configurável. Inimigos e projéteis inimigos causam dano ao colidir com o player. Existe um cooldown por inimigo para evitar dano contínuo por frame.
+O jogador possui HP numérico com um máximo configurável, exibido em uma barra de vida moderna com feedback visual dinâmico. Inimigos e projéteis inimigos causam dano ao colidir com o player. Existe um cooldown por inimigo para evitar dano contínuo por frame.
+
+## Barra de Vida (HP Bar)
+- **Design:** Barra horizontal com fundo escuro, preenchimento colorido, glow overlay e texto numérico centralizado ("HP / MaxHP").
+- **Cores dinâmicas:**
+  - Verde (> 60% HP)
+  - Amarelo (35% ~ 60%)
+  - Laranja (15% ~ 35%)
+  - Vermelho (< 15%)
+- **Flash de dano:** Ao receber dano, o fundo da barra pisca vermelho por 0.15s.
+- **Ícone:** Coração ❤ ao lado da barra.
 
 ## Fluxo de Dano
 1. Ao colidir `player` com `enemy`:
@@ -9,7 +19,7 @@ O jogador possui corações (HP) com um máximo configurável. Inimigos e projé
    - Se liberado, aplica `dmg` (do preset do inimigo) ao `player.hp`.
 2. Ao colidir `player` com `enemy-bullet`:
    - Destrói a bala e aplica 1 de dano.
-3. Atualiza a UI de corações (`updateHearts`).
+3. Atualiza a barra de HP (`updateHearts`).
 4. Se `hp <= 0`, executa kaboom e estado de morte simples.
 
 ## Health Máximo e Cura
@@ -25,3 +35,4 @@ O jogador possui corações (HP) com um máximo configurável. Inimigos e projé
 - Main: `src/main.ts` – handlers de colisão e atualização da UI.
 - Loja: `src/components/shop.ts` – upgrades e quick heal.
 - Player: `src/components/player.ts` – inicializa `hp`.
+- Top Bar: `src/components/ui/topBar.ts` – barra de HP moderna.

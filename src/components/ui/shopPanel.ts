@@ -3,8 +3,8 @@ import { gameState } from "../../state/gameState";
 
 export type ShopPanelHandles = {
   setVisible: (visible: boolean) => void,
-  refreshStats: (stats: { moveSpeed: number, maxHealth: number, reloadSpeed: number, luck: number, gold: number, projectileSpeed?: number }) => void,
-  setUpgradeHandlers: (handlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void }) => void,
+  refreshStats: (stats: { moveSpeed: number, maxHealth: number, reloadSpeed: number, luck: number, gold: number, projectileSpeed?: number, abilityHaste?: number }) => void,
+  setUpgradeHandlers: (handlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void, onAbilityHaste?: () => void }) => void,
   setQuickHealHandler: (handler: () => void) => void,
   toggle: () => void,
 };
@@ -52,16 +52,23 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const btnProj = k.add([k.rect(160, 44), k.pos(shopPanel.pos.x + panelW - 180, baseY + rowGap * 4 - 6), k.color(80, 80, 200), k.outline(3), k.area(), k.fixed(), k.z(1007), { id: "ui-up-proj" }]);
   const btnProjText = k.add([k.text("Aprimorar", { size: 22 }), k.pos(btnProj.pos.x + 20, btnProj.pos.y + 6), k.color(255, 255, 255), k.fixed(), k.z(1008), { id: "ui-up-proj-text" }]);
 
+  // Ability Haste row
+  const lvHasteLbl = k.add([k.text("0", { size: 22 }), k.pos(shopPanel.pos.x + 8, baseY + rowGap * 5 + 6), k.color(labelColor), k.fixed(), k.z(1006), { id: "ui-lv-haste" }]);
+  const iconHaste = k.add([k.text("⏱", { size: 36 }), k.pos(shopPanel.pos.x + 40, baseY + rowGap * 5), k.color(k.rgb(100, 200, 255)), k.fixed(), k.z(1006), { id: "ui-icon-haste" }]);
+  const statHaste = k.add([k.text("0", { size: 22 }), k.pos(shopPanel.pos.x + 90, baseY + rowGap * 5 + 4), k.color(labelColor), k.fixed(), k.z(1006), { id: "ui-shop-haste" }]);
+  const btnHaste = k.add([k.rect(160, 44), k.pos(shopPanel.pos.x + panelW - 180, baseY + rowGap * 5 - 6), k.color(40, 140, 200), k.outline(3), k.area(), k.fixed(), k.z(1007), { id: "ui-up-haste" }]);
+  const btnHasteText = k.add([k.text("Aprimorar", { size: 22 }), k.pos(btnHaste.pos.x + 20, btnHaste.pos.y + 6), k.color(255, 255, 255), k.fixed(), k.z(1008), { id: "ui-up-haste-text" }]);
+
   const statGold = k.add([k.text("⎔ 0", { size: 22 }), k.pos(shopPanel.pos.x + 20, shopPanel.pos.y + panelH - 48), k.color(k.rgb(255, 215, 0)), k.fixed(), k.z(1006), { id: "ui-shop-gold" }]);
 
   const quickBtn = k.add([k.rect(220, 44), k.pos(shopPanel.pos.x + panelW - 240, shopPanel.pos.y + panelH - 60), k.color(200, 160, 40), k.outline(3), k.area(), k.fixed(), k.z(1007), { id: "ui-quick-heal" }]);
-  const quickBtnText = k.add([k.text("❤ Curar (20)", { size: 22 }), k.pos(quickBtn.pos.x + 24, quickBtn.pos.y + 6), k.color(255, 255, 255), k.fixed(), k.z(1008), { id: "ui-quick-heal-text" }]);
+  const quickBtnText = k.add([k.text("❤ Curar 100HP (20)", { size: 22 }), k.pos(quickBtn.pos.x + 24, quickBtn.pos.y + 6), k.color(255, 255, 255), k.fixed(), k.z(1008), { id: "ui-quick-heal-text" }]);
 
-  let upgradeHandlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void } | null = null;
+  let upgradeHandlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void, onAbilityHaste?: () => void } | null = null;
   let quickHealHandler: (() => void) | null = null;
 
   const setVisible = (visible: boolean) => {
-    const all = [shopPanel, title, closeBtn, closeTxt, subtitle, lvMoveLbl, iconMove, statMove, btnMove, btnMoveText, lvHPLbl, iconHP, statHP, btnHP, btnHPText, lvRelLbl, iconRel, statRel, btnRel, btnRelText, lvLuckLbl, iconLuck, statLuck, btnLuck, btnLuckText, lvProjLbl, iconProj, statProj, btnProj, btnProjText, statGold, quickBtn, quickBtnText];
+    const all = [shopPanel, title, closeBtn, closeTxt, subtitle, lvMoveLbl, iconMove, statMove, btnMove, btnMoveText, lvHPLbl, iconHP, statHP, btnHP, btnHPText, lvRelLbl, iconRel, statRel, btnRel, btnRelText, lvLuckLbl, iconLuck, statLuck, btnLuck, btnLuckText, lvProjLbl, iconProj, statProj, btnProj, btnProjText, lvHasteLbl, iconHaste, statHaste, btnHaste, btnHasteText, statGold, quickBtn, quickBtnText];
     for (const obj of all) obj.hidden = !visible;
   };
   setVisible(false);
@@ -72,6 +79,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   btnRel.onClick(() => { if (upgradeHandlers) upgradeHandlers.onReload(); });
   btnLuck.onClick(() => { if (upgradeHandlers) upgradeHandlers.onLuck(); });
   btnProj.onClick(() => { if (upgradeHandlers?.onProjectile) upgradeHandlers.onProjectile(); });
+  btnHaste.onClick(() => { if (upgradeHandlers?.onAbilityHaste) upgradeHandlers.onAbilityHaste(); });
   quickBtn.onClick(() => { if (quickHealHandler) quickHealHandler(); });
 
   const costForLevel = (n: number) => 5 + (n - 1) * (n - 1) + n;
@@ -84,18 +92,20 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     (btn as any).color = base;
   };
 
-  const refreshStats = (stats: { moveSpeed: number, maxHealth: number, reloadSpeed: number, luck: number, gold: number, projectileSpeed?: number }) => {
-    const ups = gameState.upgrades ?? { moveSpeed: 0, maxHealth: 0, reloadSpeed: 0, luck: 0, projectileSpeed: 0, chosenCount: 0 };
+  const refreshStats = (stats: { moveSpeed: number, maxHealth: number, reloadSpeed: number, luck: number, gold: number, projectileSpeed?: number, abilityHaste?: number }) => {
+    const ups = gameState.upgrades ?? { moveSpeed: 0, maxHealth: 0, reloadSpeed: 0, luck: 0, projectileSpeed: 0, abilityHaste: 0, chosenCount: 0 };
     const lvMove = ups.moveSpeed;
     const lvHP = ups.maxHealth;
     const lvRel = ups.reloadSpeed;
     const lvLuck = ups.luck;
     const lvProj = ups.projectileSpeed ?? 0;
+    const lvHaste = ups.abilityHaste ?? 0;
     const costMove = costForLevel(lvMove + 1);
     const costHP = costForLevel(lvHP + 1);
     const costRel = costForLevel(lvRel + 1);
     const costLuck = costForLevel(lvLuck + 1);
     const costProj = costForLevel(lvProj + 1);
+    const costHaste = costForLevel(lvHaste + 1);
     (statMove as any).text = `${costMove}`;
     (lvMoveLbl as any).text = `${lvMove}`;
     (statHP as any).text = `${costHP}`;
@@ -106,22 +116,26 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     (lvLuckLbl as any).text = `${lvLuck}`;
     (statProj as any).text = `${costProj}`;
     (lvProjLbl as any).text = `${lvProj}`;
+    (statHaste as any).text = `${costHaste}`;
+    (lvHasteLbl as any).text = `${lvHaste}`;
     (statGold as any).text = `⎔ ${stats.gold}`;
     const canMove = stats.gold >= costMove && lvMove < 10 && (lvMove > 0 || (ups.chosenCount ?? 0) < 3);
     const canHP = stats.gold >= costHP && lvHP < 10 && (lvHP > 0 || (ups.chosenCount ?? 0) < 3);
     const canRel = stats.gold >= costRel && lvRel < 10 && (lvRel > 0 || (ups.chosenCount ?? 0) < 3);
     const canLuck = stats.gold >= costLuck && lvLuck < 10 && (lvLuck > 0 || (ups.chosenCount ?? 0) < 3);
     const canProj = stats.gold >= costProj && lvProj < 10 && (lvProj > 0 || (ups.chosenCount ?? 0) < 3);
+    const canHaste = stats.gold >= costHaste && lvHaste < 10 && (lvHaste > 0 || (ups.chosenCount ?? 0) < 3);
     setButtonEnabled(btnMove, btnMoveText, canMove);
     setButtonEnabled(btnHP, btnHPText, canHP);
     setButtonEnabled(btnRel, btnRelText, canRel);
     setButtonEnabled(btnLuck, btnLuckText, canLuck);
     setButtonEnabled(btnProj, btnProjText, canProj);
+    setButtonEnabled(btnHaste, btnHasteText, canHaste);
     const healCost = 20;
     setButtonEnabled(quickBtn, quickBtnText, stats.gold >= healCost);
   };
 
-  const setUpgradeHandlers = (handlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void }) => { upgradeHandlers = handlers; };
+  const setUpgradeHandlers = (handlers: { onMoveSpeed: () => void, onHealth: () => void, onReload: () => void, onLuck: () => void, onProjectile?: () => void, onAbilityHaste?: () => void }) => { upgradeHandlers = handlers; };
   const setQuickHealHandler = (handler: () => void) => { quickHealHandler = handler; };
   const toggle = () => setVisible(shopPanel.hidden);
 

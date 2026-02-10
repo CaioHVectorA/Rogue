@@ -8,7 +8,7 @@ export const ENEMY_PRESETS = {
     color: [255, 60, 60] as [number, number, number],
     speed: 120,
     hp: 3,
-    damage: 1,
+    damage: 40,
   },
   blue: {
     name: "barrublu",
@@ -16,7 +16,7 @@ export const ENEMY_PRESETS = {
     color: [60, 120, 255] as [number, number, number],
     speed: 80,
     hp: 6,
-    damage: 1,
+    damage: 80,
   },
   yellow: {
     name: "Amarilo",
@@ -24,7 +24,7 @@ export const ENEMY_PRESETS = {
     color: [240, 200, 40] as [number, number, number],
     speed: 150,
     hp: 3,
-    damage: 1,
+    damage: 30,
   },
   green: {
     name: "Verdu",
@@ -32,7 +32,7 @@ export const ENEMY_PRESETS = {
     color: [60, 200, 100] as [number, number, number],
     speed: 110,
     hp: 4,
-    damage: 1,
+    damage: 50,
   },
   stone: {
     name: "Pedrão",
@@ -40,7 +40,7 @@ export const ENEMY_PRESETS = {
     color: [140, 110, 80] as [number, number, number],
     speed: 35,
     hp: 20,
-    damage: 1,
+    damage: 60,
   },
 };
 export type Enemies = keyof typeof ENEMY_PRESETS;
@@ -121,7 +121,7 @@ export function spawnGreen(
   // single collision handler for enemy bullets
   k.onCollide("player", "enemy-bullet", (pl: any, bb: any) => {
     bb.destroy();
-    (pl as any).hp = Math.max(0, (pl as any).hp - 1);
+    (pl as any).hp = Math.max(0, (pl as any).hp - 30);
   });
 
   e.onUpdate(() => {
