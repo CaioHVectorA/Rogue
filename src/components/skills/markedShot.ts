@@ -3,16 +3,46 @@ import { registerSkill, addImpactFlash } from "./registry";
 import { gameState } from "../../state/gameState";
 
 const MARKED_CONFIG = {
-  baseDuration: 8000,        // 8 segundos
-  durationPerLevel: 500,     // +0.5s por level
-  marksToExplode: 5,         // marcas necessárias para explodir
-  explosionDamage: 3,        // dano da explosão
-  explosionRadius: 150,      // raio da explosão
-  explosionMarksApplied: 2,  // marcas aplicadas aos inimigos atingidos pela explosão
+  baseDuration: 8000, // 8s base
+  durationPerLevel: 1000, // +1s por level
+  baseDamage: 3, // dano base da explosão
+  damagePerLevel: 1, // +1 por level
+  baseRadius: 150, // raio base da explosão
+  radiusPerLevel: 15, // +15 por level
+  baseMarksToExplode: 5, // marcas necessárias base
+  marksReduceAtLevel: 4, // nível em que reduz pra 4 marcas
+  baseExplosionMarks: 2, // marcas aplicadas pela explosão base
+  extraMarksAtLevel: 4, // nível em que sobe pra 3 marcas na explosão
 } as const;
 
+function getLevel(): number {
+  return gameState.skills.levels["marked-shot"] ?? 1;
+}
+
 function getDuration(level: number): number {
-  return MARKED_CONFIG.baseDuration + (level - 1) * MARKED_CONFIG.durationPerLevel;
+  return (
+    MARKED_CONFIG.baseDuration + (level - 1) * MARKED_CONFIG.durationPerLevel
+  );
+}
+
+function getExplosionDamage(level: number): number {
+  return MARKED_CONFIG.baseDamage + (level - 1) * MARKED_CONFIG.damagePerLevel;
+}
+
+function getExplosionRadius(level: number): number {
+  return MARKED_CONFIG.baseRadius + (level - 1) * MARKED_CONFIG.radiusPerLevel;
+}
+
+export function getMarksToExplode(level: number): number {
+  return level >= MARKED_CONFIG.marksReduceAtLevel
+    ? MARKED_CONFIG.baseMarksToExplode - 1
+    : MARKED_CONFIG.baseMarksToExplode;
+}
+
+function getExplosionMarks(level: number): number {
+  return level >= MARKED_CONFIG.extraMarksAtLevel
+    ? MARKED_CONFIG.baseExplosionMarks + 1
+    : MARKED_CONFIG.baseExplosionMarks;
 }
 
 /**
@@ -33,7 +63,7 @@ export function addMark(k: KAPLAYCtx, enemy: GameObj): void {
   });
 
   // Se atingiu o limite, explode
-  if (e.marks >= MARKED_CONFIG.marksToExplode) {
+  if (e.marks >= getMarksToExplode(getLevel())) {
     triggerMarkExplosion(k, enemy);
   }
 }
@@ -45,7 +75,11 @@ export function addMark(k: KAPLAYCtx, enemy: GameObj): void {
  * - Aplica 2 marcas nos inimigos atingidos
  */
 function triggerMarkExplosion(k: KAPLAYCtx, source: GameObj): void {
-  const { explosionDamage, explosionRadius, explosionMarksApplied } = MARKED_CONFIG;
+  const level = getLevel();
+  const explosionDamage = getExplosionDamage(level);
+  const explosionRadius = getExplosionRadius(level);
+  const explosionMarksApplied = getExplosionMarks(level);
+  const marksToExplode = getMarksToExplode(level);
   const sourceEnemy = source as any;
 
   // Reseta marcas do inimigo que explodiu
@@ -116,7 +150,7 @@ function triggerMarkExplosion(k: KAPLAYCtx, source: GameObj): void {
         e.marks += explosionMarksApplied;
         e.marksDecayTimer = 0; // Reseta timer de expiração
         // Se o inimigo atingido também chegou em 5, explode em cadeia
-        if (e.marks >= MARKED_CONFIG.marksToExplode) {
+        if (e.marks >= marksToExplode) {
           // Pequeno delay para não ser tudo no mesmo frame
           k.wait(0.08, () => {
             if (enemy.exists()) {

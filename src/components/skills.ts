@@ -36,5 +36,6 @@ import "./skills/attackBuff";
 import "./skills/boomerangBolt";
 import "./skills/chainLightning";
 import "./skills/markedShot";
+import "./skills/orbitalOrbs";
 
 export {};

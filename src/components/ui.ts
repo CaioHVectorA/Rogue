@@ -86,7 +86,10 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
   // ===========================================
   const msBarBg = k.add([
     k.rect(buffBarWidth, buffBarHeight, { radius: 4 }),
-    k.pos(k.width() - buffBarWidth - buffBarMargin, buffBarMargin + 40 + buffBarHeight + 8),
+    k.pos(
+      k.width() - buffBarWidth - buffBarMargin,
+      buffBarMargin + 40 + buffBarHeight + 8,
+    ),
     k.color(30, 30, 35),
     k.outline(2, k.rgb(100, 100, 100)),
     k.fixed(),

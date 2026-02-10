@@ -5,7 +5,7 @@ import { createEnemy } from "./components/enemy";
 import { setupUI } from "./components/ui";
 import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
-import { useSkill } from "./components/skills";
+import { useSkill, initCharges } from "./components/skills";
 // Register skills
 import "./components/skills/coneShot";
 import "./components/skills/ricochetShot";
@@ -19,6 +19,7 @@ import "./components/skills/markedShot";
 import "./components/skills/orbitalOrbs";
 import "./components/skills/attackBuff";
 import { skillsName } from "./state/skillData";
+import { spawnOrbs } from "./components/skills/orbitalOrbs";
 
 const k = kaplay();
 
@@ -141,7 +142,17 @@ k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
 });
 
 // Remove forcing empty skill; rely on UI overlay gating
-gameState.skills.skill1 = "marked-shot" satisfies skillsName | "";
+gameState.skills.skill1 = gameState.skills.skill1 || ("" as skillsName | "");
+
+// Auto-spawn orbital orbs se a skill está equipada
+if (gameState.skills.skill1 === "orbital-orbs") {
+  spawnOrbs(k, player);
+}
+
+// Inicializa cargas da skill equipada (se tiver sistema de cargas)
+if (gameState.skills.skill1) {
+  initCharges(gameState.skills.skill1);
+}
 
 k.onKeyPress("q", () => {
   const id = gameState.skills.skill1;

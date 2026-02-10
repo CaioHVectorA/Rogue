@@ -4,6 +4,7 @@ export type WaveEntry = { type: Enemies; count: number };
 export const waves: WaveEntry[][] = [
   [
     { type: "stone", count: 3 },
+    { type: "stone", count: 12 },
   ],
   [
     { type: "red", count: 6 },
