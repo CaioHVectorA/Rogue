@@ -81,12 +81,57 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
   let buffTotalDuration = 0;
   let buffStartTime = 0;
 
+  // ===========================================
+  // Barra de buff do Marked Shot (abaixo da barra de attack buff)
+  // ===========================================
+  const msBarBg = k.add([
+    k.rect(buffBarWidth, buffBarHeight, { radius: 4 }),
+    k.pos(k.width() - buffBarWidth - buffBarMargin, buffBarMargin + 40 + buffBarHeight + 8),
+    k.color(30, 30, 35),
+    k.outline(2, k.rgb(100, 100, 100)),
+    k.fixed(),
+    k.z(1300),
+    { id: "ui-ms-bar-bg" },
+  ]);
+
+  const msBarFill = k.add([
+    k.rect(buffBarWidth - 4, buffBarHeight - 4, { radius: 2 }),
+    k.pos(msBarBg.pos.x + 2, msBarBg.pos.y + 2),
+    k.color(255, 100, 120),
+    k.fixed(),
+    k.z(1301),
+    { id: "ui-ms-bar-fill" },
+  ]);
+
+  const msBarLabel = k.add([
+    k.text("🎯", { size: 14 }),
+    k.pos(msBarBg.pos.x - 20, msBarBg.pos.y),
+    k.color(255, 100, 120),
+    k.fixed(),
+    k.z(1302),
+    { id: "ui-ms-bar-label" },
+  ]);
+
+  // Inicialmente escondido
+  msBarBg.hidden = true;
+  msBarFill.hidden = true;
+  msBarLabel.hidden = true;
+
+  let msTotalDuration = 0;
+  let msStartTime = 0;
+
   const positionBuffBar = () => {
     const x = k.width() - buffBarWidth - buffBarMargin;
     const y = buffBarMargin + 40;
     buffBarBg.pos = k.vec2(x, y);
     buffBarFill.pos = k.vec2(x + 2, y + 2);
     buffBarLabel.pos = k.vec2(x - 20, y);
+
+    // Marked Shot bar: logo abaixo da barra de attack buff
+    const msY = y + buffBarHeight + 8;
+    msBarBg.pos = k.vec2(x, msY);
+    msBarFill.pos = k.vec2(x + 2, msY + 2);
+    msBarLabel.pos = k.vec2(x - 20, msY);
   };
   k.onResize(positionBuffBar);
   positionBuffBar();
@@ -179,6 +224,47 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
       buffBarLabel.hidden = true;
       buffStartTime = 0;
       buffTotalDuration = 0;
+    }
+
+    // ===========================================
+    // Atualização da barra de Marked Shot
+    // ===========================================
+    const msActive = gameState.buffs.markedShot.activeUntil > now;
+
+    if (msActive) {
+      msBarBg.hidden = false;
+      msBarFill.hidden = false;
+      msBarLabel.hidden = false;
+
+      // Detectar início de novo buff
+      if (
+        msStartTime === 0 ||
+        gameState.buffs.markedShot.activeUntil !== msStartTime + msTotalDuration
+      ) {
+        msStartTime = now;
+        msTotalDuration = gameState.buffs.markedShot.activeUntil - now;
+      }
+
+      // Calcular progresso restante
+      const msRemaining = gameState.buffs.markedShot.activeUntil - now;
+      const msRatio = Math.max(0, msRemaining / msTotalDuration);
+      const msFillWidth = (buffBarWidth - 4) * msRatio;
+      (msBarFill as any).width = Math.max(0, msFillWidth);
+
+      // Cor: rosa → laranja → vermelho
+      if (msRatio > 0.5) {
+        msBarFill.color = k.rgb(255, 100, 120);
+      } else if (msRatio > 0.2) {
+        msBarFill.color = k.rgb(255, 80, 80);
+      } else {
+        msBarFill.color = k.rgb(200, 40, 40);
+      }
+    } else {
+      msBarBg.hidden = true;
+      msBarFill.hidden = true;
+      msBarLabel.hidden = true;
+      msStartTime = 0;
+      msTotalDuration = 0;
     }
 
     // ===========================================

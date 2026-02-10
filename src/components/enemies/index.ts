@@ -6,6 +6,7 @@ export const ENEMY_PRESETS = {
     blue: { name: "barrublu", size: 40, color: [60, 120, 255] as [number, number, number], speed: 80, hp: 6, damage: 1 },
     yellow: { name: "Amarilo", size: 28, color: [240, 200, 40] as [number, number, number], speed: 150, hp: 3, damage: 1 },
     green: { name: "Verdu", size: 30, color: [60, 200, 100] as [number, number, number], speed: 110, hp: 4, damage: 1 },
+    stone: { name: "Pedrão", size: 44, color: [140, 110, 80] as [number, number, number], speed: 35, hp: 20, damage: 1 },
 };
 export type Enemies = keyof typeof ENEMY_PRESETS;
 export function spawnRed(k: KAPLAYCtx, target: GameObj, arena: { x: number, y: number, w: number, h: number }) {
@@ -56,4 +57,9 @@ export function spawnGreen(k: KAPLAYCtx, target: GameObj, arena: { x: number, y:
         }
     });
     return e;
+}
+
+export function spawnStone(k: KAPLAYCtx, target: GameObj, arena: { x: number, y: number, w: number, h: number }) {
+    const p = ENEMY_PRESETS.stone;
+    return commonEnemy(k, { target, arenaBounds: arena, size: p.size, color: p.color, speed: p.speed, hp: p.hp, damage: p.damage, type: "stone" });
 }

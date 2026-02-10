@@ -1,5 +1,6 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { gameState } from "../state/gameState";
+import { addMark } from "./skills/markedShot";
 
 export type ShootOptions = {
     chargeTime?: number,
@@ -69,6 +70,10 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
                 const damage = baseDamage * gameState.buffs.damageMul;
                 e.hp -= damage;
                 if (e.hp <= 0) e.destroy();
+            }
+            // Adicionar marca se buff do markedShot está ativo
+            if (gameState.buffs.markedShot.active && e.exists()) {
+                addMark(k, e);
             }
             p.destroy();
         });

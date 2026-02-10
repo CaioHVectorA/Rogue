@@ -66,6 +66,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
             name: preset.name,
             hp: maxHP,
             maxHp: maxHP,
+            marks: 0,
+            marksDecayTimer: 0, // tempo desde última marca (reseta ao estacar)
             damage: dmg,
             lastDamageTime: 0,
             defaultSpeed: spd,
@@ -88,7 +90,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
                 }
             },
         },
-    ]) as GameObj & { hp: number; maxHp: number; speed?: number; damage: number; lastDamageTime: number; enemyType: "red" | "blue" };
+    ]) as GameObj & { hp: number; maxHp: number; marks: number; marksDecayTimer: number; speed?: number; damage: number; lastDamageTime: number; enemyType: "red" | "blue" };
 
     // Collide with walls: body handles resolution; add small bounce feedback
     enemy.onCollide("arena-wall", () => {
@@ -139,11 +141,28 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         { id: "hp-border-left" },
     ]);
 
+    // --- Indicadores visuais de marcas (marked shot) ---
+    const MAX_MARKS = 5;
+    const markSize = 4;
+    const markGap = 2;
+    const totalMarksWidth = MAX_MARKS * markSize + (MAX_MARKS - 1) * markGap;
+    const marksStartX = (s - totalMarksWidth) / 2;
+
+    const markDots: GameObj[] = [];
+    for (let i = 0; i < MAX_MARKS; i++) {
+        const dot = enemy.add([
+            k.rect(markSize, markSize),
+            k.pos(marksStartX + i * (markSize + markGap), -markSize - 10),
+            k.color(60, 60, 60),
+            k.z(11),
+            { id: "mark-dot" },
+        ]);
+        dot.hidden = true;
+        markDots.push(dot);
+    }
+
     enemy.onUpdate(() => {
         const ratio = Math.max(0, (enemy as any).hp / (enemy as any).maxHp);
-        // Sentido horário: top(esq→dir) → right(cima→baixo) → bottom(dir→esq) → left(baixo→cima)
-        // A vida se esvazia pela cauda no sentido horário.
-        // Mapeamento: pct=100 = tudo cheio, pct=0 = tudo vazio
         // Sentido horário de preenchimento:
         //   75-100% → top       (esq→dir)  — última a esvaziar
         //   50-75%  → right     (cima→baixo)
@@ -170,6 +189,34 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         {
             const seg = Math.max(0, Math.min(pct, 25)) / 25;
             hpLeft.scale = k.vec2(1, seg * fullLen);
+        }
+
+        // --- Atualizar visual das marcas + expiração ---
+        const e = enemy as any;
+        const currentMarks = e.marks ?? 0;
+
+        // Timer de expiração: se tem marcas, incrementa timer
+        if (currentMarks > 0) {
+            e.marksDecayTimer += k.dt();
+            // Após 3s sem receber nova marca, marcas expiram
+            if (e.marksDecayTimer >= 3) {
+                e.marks = 0;
+                e.marksDecayTimer = 0;
+            }
+        }
+
+        const hasMarks = (e.marks ?? 0) > 0;
+        for (let i = 0; i < MAX_MARKS; i++) {
+            markDots[i].hidden = !hasMarks;
+            if (hasMarks) {
+                if (i < (e.marks ?? 0)) {
+                    // Marca ativa: vermelho/rosa
+                    markDots[i].color = k.rgb(255, 80, 100);
+                } else {
+                    // Marca vazia: cinza escuro
+                    markDots[i].color = k.rgb(60, 60, 60);
+                }
+            }
         }
     });
 

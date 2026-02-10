@@ -43,6 +43,10 @@ export type GameState = {
     damageMul: number; // multiplicador de dano
     reloadSpeedMul: number; // multiplicador de velocidade de recarga
     activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
+    markedShot: {
+      active: boolean;
+      activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
+    };
   };
 };
 
@@ -80,6 +84,10 @@ export const gameState: GameState = {
     damageMul: 1.0,
     reloadSpeedMul: 1.0,
     activeUntil: 0,
+    markedShot: {
+      active: false,
+      activeUntil: 0,
+    },
   },
 };
 
