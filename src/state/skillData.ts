@@ -17,10 +17,10 @@ export const skillInfos = [
   {
     id: "ricochet-shot",
     name: "Ricochete",
-    desc: "Lança um tiro alternativo que acerta um inimigo e ricocheteia em inimigos próximos. Pode ser aprimorado para mais ricochetes.",
-    cooldownMs: 2500,
+    desc: "Lança um projétil que busca o inimigo mais próximo e ricocheteia entre alvos. Cada quique muda de cor e gera um arco visual. +1 quique por nível, com menos perda de dano.",
+    cooldownMs: 2200,
     damage:
-      "TIRO ALTERNATIVO: Dano de Tiro por quique (ricochete = 60% do Dano de Tiro).",
+      "TIRO ALTERNATIVO: Dano de Tiro no primeiro hit, -15~10% por quique conforme nível. 2→6 quiques.",
   },
   {
     id: "cone-shot",
