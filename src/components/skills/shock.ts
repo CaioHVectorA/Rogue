@@ -133,6 +133,7 @@ function triggerElectrocution(k: KAPLAYCtx, enemy: GameObj): void {
 // ===== Visuais =====
 
 function spawnShockFlash(k: KAPLAYCtx, enemy: GameObj): void {
+  if (!enemy.exists()) return;
   const eSize = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
   const cx = enemy.pos.x + eSize.width / 2;
   const cy = enemy.pos.y + eSize.height / 2;
@@ -144,17 +145,17 @@ function spawnShockFlash(k: KAPLAYCtx, enemy: GameObj): void {
     k.color(255, 255, 100),
     k.opacity(0.7),
     k.z(600),
+    k.lifespan(0.2, { fade: 0.15 }),
     { id: "shock-flash", t: 0 },
   ]) as GameObj & { t: number };
   flash.onUpdate(() => {
     flash.t += k.dt();
-    flash.opacity = 0.7 * (1 - flash.t / 0.2);
     flash.scale = k.vec2(1 + flash.t * 4);
-    if (flash.t >= 0.2) flash.destroy();
   });
 }
 
 function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
+  if (!enemy.exists()) return;
   const eSize = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
   const cx = enemy.pos.x + eSize.width / 2;
   const cy = enemy.pos.y + eSize.height / 2;
@@ -169,20 +170,19 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
     k.opacity(0.6),
     k.scale(0.2),
     k.z(800),
+    k.lifespan(0.3, { fade: 0.2 }),
     { id: "shock-burst-ring", t: 0 },
   ]) as GameObj & { t: number };
   ring.onUpdate(() => {
     ring.t += k.dt();
     const p = Math.min(ring.t / 0.3, 1);
     ring.scale = k.vec2(0.2 + p * 1.5);
-    ring.opacity = 0.6 * (1 - p);
-    if (ring.t >= 0.3) ring.destroy();
   });
 
   // Faíscas saindo do inimigo
   for (let i = 0; i < 8; i++) {
     const angle = (Math.PI * 2 * i) / 8 + (Math.random() - 0.5) * 0.4;
-    const speed = 60 + Math.random() * 100;
+    const spd = 60 + Math.random() * 100;
     const spark = k.add([
       k.rect(4 + Math.random() * 4, 2),
       k.pos(cx, cy),
@@ -191,19 +191,16 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
       k.color(255, 255, 140 + Math.random() * 115),
       k.opacity(0.8),
       k.z(801),
+      k.lifespan(0.25, { fade: 0.15 }),
       {
         id: "shock-spark",
-        t: 0,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
       },
-    ]) as GameObj & { t: number; vx: number; vy: number };
+    ]) as GameObj & { vx: number; vy: number };
     spark.onUpdate(() => {
-      spark.t += k.dt();
       spark.pos.x += spark.vx * k.dt();
       spark.pos.y += spark.vy * k.dt();
-      spark.opacity = 0.8 * (1 - spark.t / 0.25);
-      if (spark.t >= 0.25) spark.destroy();
     });
   }
 
@@ -216,6 +213,7 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
     k.outline(2, k.rgb(80, 60, 0)),
     k.opacity(1),
     k.z(850),
+    k.lifespan(1.0, { fade: 0.4 }),
     { id: "shock-label", t: 0 },
   ]) as GameObj & { t: number };
   label.scale = k.vec2(1.4);
@@ -227,10 +225,6 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
     } else {
       label.scale = k.vec2(1);
     }
-    if (label.t > 0.5) {
-      label.opacity = 1 - (label.t - 0.5) / 0.5;
-    }
-    if (label.t >= 1.0) label.destroy();
   });
 }
 
@@ -238,6 +232,7 @@ function spawnElectrocutionBurst(k: KAPLAYCtx, enemy: GameObj): void {
  * Arco elétrico visual entre dois pontos no inimigo.
  */
 function spawnMiniArc(k: KAPLAYCtx, enemy: GameObj): void {
+  if (!enemy.exists()) return;
   const eSize = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
   const cx = enemy.pos.x + eSize.width / 2;
   const cy = enemy.pos.y + eSize.height / 2;
@@ -268,24 +263,21 @@ function spawnMiniArc(k: KAPLAYCtx, enemy: GameObj): void {
     k.outline(1, k.rgb(255, 255, 140)),
     k.opacity(0.7),
     k.z(700),
-    { id: "shock-arc", t: 0, baseMx: midX, baseMy: midY, arcAngle: angle },
+    k.lifespan(0.12, { fade: 0.08 }),
+    { id: "shock-arc", baseMx: midX, baseMy: midY, arcAngle: angle },
   ]) as GameObj & {
-    t: number;
     baseMx: number;
     baseMy: number;
     arcAngle: number;
   };
 
   arc.onUpdate(() => {
-    arc.t += k.dt();
     // Shake perpendicular
-    const shake = (1 - arc.t / 0.12) * 4;
+    const shake = 4;
     const perpX = -Math.sin(arc.arcAngle) * (Math.random() - 0.5) * 2 * shake;
     const perpY = Math.cos(arc.arcAngle) * (Math.random() - 0.5) * 2 * shake;
     arc.pos.x = arc.baseMx + perpX;
     arc.pos.y = arc.baseMy + perpY;
-    arc.opacity = 0.7 * (1 - arc.t / 0.12);
-    if (arc.t >= 0.12) arc.destroy();
   });
 }
 
@@ -294,6 +286,7 @@ function spawnShockDamageNumber(
   enemy: GameObj,
   dmg: number,
 ): void {
+  if (!enemy.exists()) return;
   const eSize = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
   const cx = enemy.pos.x + eSize.width / 2;
   const cy = enemy.pos.y;
@@ -304,15 +297,14 @@ function spawnShockDamageNumber(
     k.anchor("center"),
     k.color(255, 255, 100),
     k.outline(1, k.rgb(80, 60, 0)),
+    k.opacity(1),
     k.z(700),
+    k.lifespan(0.7, { fade: 0.3 }),
     { id: "shock-dmg-number", t: 0 },
   ]) as GameObj & { t: number };
 
   label.onUpdate(() => {
-    label.t += k.dt();
     label.pos.y -= 35 * k.dt();
-    label.opacity = 1 - label.t / 0.7;
-    if (label.t >= 0.7) label.destroy();
   });
 }
 
@@ -367,6 +359,14 @@ function initShockSystem(k: KAPLAYCtx, enemy: GameObj): void {
   let counter: GameObj | null = null;
   let arcTimer = 0;
   let savedPos: { x: number; y: number } | null = null;
+
+  // Limpa counter visual quando inimigo é destruído
+  enemy.onDestroy(() => {
+    if (counter && counter.exists()) {
+      counter.destroy();
+      counter = null;
+    }
+  });
 
   enemy.onUpdate(() => {
     if (!enemy.exists()) return;
@@ -430,6 +430,14 @@ function initShockSystem(k: KAPLAYCtx, enemy: GameObj): void {
           yellow: [240, 200, 40],
           green: [60, 200, 100],
           stone: [140, 110, 80],
+          purple: [180, 60, 220],
+          smart: [240, 200, 40],
+          red_elite: [255, 30, 30],
+          blue_elite: [30, 80, 255],
+          green_elite: [30, 180, 70],
+          stone_elite: [100, 80, 55],
+          purple_elite: [200, 30, 255],
+          smart_elite: [255, 220, 20],
         };
         const origColor = colorMap[preset] ?? [255, 60, 60];
         enemy.color = k.rgb(origColor[0], origColor[1], origColor[2]);

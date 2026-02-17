@@ -171,6 +171,8 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
 
   for (const C of cards) {
     wireButtonClick(C.choose, () => {
+      if (overlayBg.hidden) return; // overlay not visible, ignore click
+      if (gameState.skills.skill1) return; // already has a skill
       const id = (C.card as any).skillId as string;
       if (!id) return;
       gameState.skills.skill1 = id;
@@ -178,6 +180,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       hide();
     });
     wireButtonClick(C.reroll, () => {
+      if (overlayBg.hidden) return; // overlay not visible, ignore click
       if (C.rerolled) return;
       const thisId = (C.card as any).skillId as string;
       const otherIds = new Set(

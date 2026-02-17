@@ -6,6 +6,7 @@ export type Upgrades = {
   projectileSpeed: number;
   abilityHaste: number;
   shotDamage: number;
+  magnetRadius: number;
 };
 
 export const upgrades: Upgrades = {
@@ -16,4 +17,5 @@ export const upgrades: Upgrades = {
   projectileSpeed: 0,
   abilityHaste: 0,
   shotDamage: 0,
+  magnetRadius: 0,
 };

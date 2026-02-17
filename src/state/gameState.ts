@@ -1,6 +1,7 @@
 import { waves } from "./waves";
 import { upgrades } from "./upgrades";
 import { debug } from "./debug";
+import { getMapStateForWave } from "../components/walls";
 
 // Exponential XP requirement: base and growth factor
 function xpRequiredFor(level: number) {
@@ -19,6 +20,7 @@ export type GameState = {
   abilityHaste: number; // % cooldown reduction (0.0 = 0%, 0.5 = 50%)
   shotDamage: number; // base shot damage (affects shot-based skills)
   elevationPoints: number; // pontos de elevação para comprar atributos e upar skills
+  mapState: number; // tamanho do mapa (1..5), cresce a cada 5 waves
   wave: number;
   gold: number;
   xp: number;
@@ -51,18 +53,27 @@ export type GameState = {
       activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
     };
   };
+  // Perks
+  perks: {
+    acquired: string[]; // IDs das perks adquiridas (máx 2)
+    stacks: { [key: string]: number }; // contadores runtime (ex: sede-de-caca kills)
+  };
+  // Gold → elevation exchange counter
+  bonusElevationsBought: number;
 };
 
 export const gameState: GameState = {
-  moveSpeed: 360,
-  reloadSpeed: 5,
-  reloadMovePenalty: 0.5,
+  moveSpeed: 450,
+  reloadSpeed: 4,
+  reloadMovePenalty: 0.8,
   maxHealth: 500,
   cooldown: 0,
   luck: 1.0,
   abilityHaste: 0.0,
   shotDamage: 1,
-  elevationPoints: 25,
+  elevationPoints: debug.INITIAL_ELEVATION ?? 25,
+  mapState:
+    debug.INITIAL_MAP_STATE ?? getMapStateForWave(debug.INITIAL_WAVE ?? 1),
   wave: debug.INITIAL_WAVE ?? 1,
   gold: debug.INITIAL_GOLD ?? 0,
   xp: debug.INITIAL_XP ?? 0,
@@ -71,7 +82,7 @@ export const gameState: GameState = {
   playerHealth: 500,
   enemyDamageCooldownMs: 1000,
   waves,
-  projectileSpeed: 560,
+  projectileSpeed: 640,
   upgrades,
   skills: {
     skill1: debug.INITIAL_SKILL1 ?? undefined,
@@ -95,6 +106,11 @@ export const gameState: GameState = {
       activeUntil: 0,
     },
   },
+  perks: {
+    acquired: debug.INITIAL_PERKS ?? [],
+    stacks: {},
+  },
+  bonusElevationsBought: 0,
 };
 
 // Helper to be called whenever level changes

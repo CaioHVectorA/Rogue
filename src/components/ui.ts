@@ -10,6 +10,7 @@ import { createTopBar } from "./ui/topBar";
 import { createShopPanel } from "./ui/shopPanel";
 import { createSkillOverlay } from "./ui/skillOverlay";
 import { createSkillUpgradeOverlay } from "./ui/skillSelection";
+import { createPerkSelectionOverlay } from "./ui/perkSelectionOverlay";
 
 export type UIHandles = {
   updateHearts: (count: number) => void;
@@ -31,6 +32,7 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
   const shop = createShopPanel(k);
   const skillOverlay = createSkillOverlay(k);
   const skillUpgradeOverlay = createSkillUpgradeOverlay(k);
+  const perkOverlay = createPerkSelectionOverlay(k);
 
   // ===========================================
   // Barra de buff no canto superior direito
@@ -340,6 +342,12 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
 
   // Wire shop toggle via TopBar's shopBtn
   topBar.shopBtn.onClick(() => shop.toggle());
+
+  // Wire perk button in shop to open perk selection overlay
+  shop.setPerkHandler(() => {
+    shop.setVisible(false);
+    perkOverlay.show();
+  });
 
   // Skill upgrade handler (stored here for external wiring)
   let _skillUpgradeHandler: (() => void) | null = null;

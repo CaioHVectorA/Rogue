@@ -1,5 +1,11 @@
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
+import {
+  canOpenPerkSelection,
+  MAX_PERKS,
+  PERK_COST,
+  MIN_LEVEL_FOR_PERKS,
+} from "../perks";
 
 // ─── Attribute definitions ───────────────────────────────
 type AttrDef = {
@@ -68,6 +74,14 @@ const ATTR_DEFS: AttrDef[] = [
     color: [240, 140, 50],
     handler: "onShotDamage",
   },
+  {
+    key: "magnetRadius",
+    icon: "🧲",
+    label: "Imã de Ouro",
+    tooltip: "Aumenta o raio de\natração de ouro.",
+    color: [255, 200, 60],
+    handler: "onMagnetRadius",
+  },
 ];
 
 // ─── Types ───────────────────────────────────────────────
@@ -76,6 +90,7 @@ export type ShopPanelHandles = {
   refreshStats: () => void;
   setUpgradeHandlers: (handlers: Record<string, () => void>) => void;
   setQuickHealHandler: (handler: () => void) => void;
+  setPerkHandler: (handler: () => void) => void;
   toggle: () => void;
 };
 
@@ -85,7 +100,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const MAX_ATTR_LEVEL = 10;
 
   const panelW = 460;
-  const panelH = 520;
+  const panelH = 640;
   const panelX = () => Math.floor((k.width() - panelW) / 2);
   const panelY = () => Math.floor((k.height() - panelH) / 2);
 
@@ -160,7 +175,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
   const costHint = track(
     k.add([
-      k.text("Custo: 1 ponto por atributo", { size: 14 }),
+      k.text("Custo: ★1 + ⎔(nível)", { size: 14 }),
       k.pos(panel.pos.x + 100, panel.pos.y + 54),
       k.color(120, 120, 140),
       k.fixed(),
@@ -330,7 +345,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const goldLabel = track(
     k.add([
       k.text("⎔ 0", { size: 18 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 90),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 210),
       k.color(255, 215, 0),
       k.fixed(),
       k.z(2001),
@@ -338,22 +353,96 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     ]),
   );
 
+  // ── Perks button ──
+  const perkBtn = track(
+    k.add([
+      k.rect(panelW - 40, 44, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 180),
+      k.color(100, 60, 180),
+      k.outline(2, k.rgb(180, 140, 255)),
+      k.area(),
+      k.fixed(),
+      k.z(2002),
+      { id: "shop-perks-btn" },
+    ]),
+  );
+  const perkBtnText = track(
+    k.add([
+      k.text("🔮 Perks (★5)", { size: 16 }),
+      k.pos(perkBtn.pos.x + (panelW - 40) / 2, perkBtn.pos.y + 12),
+      k.anchor("top"),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(2003),
+      { id: "shop-perks-btn-txt" },
+    ]),
+  );
+
+  // ── Gold → Elevation exchange button ──
+  const exchangeBtn = track(
+    k.add([
+      k.rect(panelW - 40, 44, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 120),
+      k.color(180, 140, 40),
+      k.outline(2, k.rgb(255, 215, 0)),
+      k.area(),
+      k.fixed(),
+      k.z(2002),
+      { id: "shop-exchange-btn" },
+    ]),
+  );
+  const exchangeBtnText = track(
+    k.add([
+      k.text("⎔→★ Trocar Gold por Elevação", { size: 15 }),
+      k.pos(exchangeBtn.pos.x + (panelW - 40) / 2, exchangeBtn.pos.y + 12),
+      k.anchor("top"),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(2003),
+      { id: "shop-exchange-btn-txt" },
+    ]),
+  );
+
   // ─── Handlers ─────────────────────────────────────────
   let upgradeHandlers: Record<string, () => void> = {};
   let quickHealHandler: (() => void) | null = null;
+  let perkHandler: (() => void) | undefined = undefined;
+
+  /** Cost of next gold→elevation exchange: 4^(bonusElevationsBought+1) */
+  function getExchangeCost(): number {
+    return Math.pow(4, gameState.bonusElevationsBought + 1);
+  }
 
   // Wire clicks
   for (const sq of squares) {
     sq.bg.onClick(() => {
+      if (panel.hidden) return; // guard: panel not visible
       const handlerKey = sq.def.handler;
       if (handlerKey && upgradeHandlers[handlerKey]) {
         upgradeHandlers[handlerKey]();
       }
     });
   }
-  closeBtn.onClick(() => setVisible(false));
+  closeBtn.onClick(() => {
+    if (panel.hidden) return;
+    setVisible(false);
+  });
   quickBtn.onClick(() => {
+    if (panel.hidden) return;
     if (quickHealHandler) quickHealHandler();
+  });
+  perkBtn.onClick(() => {
+    if (panel.hidden) return;
+    if (perkHandler) perkHandler();
+  });
+  exchangeBtn.onClick(() => {
+    if (panel.hidden) return;
+    const cost = getExchangeCost();
+    if (gameState.gold < cost) return;
+    gameState.gold -= cost;
+    gameState.elevationPoints += 1;
+    gameState.bonusElevationsBought += 1;
+    refreshStats();
   });
 
   // ─── Hover tooltip logic ──────────────────────────────
@@ -385,8 +474,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         hoveredSquare = found;
         const def = found.def;
         const lv = (gameState.upgrades as any)[def.key] ?? 0;
+        const goldCost = lv + 1;
         const canUp =
-          lv < MAX_ATTR_LEVEL && gameState.elevationPoints >= ATTR_COST;
+          lv < MAX_ATTR_LEVEL &&
+          gameState.elevationPoints >= ATTR_COST &&
+          gameState.gold >= goldCost;
 
         let tx = found.bg.pos.x + sqSize + 8;
         let ty = found.bg.pos.y;
@@ -405,7 +497,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         (tooltipTitle as any).text = def.label;
         (tooltipDesc as any).text = def.tooltip;
         (tooltipLv as any).text =
-          `Nv ${lv}/${MAX_ATTR_LEVEL}${canUp ? "  ★ -1" : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem pontos"}`;
+          `Nv ${lv}/${MAX_ATTR_LEVEL}${canUp ? `  ★-1 ⎔-${goldCost}` : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem recursos"}`;
 
         tooltipBg.hidden = false;
         tooltipTitle.hidden = false;
@@ -446,7 +538,14 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     closeTxt.pos = k.vec2(closeBtn.pos.x + 7, closeBtn.pos.y + 4);
     epLabel.pos = k.vec2(px + 20, py + 50);
     costHint.pos = k.vec2(px + 100, py + 54);
-    goldLabel.pos = k.vec2(px + 20, py + panelH - 90);
+    goldLabel.pos = k.vec2(px + 20, py + panelH - 210);
+    perkBtn.pos = k.vec2(px + 20, py + panelH - 180);
+    perkBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, perkBtn.pos.y + 12);
+    exchangeBtn.pos = k.vec2(px + 20, py + panelH - 120);
+    exchangeBtnText.pos = k.vec2(
+      px + 20 + (panelW - 40) / 2,
+      exchangeBtn.pos.y + 12,
+    );
     quickBtn.pos = k.vec2(px + 20, py + panelH - 60);
     quickBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, quickBtn.pos.y + 10);
 
@@ -472,8 +571,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
     for (const sq of squares) {
       const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
+      const goldCost = lv + 1;
       const canUp =
-        lv < MAX_ATTR_LEVEL && gameState.elevationPoints >= ATTR_COST;
+        lv < MAX_ATTR_LEVEL &&
+        gameState.elevationPoints >= ATTR_COST &&
+        gameState.gold >= goldCost;
 
       (sq.lvLabel as any).text = `${lv}`;
 
@@ -497,14 +599,49 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     (quickBtn as any).opacity = canHeal ? 1 : 0.4;
     quickBtn.outline.color = canHeal ? k.rgb(255, 215, 0) : k.rgb(80, 80, 80);
 
+    // ── Perk button state ──
+    const canPerk = canOpenPerkSelection();
+    const acquiredCount = gameState.perks.acquired.length;
+    if (acquiredCount >= MAX_PERKS) {
+      (perkBtnText as any).text =
+        `🔮 Perks (${acquiredCount}/${MAX_PERKS} MÁX)`;
+      (perkBtn as any).opacity = 0.35;
+      perkBtn.outline.color = k.rgb(80, 80, 80);
+    } else if (gameState.level < MIN_LEVEL_FOR_PERKS) {
+      (perkBtnText as any).text = `🔮 Perks (Nível ${MIN_LEVEL_FOR_PERKS}+)`;
+      (perkBtn as any).opacity = 0.35;
+      perkBtn.outline.color = k.rgb(80, 80, 80);
+    } else if (!canPerk) {
+      (perkBtnText as any).text = `🔮 Perks (★ insuficiente)`;
+      (perkBtn as any).opacity = 0.4;
+      perkBtn.outline.color = k.rgb(80, 80, 80);
+    } else {
+      (perkBtnText as any).text = `🔮 Adquirir Perk (★${PERK_COST})`;
+      (perkBtn as any).opacity = 1;
+      perkBtn.outline.color = k.rgb(180, 140, 255);
+    }
+
     if (hoveredSquare) {
       const def = hoveredSquare.def;
       const lv = (gameState.upgrades as any)[def.key] ?? 0;
+      const goldCostHov = lv + 1;
       const canHov =
-        lv < MAX_ATTR_LEVEL && gameState.elevationPoints >= ATTR_COST;
+        lv < MAX_ATTR_LEVEL &&
+        gameState.elevationPoints >= ATTR_COST &&
+        gameState.gold >= goldCostHov;
       (tooltipLv as any).text =
-        `Nv ${lv}/${MAX_ATTR_LEVEL}${canHov ? "  ★ -1" : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem pontos"}`;
+        `Nv ${lv}/${MAX_ATTR_LEVEL}${canHov ? `  ★-1 ⎔-${goldCostHov}` : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem recursos"}`;
     }
+
+    // ── Exchange button state ──
+    const exchCost = getExchangeCost();
+    const canExchange = gameState.gold >= exchCost;
+    (exchangeBtnText as any).text =
+      `⎔→★ Trocar Gold por Elevação (⎔${exchCost})`;
+    (exchangeBtn as any).opacity = canExchange ? 1 : 0.4;
+    exchangeBtn.outline.color = canExchange
+      ? k.rgb(255, 215, 0)
+      : k.rgb(80, 80, 80);
   };
 
   // ─── API ──────────────────────────────────────────────
@@ -516,6 +653,9 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     },
     setQuickHealHandler: (handler: () => void) => {
       quickHealHandler = handler;
+    },
+    setPerkHandler: (handler: () => void) => {
+      perkHandler = handler;
     },
     toggle: () => setVisible(panel.hidden),
   };

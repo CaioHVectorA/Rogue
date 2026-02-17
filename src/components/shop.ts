@@ -13,14 +13,25 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
 
   const canUpgradeAttr = (key: keyof typeof gameState.upgrades) => {
     const lv = gameState.upgrades[key] as number;
-    return lv < MAX_ATTR_LEVEL && gameState.elevationPoints >= ATTR_COST;
+    const goldCost = lv + 1; // gold cost = new level
+    return (
+      lv < MAX_ATTR_LEVEL &&
+      gameState.elevationPoints >= ATTR_COST &&
+      gameState.gold >= goldCost
+    );
   };
 
   const spendAttr = (key: keyof typeof gameState.upgrades) => {
     const lv = gameState.upgrades[key] as number;
-    if (lv >= MAX_ATTR_LEVEL || gameState.elevationPoints < ATTR_COST)
+    const goldCost = lv + 1;
+    if (
+      lv >= MAX_ATTR_LEVEL ||
+      gameState.elevationPoints < ATTR_COST ||
+      gameState.gold < goldCost
+    )
       return false;
     gameState.elevationPoints -= ATTR_COST;
+    gameState.gold -= goldCost;
     (gameState.upgrades as any)[key] = lv + 1;
     return true;
   };
@@ -29,8 +40,9 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     onMoveSpeed: () => {
       if (!canUpgradeAttr("moveSpeed")) return;
       if (!spendAttr("moveSpeed")) return;
-      gameState.moveSpeed += 20;
+      gameState.moveSpeed += 25;
       (player as any).speed = gameState.moveSpeed;
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onHealth: () => {
@@ -42,6 +54,7 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
         gameState.maxHealth,
       );
       ui.updateHearts((player as any).hp);
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onReload: () => {
@@ -51,18 +64,21 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
         0.1,
         Number((gameState.reloadSpeed * 0.9).toFixed(3)),
       );
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onLuck: () => {
       if (!canUpgradeAttr("luck")) return;
       if (!spendAttr("luck")) return;
       gameState.luck = Number((gameState.luck + 0.1).toFixed(2));
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onProjectile: () => {
       if (!canUpgradeAttr("projectileSpeed")) return;
       if (!spendAttr("projectileSpeed")) return;
       gameState.projectileSpeed += 40;
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onAbilityHaste: () => {
@@ -71,12 +87,21 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       gameState.abilityHaste = Number(
         (gameState.abilityHaste + 0.05).toFixed(2),
       );
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
     onShotDamage: () => {
       if (!canUpgradeAttr("shotDamage")) return;
       if (!spendAttr("shotDamage")) return;
       gameState.shotDamage += 1;
+      ui.updateGold(gameState.gold);
+      ui.refreshShopStats();
+    },
+    onMagnetRadius: () => {
+      if (!canUpgradeAttr("magnetRadius")) return;
+      if (!spendAttr("magnetRadius")) return;
+      // magnetRadius effect is read dynamically from upgrades
+      ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
   });

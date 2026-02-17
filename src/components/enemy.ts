@@ -3,7 +3,12 @@ import { speed } from "./speed";
 import { movimentable } from "./movimentable";
 import { spawnGoldDrop } from "./gold";
 import { Enemies, ENEMY_PRESETS } from "./enemies";
-import { applyGreenBehavior, applyRedBehavior } from "./behaviors";
+import {
+  applyGreenBehavior,
+  applyRedBehavior,
+  applyPurpleBehavior,
+  applySmartBehavior,
+} from "./behaviors";
 import { gameState } from "../state/gameState";
 import {
   getGoldWeightsByLuck,
@@ -54,11 +59,15 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   const maxHP = opts.hp ?? preset.hp;
   const dmg = opts.damage ?? preset.damage;
 
+  const isElite = type.endsWith("_elite");
+  const outlineColor = isElite ? k.rgb(255, 215, 0) : k.rgb(0, 0, 0);
+  const outlineThick = isElite ? 4 : 3;
+
   const enemy = k.add([
     k.rect(s, s),
     k.pos(startPos.x, startPos.y),
     k.color(color[0], color[1], color[2]),
-    k.outline(3, k.rgb(0, 0, 0)),
+    k.outline(outlineThick, outlineColor),
     k.area(),
     k.body(), // enable physics collisions with walls and other enemies
     speed({ value: spd }),
@@ -92,11 +101,17 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
           this.pos.y = k.clamp(this.pos.y, minY, maxY);
         }
         // Red-specific schooling: tend to group with nearby reds
-        if (this.enemyType === "red") {
+        if (this.enemyType === "red" || this.enemyType === "red_elite") {
           applyRedBehavior(k, this as any);
         }
-        if (this.enemyType === "green") {
+        if (this.enemyType === "green" || this.enemyType === "green_elite") {
           applyGreenBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "purple" || this.enemyType === "purple_elite") {
+          applyPurpleBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "smart" || this.enemyType === "smart_elite") {
+          applySmartBehavior(k, this as any, opts.target);
         }
       },
     },

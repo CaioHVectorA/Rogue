@@ -14,26 +14,89 @@ export type SkillUpgradeOverlayHandles = {
 };
 
 /**
- * Overlay for leveling up the player's current skill.
- * Appears when the player levels up above 2 AND already has a skill.
- * Costs 3 elevation points per skill level, max level 5.
+ * Skill upgrade system:
+ * - A small badge appears on top of the Q skill icon when upgrades are available
+ * - Clicking the badge opens the upgrade panel (pauses game)
+ * - Panel has Upgrade + Skip buttons
  */
 export function createSkillUpgradeOverlay(
   k: KAPLAYCtx,
 ): SkillUpgradeOverlayHandles {
   // Track last player level to detect level-ups
   let lastPlayerLevel = gameState.level;
-  let pendingLevelUps = 0; // how many level-ups to show
+  let pendingLevelUps = 0;
 
-  // All managed objects
-  const allObjs: GameObj[] = [];
-  const track = <T extends GameObj>(obj: T): T => {
-    allObjs.push(obj);
+  // ═══════════════════════════════════════════════
+  // BADGE — small indicator on top of Q skill icon
+  // ═══════════════════════════════════════════════
+  const skillSize = 64;
+  const badgeSize = 44;
+
+  const getBadgePos = () => {
+    const skillX = k.width() - skillSize - 20;
+    const skillY = k.height() - skillSize - 20;
+    return {
+      x: skillX + skillSize / 2 - badgeSize / 2,
+      y: skillY - badgeSize - 6,
+    };
+  };
+
+  const bp = getBadgePos();
+
+  const badge = k.add([
+    k.rect(badgeSize, badgeSize, { radius: 12 }),
+    k.pos(bp.x, bp.y),
+    k.color(120, 60, 220),
+    k.outline(3, k.rgb(255, 220, 100)),
+    k.area(),
+    k.scale(1),
+    k.fixed(),
+    k.z(1300),
+    { id: "skill-up-badge" },
+  ]);
+
+  const badgeText = k.add([
+    k.text("UP!", { size: 18 }),
+    k.pos(bp.x + badgeSize / 2, bp.y + badgeSize / 2),
+    k.anchor("center"),
+    k.color(255, 220, 100),
+    k.scale(1),
+    k.fixed(),
+    k.z(1301),
+    { id: "skill-up-badge-txt" },
+  ]);
+
+  badge.hidden = true;
+  badgeText.hidden = true;
+
+  // Pulse animation for badge
+  let badgePulseT = 0;
+
+  const positionBadge = () => {
+    const p = getBadgePos();
+    badge.pos = k.vec2(p.x, p.y);
+    badgeText.pos = k.vec2(p.x + badgeSize / 2, p.y + badgeSize / 2);
+  };
+  k.onResize(positionBadge);
+
+  // Badge click → open panel
+  badge.onClick(() => {
+    if (badge.hidden) return; // guard: badge not visible
+    if (pendingLevelUps > 0) {
+      showPanel();
+    }
+  });
+
+  // ═══════════════════════════════════════════════
+  // PANEL — fullscreen overlay (only when user clicks badge)
+  // ═══════════════════════════════════════════════
+  const panelObjs: GameObj[] = [];
+  const trackP = <T extends GameObj>(obj: T): T => {
+    panelObjs.push(obj);
     return obj;
   };
 
-  // ── Dimmed background ──
-  const overlayBg = track(
+  const overlayBg = trackP(
     k.add([
       k.rect(k.width(), k.height()),
       k.pos(0, 0),
@@ -45,13 +108,12 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Card ──
   const cardW = 380;
   const cardH = 340;
   const cardX = () => Math.floor((k.width() - cardW) / 2);
   const cardY = () => Math.floor((k.height() - cardH) / 2);
 
-  const card = track(
+  const card = trackP(
     k.add([
       k.rect(cardW, cardH, { radius: 16 }),
       k.pos(cardX(), cardY()),
@@ -64,8 +126,7 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Glow ring on top ──
-  const glowBadge = track(
+  const glowBadgeIcon = trackP(
     k.add([
       k.text("⬆", { size: 48 }),
       k.pos(card.pos.x + cardW / 2, card.pos.y - 10),
@@ -77,10 +138,9 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Title ──
-  const titleTxt = track(
+  const titleTxt = trackP(
     k.add([
-      k.text("Level Up!", { size: 28 }),
+      k.text("Aprimorar Habilidade", { size: 24 }),
       k.pos(card.pos.x + cardW / 2, card.pos.y + 20),
       k.anchor("top"),
       k.color(255, 255, 255),
@@ -90,11 +150,10 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Skill name ──
-  const skillNameTxt = track(
+  const skillNameTxt = trackP(
     k.add([
       k.text("", { size: 22 }),
-      k.pos(card.pos.x + cardW / 2, card.pos.y + 60),
+      k.pos(card.pos.x + cardW / 2, card.pos.y + 55),
       k.anchor("top"),
       k.color(180, 220, 255),
       k.fixed(),
@@ -103,11 +162,10 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Skill level display ──
-  const levelTxt = track(
+  const levelTxt = trackP(
     k.add([
       k.text("Nível 1 → 2", { size: 20 }),
-      k.pos(card.pos.x + cardW / 2, card.pos.y + 95),
+      k.pos(card.pos.x + cardW / 2, card.pos.y + 85),
       k.anchor("top"),
       k.color(180, 140, 255),
       k.fixed(),
@@ -116,11 +174,10 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Description of what changes ──
-  const descTxt = track(
+  const descTxt = trackP(
     k.add([
       k.text("", { size: 15 }),
-      k.pos(card.pos.x + 24, card.pos.y + 135),
+      k.pos(card.pos.x + 24, card.pos.y + 120),
       k.color(180, 180, 200),
       k.fixed(),
       k.z(4002),
@@ -128,11 +185,10 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Cost display ──
-  const costTxt = track(
+  const costTxt = trackP(
     k.add([
       k.text(`★ ${SKILL_COST} pontos de elevação`, { size: 16 }),
-      k.pos(card.pos.x + cardW / 2, card.pos.y + 210),
+      k.pos(card.pos.x + cardW / 2, card.pos.y + 200),
       k.anchor("top"),
       k.color(180, 140, 255),
       k.fixed(),
@@ -141,9 +197,20 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Upgrade button ──
+  const pendingTxt = trackP(
+    k.add([
+      k.text("", { size: 14 }),
+      k.pos(card.pos.x + cardW / 2, card.pos.y + 225),
+      k.anchor("top"),
+      k.color(140, 140, 160),
+      k.fixed(),
+      k.z(4002),
+      { id: "skill-up-pending" },
+    ]),
+  );
+
   const btnW = cardW - 60;
-  const upgradeBtn = track(
+  const upgradeBtn = trackP(
     k.add([
       k.rect(btnW, 48, { radius: 10 }),
       k.pos(card.pos.x + 30, card.pos.y + cardH - 110),
@@ -155,7 +222,7 @@ export function createSkillUpgradeOverlay(
       { id: "skill-up-btn" },
     ]),
   );
-  const upgradeBtnTxt = track(
+  const upgradeBtnTxt = trackP(
     k.add([
       k.text("Aprimorar Habilidade", { size: 18 }),
       k.pos(upgradeBtn.pos.x + btnW / 2, upgradeBtn.pos.y + 13),
@@ -167,8 +234,7 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ── Skip button ──
-  const skipBtn = track(
+  const skipBtn = trackP(
     k.add([
       k.rect(btnW, 40, { radius: 8 }),
       k.pos(card.pos.x + 30, card.pos.y + cardH - 55),
@@ -180,9 +246,9 @@ export function createSkillUpgradeOverlay(
       { id: "skill-up-skip" },
     ]),
   );
-  const skipBtnTxt = track(
+  const skipBtnTxt = trackP(
     k.add([
-      k.text("Pular", { size: 16 }),
+      k.text("Fechar", { size: 16 }),
       k.pos(skipBtn.pos.x + btnW / 2, skipBtn.pos.y + 10),
       k.anchor("top"),
       k.color(180, 180, 180),
@@ -192,26 +258,30 @@ export function createSkillUpgradeOverlay(
     ]),
   );
 
-  // ─── Visibility ──────────────────────────────
-  const setVisible = (visible: boolean) => {
-    for (const obj of allObjs) obj.hidden = !visible;
-  };
-  setVisible(false);
+  // ─── Panel visibility ──────────────────────────
+  let panelOpen = false;
 
-  // ─── Reposition ──────────────────────────────
-  const reposition = () => {
+  const setPanelVisible = (visible: boolean) => {
+    panelOpen = visible;
+    for (const obj of panelObjs) obj.hidden = !visible;
+  };
+  setPanelVisible(false);
+
+  // ─── Panel reposition ──────────────────────────
+  const repositionPanel = () => {
     const cx = cardX();
     const cy = cardY();
     card.pos = k.vec2(cx, cy);
     overlayBg.pos = k.vec2(0, 0);
     (overlayBg as any).width = k.width();
     (overlayBg as any).height = k.height();
-    glowBadge.pos = k.vec2(cx + cardW / 2, cy - 10);
+    glowBadgeIcon.pos = k.vec2(cx + cardW / 2, cy - 10);
     titleTxt.pos = k.vec2(cx + cardW / 2, cy + 20);
-    skillNameTxt.pos = k.vec2(cx + cardW / 2, cy + 60);
-    levelTxt.pos = k.vec2(cx + cardW / 2, cy + 95);
-    descTxt.pos = k.vec2(cx + 24, cy + 135);
-    costTxt.pos = k.vec2(cx + cardW / 2, cy + 210);
+    skillNameTxt.pos = k.vec2(cx + cardW / 2, cy + 55);
+    levelTxt.pos = k.vec2(cx + cardW / 2, cy + 85);
+    descTxt.pos = k.vec2(cx + 24, cy + 120);
+    costTxt.pos = k.vec2(cx + cardW / 2, cy + 200);
+    pendingTxt.pos = k.vec2(cx + cardW / 2, cy + 225);
     upgradeBtn.pos = k.vec2(cx + 30, cy + cardH - 110);
     upgradeBtnTxt.pos = k.vec2(
       upgradeBtn.pos.x + btnW / 2,
@@ -220,9 +290,9 @@ export function createSkillUpgradeOverlay(
     skipBtn.pos = k.vec2(cx + 30, cy + cardH - 55);
     skipBtnTxt.pos = k.vec2(skipBtn.pos.x + btnW / 2, skipBtn.pos.y + 10);
   };
-  k.onResize(reposition);
+  k.onResize(repositionPanel);
 
-  // ─── Refresh card content ────────────────────
+  // ─── Refresh panel content ─────────────────────
   function refreshContent() {
     const skillId = gameState.skills.skill1;
     if (!skillId) return;
@@ -236,7 +306,6 @@ export function createSkillUpgradeOverlay(
     (levelTxt as any).text =
       lv >= MAX_SKILL_LEVEL ? `Nível ${lv} (MÁX)` : `Nível ${lv} → ${lv + 1}`;
 
-    // Build a short per-skill description of level-up benefits
     let descLines = "";
     if (info) {
       descLines = `${info.damage}`;
@@ -252,7 +321,9 @@ export function createSkillUpgradeOverlay(
         ? "Nível máximo atingido"
         : `★ Insuficiente (${gameState.elevationPoints}/${SKILL_COST})`;
 
-    // Button state
+    (pendingTxt as any).text =
+      pendingLevelUps > 1 ? `${pendingLevelUps} aprimoramentos pendentes` : "";
+
     if (canUp) {
       (upgradeBtn as any).color = k.rgb(40, 160, 80);
       upgradeBtn.outline.color = k.rgb(100, 255, 140);
@@ -264,8 +335,9 @@ export function createSkillUpgradeOverlay(
     }
   }
 
-  // ─── Actions ─────────────────────────────────
+  // ─── Button actions ────────────────────────────
   upgradeBtn.onClick(() => {
+    if (!panelOpen) return; // guard: panel not visible
     const skillId = gameState.skills.skill1;
     if (!skillId) return;
     const lv = gameState.skills.levels[skillId] ?? 1;
@@ -288,40 +360,68 @@ export function createSkillUpgradeOverlay(
 
     pendingLevelUps = Math.max(0, pendingLevelUps - 1);
     if (pendingLevelUps > 0) {
-      // Show next level-up
       refreshContent();
     } else {
-      hide();
+      hidePanel();
     }
   });
 
   skipBtn.onClick(() => {
-    pendingLevelUps = Math.max(0, pendingLevelUps - 1);
-    if (pendingLevelUps > 0) {
-      refreshContent();
-    } else {
-      hide();
-    }
+    if (!panelOpen) return; // guard: panel not visible
+    hidePanel();
   });
 
-  // ─── Public API ──────────────────────────────
-  const show = () => {
+  // ─── Show / Hide panel ─────────────────────────
+  function showPanel() {
     if (!gameState.skills.skill1) return;
-    setVisible(true);
-    reposition();
+    if (pendingLevelUps <= 0) return;
+    setPanelVisible(true);
+    repositionPanel();
     refreshContent();
-    // Pause gameplay while overlay is open
     (k as any).setTimeScale?.(0);
-  };
+  }
 
-  const hide = () => {
-    setVisible(false);
-    pendingLevelUps = 0;
-    // Resume gameplay
+  function hidePanel() {
+    setPanelVisible(false);
     (k as any).setTimeScale?.(1);
-  };
+  }
 
-  const isVisible = () => !overlayBg.hidden;
+  // ─── Update badge visibility ───────────────────
+  function updateBadge() {
+    const hasPending = pendingLevelUps > 0 && !!gameState.skills.skill1;
+    badge.hidden = !hasPending;
+    badgeText.hidden = !hasPending;
+
+    if (hasPending) {
+      (badgeText as any).text =
+        pendingLevelUps > 1 ? `UP!×${pendingLevelUps}` : "UP!";
+      positionBadge();
+
+      // Strong pulse animation with bounce
+      badgePulseT += k.dt() * 4;
+      const scale = 1.0 + Math.sin(badgePulseT) * 0.18;
+      badge.scale = k.vec2(scale, scale);
+      badgeText.scale = k.vec2(scale, scale);
+
+      // Color pulse: alternate between gold and bright green
+      const t = (Math.sin(badgePulseT * 0.7) + 1) / 2;
+      badge.color = k.rgb(
+        Math.floor(40 + t * 80),
+        Math.floor(160 + t * 60),
+        Math.floor(80 - t * 40),
+      );
+      badge.outline.color = k.rgb(
+        Math.floor(255 - t * 55),
+        Math.floor(220 + t * 35),
+        Math.floor(100 - t * 50),
+      );
+    }
+  }
+
+  // ─── Public API ──────────────────────────────
+  const show = () => showPanel();
+  const hide = () => hidePanel();
+  const isVisible = () => panelOpen;
 
   const update = () => {
     // Detect player level-ups
@@ -329,17 +429,32 @@ export function createSkillUpgradeOverlay(
       const gained = gameState.level - lastPlayerLevel;
       lastPlayerLevel = gameState.level;
 
-      // Only show skill upgrade if player already has a skill and level > 2
+      // Only accumulate if player already has a skill and level > 2
+      // and the skill is NOT already at max level
       if (gameState.skills.skill1 && gameState.level > 2) {
         const skillId = gameState.skills.skill1;
         const lv = gameState.skills.levels[skillId] ?? 1;
         if (lv < MAX_SKILL_LEVEL) {
           pendingLevelUps += gained;
-          if (!isVisible()) {
-            show();
-          }
         }
       }
+    }
+
+    // Clamp pendingLevelUps to 0 if skill is already at max
+    if (gameState.skills.skill1) {
+      const skillId = gameState.skills.skill1;
+      const lv = gameState.skills.levels[skillId] ?? 1;
+      if (lv >= MAX_SKILL_LEVEL) {
+        pendingLevelUps = 0;
+      }
+    }
+
+    // Update badge (always, even during gameplay)
+    if (!panelOpen) {
+      updateBadge();
+    } else {
+      badge.hidden = true;
+      badgeText.hidden = true;
     }
   };
 

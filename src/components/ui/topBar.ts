@@ -198,6 +198,7 @@ export function createTopBar(k: KAPLAYCtx): TopBarHandles {
   ]);
   let playHandler: (() => void) | null = null;
   playBtn.onClick(() => {
+    if (playBtn.hidden) return; // guard: button not visible
     if (playHandler) playHandler();
   });
 
