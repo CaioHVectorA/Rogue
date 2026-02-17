@@ -3,16 +3,16 @@ import { registerSkill, addImpactFlash } from "./registry";
 import { gameState } from "../../state/gameState";
 
 const MARKED_CONFIG = {
-  baseDuration: 8000, // 8s base
-  durationPerLevel: 1000, // +1s por level
-  baseDamage: 3, // dano base da explosão
-  damagePerLevel: 1, // +1 por level
-  baseRadius: 150, // raio base da explosão
-  radiusPerLevel: 15, // +15 por level
+  baseDuration: 10000, // 10s base (buffed)
+  durationPerLevel: 1200, // +1.2s por level (buffed)
+  baseDamage: 4, // dano base da explosão (buffed)
+  damagePerLevel: 1.5, // +1.5 por level (buffed)
+  baseRadius: 180, // raio base da explosão (buffed)
+  radiusPerLevel: 20, // +20 por level (buffed)
   baseMarksToExplode: 5, // marcas necessárias base
-  marksReduceAtLevel: 4, // nível em que reduz pra 4 marcas
-  baseExplosionMarks: 2, // marcas aplicadas pela explosão base
-  extraMarksAtLevel: 4, // nível em que sobe pra 3 marcas na explosão
+  marksReduceAtLevel: 3, // nível em que reduz pra 4 marcas (easier)
+  baseExplosionMarks: 3, // marcas aplicadas pela explosão base (buffed)
+  extraMarksAtLevel: 3, // nível em que sobe pra 4 marcas na explosão
 } as const;
 
 function getLevel(): number {

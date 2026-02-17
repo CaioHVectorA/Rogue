@@ -14,43 +14,43 @@ type ConeLevelData = {
 const CONE_LEVELS: ConeLevelData[] = [
   // level 1
   {
-    projectiles: 3,
+    projectiles: 5,
     arcDeg: 50,
-    cooldown: 2400,
-    speedMul: 0.95,
-    trailLife: 0.18,
+    cooldown: 2000,
+    speedMul: 1.15,
+    trailLife: 0.14,
   },
   // level 2
   {
-    projectiles: 5,
+    projectiles: 7,
     arcDeg: 55,
-    cooldown: 2200,
-    speedMul: 0.95,
-    trailLife: 0.2,
+    cooldown: 1800,
+    speedMul: 1.2,
+    trailLife: 0.16,
   },
   // level 3
   {
-    projectiles: 7,
+    projectiles: 9,
     arcDeg: 60,
-    cooldown: 2000,
-    speedMul: 1.0,
-    trailLife: 0.22,
+    cooldown: 1600,
+    speedMul: 1.25,
+    trailLife: 0.18,
   },
   // level 4
   {
-    projectiles: 9,
+    projectiles: 11,
     arcDeg: 65,
-    cooldown: 1800,
-    speedMul: 1.0,
-    trailLife: 0.24,
+    cooldown: 1400,
+    speedMul: 1.3,
+    trailLife: 0.2,
   },
   // level 5
   {
-    projectiles: 11,
+    projectiles: 13,
     arcDeg: 70,
-    cooldown: 1600,
-    speedMul: 1.05,
-    trailLife: 0.26,
+    cooldown: 1200,
+    speedMul: 1.4,
+    trailLife: 0.22,
   },
 ];
 

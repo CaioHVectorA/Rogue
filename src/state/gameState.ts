@@ -65,14 +65,14 @@ export type GameState = {
 };
 
 export const gameState: GameState = {
-  moveSpeed: 450,
-  reloadSpeed: 4,
+  moveSpeed: 600,
+  reloadSpeed: 3,
   reloadMovePenalty: 0.8,
   maxHealth: 500,
   cooldown: 0,
   luck: 1.0,
   abilityHaste: 0.0,
-  shotDamage: 1,
+  shotDamage: 1.25,
   elevationPoints: debug.INITIAL_ELEVATION ?? 25,
   mapState:
     debug.INITIAL_MAP_STATE ?? getMapStateForWave(debug.INITIAL_WAVE ?? 1),
@@ -84,7 +84,7 @@ export const gameState: GameState = {
   playerHealth: 500,
   enemyDamageCooldownMs: 1000,
   waves,
-  projectileSpeed: 640,
+  projectileSpeed: 900,
   upgrades,
   skills: {
     skill1: debug.INITIAL_SKILL1 ?? undefined,

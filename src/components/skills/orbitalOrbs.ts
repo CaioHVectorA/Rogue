@@ -8,14 +8,14 @@ const ORB_CONFIG = {
   maxOrbs: 6, // máximo de orbes
   orbRadius: 9, // tamanho visual do orbe
   orbitDistance: 85, // distância do centro do player
-  baseSpeed: 2.0, // velocidade de rotação base (rad/s)
-  speedPerLevel: 0.05, // +5% velocidade passiva por nível
-  boostMultiplierPerStack: 1.8, // multiplicador de velocidade POR STACK
-  boostDuration: 3.0, // duração do boost (segundos) — reseta ao empilhar
+  baseSpeed: 3.2, // velocidade de rotação base (rad/s) - buffed
+  speedPerLevel: 0.08, // +8% velocidade passiva por nível (buffed)
+  boostMultiplierPerStack: 1.9, // multiplicador de velocidade POR STACK (slightly buffed)
+  boostDuration: 3.5, // duração do boost (segundos) — reseta ao empilhar (slightly longer)
   maxStacks: 10, // máximo de stacks de boost (infinito com CDR)
-  baseDamage: 1, // dano base por colisão
-  damagePerLevel: 0.5, // +0.5 dano por level
-  hitCooldown: 0.5, // cooldown de dano por inimigo (segundos)
+  baseDamage: 1.2, // dano base por colisão (buffed)
+  damagePerLevel: 0.6, // +0.6 dano por level (buffed)
+  hitCooldown: 0.45, // cooldown de dano por inimigo (segundos) (reduced)
   trailCount: 3, // quantas sombras de trail por orbe
   trailFadeFactor: 0.25, // fator de opacidade do trail
   glowRadius: 16, // tamanho do glow atrás do orbe

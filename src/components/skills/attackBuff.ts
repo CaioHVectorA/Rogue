@@ -3,12 +3,12 @@ import { registerSkill } from "./registry";
 import { gameState } from "../../state/gameState";
 
 const BUFF_CONFIG = {
-  baseDuration: 10000, // 10 segundos
-  durationPerLevel: 500, // +0.5s por level
-  baseDamageMul: 1.3, // +30% de dano base
-  damagePerLevel: 0.1, // +10% por level
-  baseReloadSpeedMul: 1.4, // +40% de velocidade de recarga base
-  reloadSpeedPerLevel: 0.1, // +10% por level
+  baseDuration: 12000, // 12 segundos (buffed)
+  durationPerLevel: 800, // +0.8s por level (buffed)
+  baseDamageMul: 1.45, // +45% de dano base (buffed)
+  damagePerLevel: 0.12, // +12% por level (buffed)
+  baseReloadSpeedMul: 1.6, // +60% de velocidade de recarga base (buffed)
+  reloadSpeedPerLevel: 0.12, // +12% por level (buffed)
 } as const;
 
 function getDuration(level: number): number {
@@ -27,7 +27,7 @@ function getReloadSpeedMul(level: number): number {
 }
 
 function getMaxCharges(level: number): number {
-  // 1 carga base, +1 a cada 2 levels, máximo 5
+  // 1 carga base, +1 a cada level, máximo 5
   return Math.min(5, 1 + Math.floor((level - 1) / 1));
 }
 
