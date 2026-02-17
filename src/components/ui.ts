@@ -367,6 +367,7 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
     setQuickHealHandler: (handler) => shop.setQuickHealHandler(handler),
     setSkillUpgradeHandler: (handler) => {
       _skillUpgradeHandler = handler;
+      shop.setSkillUpgradeHandler(handler);
     },
     refreshShopStats: () => shop.refreshStats(),
   };

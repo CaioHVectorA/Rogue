@@ -12,7 +12,7 @@ const ORB_CONFIG = {
   speedPerLevel: 0.05, // +5% velocidade passiva por nível
   boostMultiplierPerStack: 1.8, // multiplicador de velocidade POR STACK
   boostDuration: 3.0, // duração do boost (segundos) — reseta ao empilhar
-  maxStacks: 3, // máximo de stacks de boost
+  maxStacks: 10, // máximo de stacks de boost (infinito com CDR)
   baseDamage: 1, // dano base por colisão
   damagePerLevel: 0.5, // +0.5 dano por level
   hitCooldown: 0.5, // cooldown de dano por inimigo (segundos)
@@ -305,17 +305,59 @@ const STACK_COLORS: {
     outline: [255, 255, 200],
   }, // stack 1: dourado
   {
+    orb: [255, 200, 100],
+    glow: [255, 170, 50],
+    trail: [255, 190, 80],
+    outline: [255, 240, 170],
+  }, // stack 2: dourado quente
+  {
     orb: [255, 180, 80],
     glow: [255, 140, 30],
     trail: [255, 160, 60],
     outline: [255, 220, 150],
-  }, // stack 2: laranja
+  }, // stack 3: laranja
   {
-    orb: [255, 120, 80],
-    glow: [255, 80, 40],
-    trail: [255, 100, 60],
-    outline: [255, 180, 130],
-  }, // stack 3: vermelho-fogo
+    orb: [255, 150, 60],
+    glow: [255, 110, 25],
+    trail: [255, 130, 50],
+    outline: [255, 200, 130],
+  }, // stack 4: laranja forte
+  {
+    orb: [255, 120, 50],
+    glow: [255, 90, 20],
+    trail: [255, 110, 40],
+    outline: [255, 180, 120],
+  }, // stack 5: vermelho-laranja
+  {
+    orb: [255, 100, 50],
+    glow: [255, 70, 20],
+    trail: [255, 90, 40],
+    outline: [255, 160, 110],
+  }, // stack 6: vermelho
+  {
+    orb: [255, 80, 60],
+    glow: [255, 50, 30],
+    trail: [255, 70, 50],
+    outline: [255, 140, 100],
+  }, // stack 7: vermelho intenso
+  {
+    orb: [255, 60, 80],
+    glow: [255, 30, 50],
+    trail: [255, 50, 70],
+    outline: [255, 120, 120],
+  }, // stack 8: carmesim
+  {
+    orb: [255, 40, 120],
+    glow: [255, 20, 80],
+    trail: [255, 30, 100],
+    outline: [255, 100, 160],
+  }, // stack 9: magenta
+  {
+    orb: [255, 255, 255],
+    glow: [255, 220, 255],
+    trail: [255, 240, 255],
+    outline: [255, 255, 255],
+  }, // stack 10: branco puro (overdrive)
 ];
 
 function getMaxCharges(level: number): number {

@@ -17,6 +17,10 @@ const MAGNET_PER_UPGRADE = 15; // extra radius per magnetRadius upgrade level
 export function getEffectiveMagnetRadius(): number {
   const upgradeLv = (gameState.upgrades as any).magnetRadius ?? 0;
   let radius = BASE_MAGNET_RADIUS + upgradeLv * MAGNET_PER_UPGRADE;
+  // +15% bonus at max level (10)
+  if (upgradeLv >= 10) {
+    radius = Math.floor(radius * 1.15);
+  }
   // Perk: imã magnético doubles radius
   if (gameState.perks.acquired.includes("ima-magnetico")) {
     radius *= 2;

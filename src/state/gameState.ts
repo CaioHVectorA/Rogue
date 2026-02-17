@@ -60,6 +60,8 @@ export type GameState = {
   };
   // Gold → elevation exchange counter
   bonusElevationsBought: number;
+  // Quick heal usage counter (cost increases per use)
+  healUseCount: number;
 };
 
 export const gameState: GameState = {
@@ -111,6 +113,7 @@ export const gameState: GameState = {
     stacks: {},
   },
   bonusElevationsBought: 0,
+  healUseCount: 0,
 };
 
 // Helper to be called whenever level changes

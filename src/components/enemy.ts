@@ -305,6 +305,52 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     const [r, g, b] = getGoldColor(tier);
     drop.color = k.rgb(r, g, b);
     drop.scale = k.vec2(getGoldScale(tier), getGoldScale(tier));
+
+    // Rare chance to drop an elevation point (luck makes it more likely)
+    // Base chance: 1.5%, scales with luck up to ~7.5% at luck 3.0
+    const elevChance = 0.015 * luck;
+    if (Math.random() < elevChance) {
+      // Spawn a visual elevation point drop (star)
+      const starSize = 14;
+      const star = k.add([
+        k.rect(starSize, starSize),
+        k.pos(enemy.pos.x - starSize / 2 + 12, enemy.pos.y - starSize / 2),
+        k.color(180, 140, 255),
+        k.outline(2, k.rgb(255, 220, 100)),
+        k.area(),
+        k.opacity(1),
+        k.z(55),
+        {
+          id: "elevation-drop",
+          age: 0,
+          blinkT: 0,
+        },
+      ]);
+      // Animate the star
+      star.onUpdate(() => {
+        if (!star.exists()) return;
+        (star as any).age += k.dt();
+        // Expires after 20s
+        if ((star as any).age >= 20) { star.destroy(); return; }
+        // Blink after 15s
+        if ((star as any).age >= 15) {
+          (star as any).blinkT += k.dt();
+          const remaining = 20 - (star as any).age;
+          const blinkRate = remaining < 2 ? 0.08 : remaining < 3 ? 0.12 : 0.2;
+          star.opacity = Math.sin((star as any).blinkT / blinkRate * Math.PI) > 0 ? 1 : 0.2;
+        }
+        // Magnetism toward player (same as gold)
+        const players = k.get("player");
+        if (players.length > 0) {
+          const player = players[0];
+          const dist = star.pos.dist(player.pos);
+          if (dist < 120 && dist > 2) {
+            const dir = player.pos.sub(star.pos).unit();
+            star.move(dir.scale(400 * (1 + (1 - dist / 120) * 2)));
+          }
+        }
+      });
+    }
   });
 
   return enemy;

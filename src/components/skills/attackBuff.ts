@@ -26,16 +26,22 @@ function getReloadSpeedMul(level: number): number {
   );
 }
 
+function getMaxCharges(level: number): number {
+  // 1 carga base, +1 a cada 2 levels, máximo 5
+  return Math.min(5, 1 + Math.floor((level - 1) / 1));
+}
+
 registerSkill({
   id: "attack-buff",
   getCooldown: () => 9000,
+  getMaxCharges: (level: number) => getMaxCharges(level),
   use: ({ k, player }) => {
     const level = gameState.skills.levels["attack-buff"] ?? 1;
     const duration = getDuration(level);
     const damageMul = getDamageMul(level);
     const reloadSpeedMul = getReloadSpeedMul(level);
 
-    // Aplicar buffs ao gameState
+    // Aplicar buffs ao gameState (re-ativa/estende o buff)
     gameState.buffs.damageMul = damageMul;
     gameState.buffs.reloadSpeedMul = reloadSpeedMul;
     gameState.buffs.activeUntil = Date.now() + duration;
@@ -46,10 +52,13 @@ registerSkill({
 
     // Timer para remover o buff
     k.wait(duration / 1000, () => {
-      gameState.buffs.damageMul = 1.0;
-      gameState.buffs.reloadSpeedMul = 1.0;
-      gameState.buffs.activeUntil = 0;
-      player.color = originalColor;
+      // Só remove se o buff não foi renovado
+      if (Date.now() >= gameState.buffs.activeUntil) {
+        gameState.buffs.damageMul = 1.0;
+        gameState.buffs.reloadSpeedMul = 1.0;
+        gameState.buffs.activeUntil = 0;
+        player.color = originalColor;
+      }
     });
   },
 });

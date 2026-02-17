@@ -91,6 +91,7 @@ export type ShopPanelHandles = {
   setUpgradeHandlers: (handlers: Record<string, () => void>) => void;
   setQuickHealHandler: (handler: () => void) => void;
   setPerkHandler: (handler: () => void) => void;
+  setSkillUpgradeHandler: (handler: () => void) => void;
   toggle: () => void;
 };
 
@@ -100,7 +101,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const MAX_ATTR_LEVEL = 10;
 
   const panelW = 460;
-  const panelH = 640;
+  const panelH = 700;
   const panelX = () => Math.floor((k.width() - panelW) / 2);
   const panelY = () => Math.floor((k.height() - panelH) / 2);
 
@@ -320,7 +321,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const quickBtn = track(
     k.add([
       k.rect(panelW - 40, 40, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 60),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 100),
       k.color(180, 140, 40),
       k.outline(2, k.rgb(255, 215, 0)),
       k.area(),
@@ -342,10 +343,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   );
 
   // ── Gold display ──
+  // Layout from bottom: Quick Heal (-60), Exchange (-120), Skill Upgrade (-180), Perks (-240), Gold label (-280)
   const goldLabel = track(
     k.add([
       k.text("⎔ 0", { size: 18 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 210),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 300),
       k.color(255, 215, 0),
       k.fixed(),
       k.z(2001),
@@ -357,7 +359,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const perkBtn = track(
     k.add([
       k.rect(panelW - 40, 44, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 180),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 280),
       k.color(100, 60, 180),
       k.outline(2, k.rgb(180, 140, 255)),
       k.area(),
@@ -378,11 +380,36 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     ]),
   );
 
+  // ── Skill upgrade button ──
+  const skillUpBtn = track(
+    k.add([
+      k.rect(panelW - 40, 44, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 220),
+      k.color(60, 120, 200),
+      k.outline(2, k.rgb(120, 180, 255)),
+      k.area(),
+      k.fixed(),
+      k.z(2002),
+      { id: "shop-skill-up-btn" },
+    ]),
+  );
+  const skillUpBtnText = track(
+    k.add([
+      k.text("⬆ Aprimorar Habilidade (★3)", { size: 15 }),
+      k.pos(skillUpBtn.pos.x + (panelW - 40) / 2, skillUpBtn.pos.y + 12),
+      k.anchor("top"),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(2003),
+      { id: "shop-skill-up-btn-txt" },
+    ]),
+  );
+
   // ── Gold → Elevation exchange button ──
   const exchangeBtn = track(
     k.add([
       k.rect(panelW - 40, 44, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 120),
+      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 160),
       k.color(180, 140, 40),
       k.outline(2, k.rgb(255, 215, 0)),
       k.area(),
@@ -407,10 +434,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   let upgradeHandlers: Record<string, () => void> = {};
   let quickHealHandler: (() => void) | null = null;
   let perkHandler: (() => void) | undefined = undefined;
+  let skillUpgradeHandler: (() => void) | null = null;
 
-  /** Cost of next gold→elevation exchange: 4^(bonusElevationsBought+1) */
+  /** Cost of next gold→elevation exchange: 3^(bonusElevationsBought+1) */
   function getExchangeCost(): number {
-    return Math.pow(4, gameState.bonusElevationsBought + 1);
+    return Math.pow(3, gameState.bonusElevationsBought + 1);
   }
 
   // Wire clicks
@@ -442,6 +470,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     gameState.gold -= cost;
     gameState.elevationPoints += 1;
     gameState.bonusElevationsBought += 1;
+    refreshStats();
+  });
+  skillUpBtn.onClick(() => {
+    if (panel.hidden) return;
+    if (skillUpgradeHandler) skillUpgradeHandler();
     refreshStats();
   });
 
@@ -538,15 +571,17 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     closeTxt.pos = k.vec2(closeBtn.pos.x + 7, closeBtn.pos.y + 4);
     epLabel.pos = k.vec2(px + 20, py + 50);
     costHint.pos = k.vec2(px + 100, py + 54);
-    goldLabel.pos = k.vec2(px + 20, py + panelH - 210);
-    perkBtn.pos = k.vec2(px + 20, py + panelH - 180);
+    goldLabel.pos = k.vec2(px + 20, py + panelH - 300);
+    perkBtn.pos = k.vec2(px + 20, py + panelH - 280);
     perkBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, perkBtn.pos.y + 12);
-    exchangeBtn.pos = k.vec2(px + 20, py + panelH - 120);
+    skillUpBtn.pos = k.vec2(px + 20, py + panelH - 220);
+    skillUpBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, skillUpBtn.pos.y + 12);
+    exchangeBtn.pos = k.vec2(px + 20, py + panelH - 160);
     exchangeBtnText.pos = k.vec2(
       px + 20 + (panelW - 40) / 2,
       exchangeBtn.pos.y + 12,
     );
-    quickBtn.pos = k.vec2(px + 20, py + panelH - 60);
+    quickBtn.pos = k.vec2(px + 20, py + panelH - 100);
     quickBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, quickBtn.pos.y + 10);
 
     const gx =
@@ -594,10 +629,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       }
     }
 
-    const healCost = 20;
+    const healCost = 20 + (gameState as any).healUseCount * 5;
     const canHeal = gameState.gold >= healCost;
     (quickBtn as any).opacity = canHeal ? 1 : 0.4;
     quickBtn.outline.color = canHeal ? k.rgb(255, 215, 0) : k.rgb(80, 80, 80);
+    (quickBtnText as any).text = `❤ Curar 100HP (${healCost} gold)`;
 
     // ── Perk button state ──
     const canPerk = canOpenPerkSelection();
@@ -642,6 +678,34 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     exchangeBtn.outline.color = canExchange
       ? k.rgb(255, 215, 0)
       : k.rgb(80, 80, 80);
+
+    // ── Skill upgrade button state ──
+    const SKILL_UP_COST = 3;
+    const MAX_SKILL_LVL = 5;
+    const skillId = gameState.skills.skill1;
+    if (skillId) {
+      const skillLv = gameState.skills.levels[skillId] ?? 1;
+      const canSkillUp = skillLv < MAX_SKILL_LVL && gameState.elevationPoints >= SKILL_UP_COST;
+      if (skillLv >= MAX_SKILL_LVL) {
+        (skillUpBtnText as any).text = `⬆ Habilidade (MÁX)`;
+        (skillUpBtn as any).opacity = 0.35;
+        skillUpBtn.outline.color = k.rgb(80, 80, 80);
+      } else if (canSkillUp) {
+        (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★${SKILL_UP_COST})`;
+        (skillUpBtn as any).opacity = 1;
+        skillUpBtn.outline.color = k.rgb(120, 180, 255);
+      } else {
+        (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade (★ insuficiente)`;
+        (skillUpBtn as any).opacity = 0.4;
+        skillUpBtn.outline.color = k.rgb(80, 80, 80);
+      }
+      skillUpBtn.hidden = false;
+      skillUpBtnText.hidden = false;
+    } else {
+      // No skill equipped yet
+      skillUpBtn.hidden = true;
+      skillUpBtnText.hidden = true;
+    }
   };
 
   // ─── API ──────────────────────────────────────────────
@@ -656,6 +720,9 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     },
     setPerkHandler: (handler: () => void) => {
       perkHandler = handler;
+    },
+    setSkillUpgradeHandler: (handler: () => void) => {
+      skillUpgradeHandler = handler;
     },
     toggle: () => setVisible(panel.hidden),
   };

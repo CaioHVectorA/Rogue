@@ -140,6 +140,13 @@ k.onCollide("player", "gold-drop", (p: any, drop: any) => {
   drop.destroy();
 });
 
+// Collect elevation point drops
+k.onCollide("player", "elevation-drop", (p: any, drop: any) => {
+  gameState.elevationPoints += 1;
+  ui.refreshShopStats();
+  drop.destroy();
+});
+
 // Track enemies left in current wave
 let enemiesLeft = 0;
 function spawnWave(waveIndex: number) {
