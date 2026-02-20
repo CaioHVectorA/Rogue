@@ -7,6 +7,7 @@ export type Upgrades = {
   abilityHaste: number;
   shotDamage: number;
   magnetRadius: number;
+  vampirism: number; // new attribute: vampirismo
 };
 
 export const upgrades: Upgrades = {
@@ -18,4 +19,5 @@ export const upgrades: Upgrades = {
   abilityHaste: 0,
   shotDamage: 0,
   magnetRadius: 0,
+  vampirism: 0,
 };

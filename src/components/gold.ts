@@ -25,6 +25,10 @@ export function getEffectiveMagnetRadius(): number {
   if (gameState.perks.acquired.includes("ima-magnetico")) {
     radius *= 2;
   }
+  // Max-level magnet makes it effectively global
+  if (upgradeLv >= 10) {
+    radius = Math.max(radius, 9999);
+  }
   return radius;
 }
 

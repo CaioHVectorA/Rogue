@@ -10,11 +10,11 @@ import { useSkill, initCharges } from "./components/skills";
 // Register skills
 import "./components/skills/coneShot";
 import "./components/skills/ricochetShot";
-import "./components/skills/shockwave";
+// shockwave skill temporarily disabled
 import "./components/skills/chainLightning";
 import "./components/skills/arcMine";
 import "./components/skills/poisonPool";
-import "./components/skills/boomerangBolt";
+// boomerang skill temporarily disabled
 import "./components/skills/summonedTotem";
 import "./components/skills/markedShot";
 import "./components/skills/orbitalOrbs";
@@ -175,6 +175,25 @@ function spawnWave(waveIndex: number) {
           gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
         }
         ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
+
+        // Vampirism: heal player on kill
+        try {
+          const vampLv = (gameState.upgrades as any).vampirism ?? 0;
+          if (vampLv > 0) {
+            const players = k.get("player");
+            if (players.length > 0) {
+              const p = players[0] as any;
+              const missing = Math.max(0, gameState.maxHealth - (p.hp ?? gameState.maxHealth));
+              const fixedHeal = vampLv * 2;
+              const pct = Math.min(0.5, 0.03 * vampLv); // 3% per level up to 50%
+              const heal = fixedHeal + Math.round(missing * pct);
+              p.hp = Math.min(gameState.maxHealth, (p.hp ?? gameState.maxHealth) + heal);
+              ui.updateHearts(p.hp);
+            }
+          }
+        } catch (err) {
+          // ignore if UI/player not available
+        }
 
         // If wave finished, advance wave
         if (enemiesLeft <= 0) {

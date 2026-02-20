@@ -82,6 +82,14 @@ const ATTR_DEFS: AttrDef[] = [
     color: [255, 200, 60],
     handler: "onMagnetRadius",
   },
+  {
+    key: "vampirism",
+    icon: "❤+",
+    label: "Vampirismo",
+    tooltip: "Cura o jogador ao matar inimigos; cura fixa + % da vida perdida.",
+    color: [200, 60, 120],
+    handler: "onVampirism",
+  },
 ];
 
 // ─── Types ───────────────────────────────────────────────
@@ -99,6 +107,14 @@ export type ShopPanelHandles = {
 export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const ATTR_COST = 1;
   const MAX_ATTR_LEVEL = 10;
+
+  function nextAttrGoldCost(nextLevel: number) {
+    if (nextLevel <= 2) return 1;
+    if (nextLevel <= 4) return 2; // lvl 3-4 -> 2
+    if (nextLevel <= 7) return 3; // lvl 5-7 -> 3
+    if (nextLevel <= 9) return 5; // lvl 8-9 -> 5
+    return 10; // lvl 10 -> 10
+  }
 
   const panelW = 460;
   const panelH = 700;
@@ -507,7 +523,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         hoveredSquare = found;
         const def = found.def;
         const lv = (gameState.upgrades as any)[def.key] ?? 0;
-        const goldCost = lv + 1;
+        const goldCost = nextAttrGoldCost(lv + 1);
         const canUp =
           lv < MAX_ATTR_LEVEL &&
           gameState.elevationPoints >= ATTR_COST &&
@@ -606,7 +622,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
     for (const sq of squares) {
       const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
-      const goldCost = lv + 1;
+      const nextLv = lv + 1;
+      const goldCost = nextAttrGoldCost(nextLv);
       const canUp =
         lv < MAX_ATTR_LEVEL &&
         gameState.elevationPoints >= ATTR_COST &&
@@ -660,7 +677,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     if (hoveredSquare) {
       const def = hoveredSquare.def;
       const lv = (gameState.upgrades as any)[def.key] ?? 0;
-      const goldCostHov = lv + 1;
+      const nextLv = lv + 1;
+      const goldCostHov = nextAttrGoldCost(nextLv);
       const canHov =
         lv < MAX_ATTR_LEVEL &&
         gameState.elevationPoints >= ATTR_COST &&

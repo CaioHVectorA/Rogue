@@ -629,7 +629,7 @@ registerSkill({
           ]) as GameObj & { t: number };
 
           const bullet = k.add([
-            k.rect(bulletSize * 1.6, bulletSize * 0.7),
+            k.rect(bulletSize * 1.6, bulletSize * 0.9), // slightly larger
             k.pos(cx + dir.x * 14, cy + dir.y * 14),
             k.anchor("center"),
             k.rotate(k.rad2deg(Math.atan2(dir.y, dir.x))),
@@ -643,7 +643,7 @@ registerSkill({
             k.z(150),
             {
               id: "skill-totem-bullet",
-              vel: dirVec.scale(data.bulletSpeed),
+              vel: dirVec.scale(data.bulletSpeed * 1.6), // bullets much faster
               dist: 0,
               trailT: 0,
             },
@@ -710,6 +710,48 @@ registerSkill({
 
           bullet.onDestroy(() => {
             if (bulletGlow.exists()) bulletGlow.destroy();
+            // Explosion on destroy — radius scales with totem level
+            const lvl = gameState.skills.levels["summoned-totem"] ?? 1;
+            const baseExplodeRadius = 28;
+            const explodeRadius = baseExplodeRadius + (lvl - 1) * 8;
+
+            // Visual ring
+            const ring = k.add([
+              k.circle(explodeRadius),
+              k.pos(bullet.pos.x, bullet.pos.y),
+              k.anchor("center"),
+              k.color(255, 180, 120),
+              k.opacity(0.5),
+              k.outline(2, k.rgb(255, 140, 40)),
+              k.z(500),
+              { id: "totem-explode-ring", t: 0 },
+            ]) as GameObj & { t: number };
+            ring.onUpdate(() => {
+              ring.t += k.dt();
+              const p = Math.min(ring.t / 0.28, 1);
+              ring.scale = k.vec2(0.2 + p * 1.8);
+              ring.opacity = 0.5 * (1 - p);
+              if (ring.t >= 0.28) ring.destroy();
+            });
+
+            // Damage enemies in radius
+            const enemies = k.get("enemy") as GameObj[];
+            for (const en of enemies) {
+              if (!en.exists()) continue;
+              const eSize = en.getSize ? en.getSize() : { width: 30, height: 30 };
+              const ecx = en.pos.x + eSize.width / 2;
+              const ecy = en.pos.y + eSize.height / 2;
+              const dx = ecx - bullet.pos.x;
+              const dy = ecy - bullet.pos.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist <= explodeRadius) {
+                const ed = en as any;
+                if (typeof ed.hp === "number") {
+                  ed.hp -= Math.max(1, Math.floor(data.damage * 0.8));
+                  if (ed.hp <= 0) ed.destroy();
+                }
+              }
+            }
           });
         }
       }

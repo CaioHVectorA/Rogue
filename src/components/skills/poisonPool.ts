@@ -4,7 +4,7 @@ import { gameState } from "../../state/gameState";
 import { addPoisonStacks } from "./poison";
 
 const POOL_CONFIG = {
-  poolRadius: 70, // raio grande
+  poolRadius: 70, // raio grande (base)
   baseDuration: 10, // 10s base
   durationPerLevel: 3, // +3s por nível
   spawnDistance: 110, // distância do player
@@ -63,6 +63,10 @@ function getPoolDirection(
   return { x: dx / len, y: dy / len };
 }
 
+function getPoolRadius(level: number): number {
+  return POOL_CONFIG.poolRadius + (level - 1) * 24; // aumenta 24px por nível (more impactful)
+}
+
 /**
  * Cria a poça roxa com visual 2D bonito
  */
@@ -73,7 +77,8 @@ function createPool(
 ): void {
   const duration = getDuration(level);
   const slowFactor = getSlowFactor(level);
-  const { poolRadius, stacksPerTick, tickInterval } = POOL_CONFIG;
+  const poolRadius = getPoolRadius(level);
+  const { stacksPerTick, tickInterval } = POOL_CONFIG;
 
   const enemiesInPool = new Set<GameObj>();
   const enemyTickTimers = new Map<GameObj, number>();

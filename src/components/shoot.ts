@@ -55,36 +55,54 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
       typeof opts.projectileSpeed === "number"
         ? opts.projectileSpeed
         : gameState.projectileSpeed;
-    const p = k.add([
-      k.rect(projSize, projSize),
-      k.pos(self.pos.x, self.pos.y),
-      k.color(projColor[0], projColor[1], projColor[2]),
-      k.outline(2, k.rgb(255, 255, 255)),
-      k.area(),
-      { id: "projectile", vel: dir.scale(speed) },
-    ]);
-    p.onUpdate(() => {
-      p.move(p.vel);
-      // remove if too far from camera
-      if (p.pos.dist(self.pos) > k.width() * 2) p.destroy();
-    });
-    // hit enemy
-    p.onCollide("enemy", (e: GameObj & { hp?: number }) => {
-      // Apply damage: reduce HP and destroy on 0
-      if (typeof e.hp === "number") {
-        const baseDamage = 1;
-        const damage = baseDamage * gameState.buffs.damageMul;
-        e.hp -= damage;
-        if (e.hp <= 0) e.destroy();
-      }
-      // Adicionar marca se buff do markedShot está ativo
-      if (gameState.buffs.markedShot.active && e.exists()) {
-        addMark(k, e);
-      }
-      p.destroy();
-    });
-    // hit walls
-    p.onCollide("arena-wall", () => p.destroy());
+
+    // If projectileSpeed upgrade is maxed, make projectiles extremely fast
+    const projSpeedUpgrade = (gameState.upgrades as any).projectileSpeed ?? 0;
+    const effectiveSpeed = projSpeedUpgrade >= 10 ? Math.max(1600, speed) : speed;
+
+    const spawnProjectile = (offsetAngle = 0) => {
+      const ang = Math.atan2(dir.y, dir.x) + offsetAngle;
+      const d = k.vec2(Math.cos(ang), Math.sin(ang));
+      const p = k.add([
+        k.rect(projSize, projSize),
+        k.pos(self.pos.x, self.pos.y),
+        k.color(projColor[0], projColor[1], projColor[2]),
+        k.outline(2, k.rgb(255, 255, 255)),
+        k.area(),
+        { id: "projectile", vel: d.scale(effectiveSpeed) },
+      ]);
+      p.onUpdate(() => {
+        p.move(p.vel);
+        // remove if too far from camera
+        if (p.pos.dist(self.pos) > k.width() * 2) p.destroy();
+      });
+      // hit enemy
+      p.onCollide("enemy", (e: GameObj & { hp?: number }) => {
+        // Apply damage: reduce HP and destroy on 0
+        if (typeof e.hp === "number") {
+          const baseDamage = 1 * gameState.shotDamage;
+          const damage = baseDamage * gameState.buffs.damageMul;
+          e.hp -= damage;
+          if (e.hp <= 0) e.destroy();
+        }
+        // Adicionar marca se buff do markedShot está ativo
+        if (gameState.buffs.markedShot.active && e.exists()) {
+          addMark(k, e);
+        }
+        p.destroy();
+      });
+      // hit walls
+      p.onCollide("arena-wall", () => p.destroy());
+    };
+
+    // If reloadSpeed upgrade is maxed, fire double projectiles (slightly spread)
+    const reloadUpgrade = (gameState.upgrades as any).reloadSpeed ?? 0;
+    if (reloadUpgrade >= 10) {
+      spawnProjectile(-0.03);
+      spawnProjectile(0.03);
+    } else {
+      spawnProjectile(0);
+    }
   }
 
   return {

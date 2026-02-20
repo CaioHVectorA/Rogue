@@ -27,7 +27,12 @@ export function getEffectiveCooldown(skillId: string): number {
   const lvl = gameState.skills.levels[skillId] ?? 1;
   const baseCD = skill?.getCooldown?.(lvl) ?? 3000;
   const haste = Math.min(gameState.abilityHaste, 0.75); // cap at 75%
-  return Math.max(100, Math.round(baseCD * (1 - haste)));
+  let eff = Math.max(100, Math.round(baseCD * (1 - haste)));
+  // Special max-level abilityHaste effect: further reduce by 1s and 15% multiplicative
+  if ((gameState.upgrades as any).abilityHaste >= 10) {
+    eff = Math.max(60, Math.round(eff * 0.85) - 1000);
+  }
+  return eff;
 }
 
 export const skillsRegistry: Record<string, Skill> = {};
