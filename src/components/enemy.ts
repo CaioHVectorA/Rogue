@@ -331,13 +331,19 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         if (!star.exists()) return;
         (star as any).age += k.dt();
         // Expires after 20s
-        if ((star as any).age >= 20) { star.destroy(); return; }
+        if ((star as any).age >= 20) {
+          star.destroy();
+          return;
+        }
         // Blink after 15s
         if ((star as any).age >= 15) {
           (star as any).blinkT += k.dt();
           const remaining = 20 - (star as any).age;
           const blinkRate = remaining < 2 ? 0.08 : remaining < 3 ? 0.12 : 0.2;
-          star.opacity = Math.sin((star as any).blinkT / blinkRate * Math.PI) > 0 ? 1 : 0.2;
+          star.opacity =
+            Math.sin(((star as any).blinkT / blinkRate) * Math.PI) > 0
+              ? 1
+              : 0.2;
         }
         // Magnetism toward player (same as gold)
         const players = k.get("player");

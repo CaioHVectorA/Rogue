@@ -591,7 +591,10 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     perkBtn.pos = k.vec2(px + 20, py + panelH - 280);
     perkBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, perkBtn.pos.y + 12);
     skillUpBtn.pos = k.vec2(px + 20, py + panelH - 220);
-    skillUpBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, skillUpBtn.pos.y + 12);
+    skillUpBtnText.pos = k.vec2(
+      px + 20 + (panelW - 40) / 2,
+      skillUpBtn.pos.y + 12,
+    );
     exchangeBtn.pos = k.vec2(px + 20, py + panelH - 160);
     exchangeBtnText.pos = k.vec2(
       px + 20 + (panelW - 40) / 2,
@@ -703,17 +706,20 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     const skillId = gameState.skills.skill1;
     if (skillId) {
       const skillLv = gameState.skills.levels[skillId] ?? 1;
-      const canSkillUp = skillLv < MAX_SKILL_LVL && gameState.elevationPoints >= SKILL_UP_COST;
+      const canSkillUp =
+        skillLv < MAX_SKILL_LVL && gameState.elevationPoints >= SKILL_UP_COST;
       if (skillLv >= MAX_SKILL_LVL) {
         (skillUpBtnText as any).text = `⬆ Habilidade (MÁX)`;
         (skillUpBtn as any).opacity = 0.35;
         skillUpBtn.outline.color = k.rgb(80, 80, 80);
       } else if (canSkillUp) {
-        (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★${SKILL_UP_COST})`;
+        (skillUpBtnText as any).text =
+          `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★${SKILL_UP_COST})`;
         (skillUpBtn as any).opacity = 1;
         skillUpBtn.outline.color = k.rgb(120, 180, 255);
       } else {
-        (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade (★ insuficiente)`;
+        (skillUpBtnText as any).text =
+          `⬆ Aprimorar Habilidade (★ insuficiente)`;
         (skillUpBtn as any).opacity = 0.4;
         skillUpBtn.outline.color = k.rgb(80, 80, 80);
       }

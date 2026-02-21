@@ -738,7 +738,9 @@ registerSkill({
             const enemies = k.get("enemy") as GameObj[];
             for (const en of enemies) {
               if (!en.exists()) continue;
-              const eSize = en.getSize ? en.getSize() : { width: 30, height: 30 };
+              const eSize = en.getSize
+                ? en.getSize()
+                : { width: 30, height: 30 };
               const ecx = en.pos.x + eSize.width / 2;
               const ecy = en.pos.y + eSize.height / 2;
               const dx = ecx - bullet.pos.x;

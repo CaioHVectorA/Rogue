@@ -58,7 +58,8 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
 
     // If projectileSpeed upgrade is maxed, make projectiles extremely fast
     const projSpeedUpgrade = (gameState.upgrades as any).projectileSpeed ?? 0;
-    const effectiveSpeed = projSpeedUpgrade >= 10 ? Math.max(1600, speed) : speed;
+    const effectiveSpeed =
+      projSpeedUpgrade >= 10 ? Math.max(1600, speed) : speed;
 
     const spawnProjectile = (offsetAngle = 0) => {
       const ang = Math.atan2(dir.y, dir.x) + offsetAngle;

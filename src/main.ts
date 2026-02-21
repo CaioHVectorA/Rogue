@@ -183,11 +183,17 @@ function spawnWave(waveIndex: number) {
             const players = k.get("player");
             if (players.length > 0) {
               const p = players[0] as any;
-              const missing = Math.max(0, gameState.maxHealth - (p.hp ?? gameState.maxHealth));
+              const missing = Math.max(
+                0,
+                gameState.maxHealth - (p.hp ?? gameState.maxHealth),
+              );
               const fixedHeal = vampLv * 2;
               const pct = Math.min(0.5, 0.03 * vampLv); // 3% per level up to 50%
               const heal = fixedHeal + Math.round(missing * pct);
-              p.hp = Math.min(gameState.maxHealth, (p.hp ?? gameState.maxHealth) + heal);
+              p.hp = Math.min(
+                gameState.maxHealth,
+                (p.hp ?? gameState.maxHealth) + heal,
+              );
               ui.updateHearts(p.hp);
             }
           }
