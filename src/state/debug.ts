@@ -23,7 +23,7 @@ const PRESETS = {
   // ── Do zero, experiência limpa ──
   initial: {
     name: "Início (wave 1)",
-    INITIAL_GOLD: 0,
+    INITIAL_GOLD: 5,
     INITIAL_WAVE: 1,
     INITIAL_LEVEL: 1,
     INITIAL_XP: 0,
@@ -87,6 +87,13 @@ const preset = PRESETS[ACTIVE_PRESET];
 
 export const debug = {
   ...preset,
+
+  // ══════════════════════════════════════════════════════
+  // GAME_SPEED — multiplicador global de velocidade/dificuldade
+  //   1.0 = normal | 0.5 = metade da velocidade | 2.0 = dobro
+  //   Afeta: velocidade do player, inimigos, projéteis e recarga.
+  // ══════════════════════════════════════════════════════
+  GAME_SPEED: 1,
 
   // ── Perk IDs disponíveis (referência) ──
   // "execucao-limpa" | "nao-olhe-para-tras" | "ciclo-vicioso"

@@ -1,6 +1,18 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { gameState } from "../state/gameState";
 import { addMark } from "./skills/markedShot";
+import { debug } from "../state/debug";
+import {
+  shouldTriggerChainExplosion,
+  spawnChainExplosion,
+  canTriggerSeismic,
+  triggerSeismic,
+  onShotHitLigeirinho,
+  onShotMissLigeirinho,
+  getLigeirinhoSpeedBonus,
+  getLigeirinhoReloadBonus,
+  getZonaDePerigoAttackMul,
+} from "./perks";
 
 export type ShootOptions = {
   chargeTime?: number;
@@ -51,10 +63,11 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     if (!target) return;
     const dir = target.pos.sub(self.pos).unit();
     // Read projectile speed at fire time to reflect upgrades
+    const gs = debug.GAME_SPEED ?? 1.0;
     const speed =
       typeof opts.projectileSpeed === "number"
-        ? opts.projectileSpeed
-        : gameState.projectileSpeed;
+        ? opts.projectileSpeed * gs
+        : gameState.projectileSpeed * gs;
 
     // If projectileSpeed upgrade is maxed, make projectiles extremely fast
     const projSpeedUpgrade = (gameState.upgrades as any).projectileSpeed ?? 0;
@@ -82,10 +95,22 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         // Apply damage: reduce HP and destroy on 0
         if (typeof e.hp === "number") {
           const baseDamage = 1 * gameState.shotDamage;
-          const damage = baseDamage * gameState.buffs.damageMul;
+          // Zona de Perigo: +5% dano por inimigo próximo
+          const zonaMul = getZonaDePerigoAttackMul(k, self.pos);
+          const damage = baseDamage * gameState.buffs.damageMul * zonaMul;
           e.hp -= damage;
           if (e.hp <= 0) e.destroy();
+          // Reação em Cadeia: 10% de explosão
+          if (shouldTriggerChainExplosion()) {
+            spawnChainExplosion(k, e.pos ? e.pos.clone() : p.pos.clone(), damage);
+          }
         }
+        // Impacto Sísmico: substitui o tiro por onda circular
+        if (canTriggerSeismic()) {
+          triggerSeismic(k, p.pos.clone());
+        }
+        // Ligeirinho: acerto acumula velocidade
+        onShotHitLigeirinho();
         // Adicionar marca se buff do markedShot está ativo
         if (gameState.buffs.markedShot.active && e.exists()) {
           addMark(k, e);
@@ -93,7 +118,11 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         p.destroy();
       });
       // hit walls
-      p.onCollide("arena-wall", () => p.destroy());
+      p.onCollide("arena-wall", () => {
+        // Ligeirinho: errar (bater na parede) reseta stacks
+        onShotMissLigeirinho();
+        p.destroy();
+      });
     };
 
     // If reloadSpeed upgrade is maxed, fire double projectiles (slightly spread)
@@ -156,8 +185,10 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         const still = isStationary(this);
         // charge even while moving (slower when moving)
         // Interpret reloadSpeed as reload time (seconds). Convert to a rate.
-        // Apply buff multiplier to reload speed
-        const baseReloadTime = Math.max(0.0001, gameState.reloadSpeed);
+        // Apply buff multiplier to reload speed + GAME_SPEED + Ligeirinho
+        const gs = debug.GAME_SPEED ?? 1.0;
+        const ligeirinhoReload = 1 + getLigeirinhoReloadBonus();
+        const baseReloadTime = Math.max(0.0001, gameState.reloadSpeed / (gs * ligeirinhoReload));
         const reloadTime = baseReloadTime / gameState.buffs.reloadSpeedMul; // Buff diminui o tempo
         const base = 1 / reloadTime; // higher when reload time is lower
         const movePenalty = gameState.reloadMovePenalty; // e.g., 0.5

@@ -101,6 +101,90 @@ export const ENEMY_PRESETS = {
     hp: 10,
     damage: 75,
   },
+
+  // ── Novos inimigos ──
+  spinner: {
+    name: "Rodador",
+    size: 26,
+    color: [255, 120, 40] as [number, number, number],
+    speed: 110,
+    hp: 5,
+    damage: 35,
+  },
+  summoner: {
+    name: "Conjurador",
+    size: 32,
+    color: [150, 40, 220] as [number, number, number],
+    speed: 75,
+    hp: 12,
+    damage: 20,
+  },
+  regen: {
+    name: "Regenerador",
+    size: 30,
+    color: [40, 200, 100] as [number, number, number],
+    speed: 130,
+    hp: 14,
+    damage: 50,
+  },
+  colossus: {
+    name: "Colosso",
+    size: 60,
+    color: [160, 100, 40] as [number, number, number],
+    speed: 50,
+    hp: 45,
+    damage: 80,
+  },
+  cone_shooter: {
+    name: "Atirador Conal",
+    size: 28,
+    color: [220, 40, 180] as [number, number, number],
+    speed: 90,
+    hp: 6,
+    damage: 40,
+  },
+
+  // ── Elites dos novos ──
+  spinner_elite: {
+    name: "Rodador+",
+    size: 30,
+    color: [255, 80, 20] as [number, number, number],
+    speed: 140,
+    hp: 10,
+    damage: 55,
+  },
+  summoner_elite: {
+    name: "Conjurador+",
+    size: 36,
+    color: [120, 20, 200] as [number, number, number],
+    speed: 90,
+    hp: 22,
+    damage: 35,
+  },
+  regen_elite: {
+    name: "Regenerador+",
+    size: 34,
+    color: [20, 160, 80] as [number, number, number],
+    speed: 155,
+    hp: 26,
+    damage: 70,
+  },
+  colossus_elite: {
+    name: "Colosso+",
+    size: 70,
+    color: [120, 70, 20] as [number, number, number],
+    speed: 65,
+    hp: 80,
+    damage: 120,
+  },
+  cone_shooter_elite: {
+    name: "Atirador Conal+",
+    size: 32,
+    color: [200, 20, 160] as [number, number, number],
+    speed: 115,
+    hp: 12,
+    damage: 65,
+  },
 };
 
 export type Enemies = keyof typeof ENEMY_PRESETS;

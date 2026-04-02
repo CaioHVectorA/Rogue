@@ -11,11 +11,10 @@ const MAX_LEVEL_BONUS = 0.15; // 15% bonus when attribute reaches max level
 // New helper: cost to buy next level (based on target level)
 function nextLevelCost(nextLevel: number): number {
   // nextLevel is the level you will reach after the purchase
-  if (nextLevel <= 2) return 1;
-  if (nextLevel <= 4) return 2; // from lvl3 cost 2 (i.e., buying to level 3 or 4)
-  if (nextLevel <= 7) return 3; // from lvl5 cost 3
-  if (nextLevel <= 9) return 5; // levels 8-9 cost 5
-  return 10; // level 10 costs 10
+  // Cost formula: (current level)^2 where current level = nextLevel - 1
+  // Ensure cost for first levels is at least 1 (0->1 costs 1)
+  const currentLevel = Math.max(1, nextLevel - 1);
+  return currentLevel * currentLevel;
 }
 
 // Helper to count how many attributes are already maxed

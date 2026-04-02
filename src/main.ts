@@ -7,6 +7,10 @@ import { setupUI } from "./components/ui";
 import { setupShop } from "./components/shop";
 import { gameState } from "./state/gameState";
 import { useSkill, initCharges } from "./components/skills";
+import {
+  onKillReduceQCooldown,
+  getZonaDePerigoDefenseMul,
+} from "./components/perks";
 // Register skills
 import "./components/skills/coneShot";
 import "./components/skills/ricochetShot";
@@ -171,10 +175,14 @@ function spawnWave(waveIndex: number) {
         if (gameState.xp >= gameState.xpToLevel) {
           gameState.xp -= gameState.xpToLevel;
           gameState.level += 1;
-          gameState.elevationPoints += 3; // +3 elevation points per level up
+          gameState.elevationPoints += 3;
           gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
         }
         ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
+
+        // Execução Limpa: matar reduz CD da skill Q
+        const isElite = ((e as any).enemyType ?? "").endsWith("_elite");
+        onKillReduceQCooldown(isElite);
 
         // Vampirism: heal player on kill
         try {
@@ -232,20 +240,21 @@ k.onCollide("player", "enemy", (p: any, e: any) => {
   if ((e.lastDamageTime ?? 0) + gameState.enemyDamageCooldownMs > now) return;
   e.lastDamageTime = now;
   const dmg = e.damage ?? 1;
-  (p as any).hp = Math.max(0, ((p as any).hp ?? gameState.maxHealth) - dmg);
+  // Zona de Perigo: +3% dano recebido por inimigo próximo
+  const zonaDef = getZonaDePerigoDefenseMul(k, p.pos);
+  (p as any).hp = Math.max(0, ((p as any).hp ?? gameState.maxHealth) - dmg * zonaDef);
   ui.updateHearts((p as any).hp);
   if ((p as any).hp <= 0) {
-    // simple kaboom on death
     k.addKaboom(p.pos.clone());
   }
 });
 k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
   bb.destroy();
   const bulletDmg = bb.damage ?? 30;
-  (p as any).hp = Math.max(0, (p as any).hp - bulletDmg);
+  const zonaDef = getZonaDePerigoDefenseMul(k, p.pos);
+  (p as any).hp = Math.max(0, (p as any).hp - bulletDmg * zonaDef);
   ui.updateHearts((p as any).hp);
   if ((p as any).hp <= 0) {
-    // simple kaboom on death
     k.addKaboom(p.pos.clone());
   }
 });

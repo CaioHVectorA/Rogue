@@ -1,4 +1,5 @@
 import type { GameObj, Vec2 } from "kaplay";
+import { getLigeirinhoSpeedBonus } from "./perks";
 
 export type MovimentableOptions = {
     keys?: {
@@ -42,7 +43,8 @@ export function movimentable(k: any, opts: MovimentableOptions = {}) {
                 }
 
                 if (dir && (dir.x !== 0 || dir.y !== 0)) {
-                    const spd = this.speed ?? 220;
+                    const ligeirinho = 1 + getLigeirinhoSpeedBonus();
+                    const spd = (this.speed ?? 220) * (opts.getDirection ? 1 : ligeirinho);
                     const move = dir.unit().scale(spd);
                     this.move(move);
                 }

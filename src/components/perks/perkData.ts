@@ -25,40 +25,6 @@ export const perkDefs: PerkDef[] = [
     category: "reset",
     color: [60, 200, 180],
   },
-  {
-    id: "nao-olhe-para-tras",
-    name: "Não Olhe Para Trás",
-    icon: "💨",
-    desc: "Matar inimigos enquanto se move\nreduz CD de Q em 25%.\nParar por 0.5s cancela o efeito.",
-    category: "reset",
-    color: [100, 180, 255],
-  },
-  {
-    id: "ciclo-vicioso",
-    name: "Ciclo Vicioso",
-    icon: "🔁",
-    desc: "Cada tiro reduz CD de Q em 20%\ndo valor restante.\nEficiência reduzida por 0.3s.",
-    category: "reset",
-    color: [180, 120, 255],
-  },
-
-  // ── Stack infinito perks ──
-  {
-    id: "sede-de-caca",
-    name: "Sede de Caça",
-    icon: "💀",
-    desc: "Cada inimigo morto: +1% dano\npermanente.\nAo morrer: perde 50% dos bônus.",
-    category: "stack",
-    color: [255, 80, 80],
-  },
-  {
-    id: "aprendizado-doloroso",
-    name: "Aprendizado Doloroso",
-    icon: "🩸",
-    desc: "Receber dano: +0.5% Vida Máxima\npermanente.\nDano consecutivo reduz eficiência.",
-    category: "stack",
-    color: [200, 60, 120],
-  },
 
   // ── General perks ──
   {
@@ -102,14 +68,6 @@ export const perkDefs: PerkDef[] = [
     desc: "Tiros acertados: +4% Vel. Mov.\n(até 5x). 10% do bônus acelera\nrecarga. Errar reinicia acúmulos.",
     category: "basic",
     color: [255, 220, 60],
-  },
-  {
-    id: "diga-onde-voce-vai",
-    name: "Diga Onde Você Vai",
-    icon: "🏹",
-    desc: "Por 3s após usar Q:\nTiros atravessam inimigos.\nCada perfuração: -20% dano.",
-    category: "basic",
-    color: [100, 220, 160],
   },
 
   // ── Shock perk ──

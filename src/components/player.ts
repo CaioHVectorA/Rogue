@@ -4,6 +4,7 @@ import { movimentable } from "./movimentable";
 import { shoot } from "./shoot";
 import { size } from "./size";
 import { gameState } from "../state/gameState";
+import { debug } from "../state/debug";
 
 export type PlayerOptions = {
   pos?: Vec2;
@@ -16,7 +17,8 @@ export type PlayerOptions = {
 
 export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
   const s = opts.size ?? 36;
-  const spd = opts.speed ?? 220;
+  const gs = debug.GAME_SPEED ?? 1.0;
+  const spd = (opts.speed ?? 220) * gs;
   const startPos = opts.pos ?? k.vec2(k.width() / 2, k.height() / 2);
   const color = opts.color ?? [0, 180, 255];
   const baseHP = opts.hp ?? 5;

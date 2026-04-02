@@ -1,6 +1,7 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import { registerSkill } from "./registry";
 import { gameState } from "../../state/gameState";
+import { getEngenhariaRunicaBonusSlots, getEngenhariaRunicaDamageBonus } from "../perks";
 
 // ===== Tabela de escalamento por nível =====
 type TotemLevelData = {
@@ -69,6 +70,12 @@ const TOTEM_LEVELS: TotemLevelData[] = [
 function getLevelData(): TotemLevelData {
   const lvl = gameState.skills.levels["summoned-totem"] ?? 1;
   return TOTEM_LEVELS[Math.min(lvl, TOTEM_LEVELS.length) - 1];
+}
+
+// Controla quantos totens estão ativos agora
+let _activeTotemCount = 0;
+function getMaxTotems(): number {
+  return 1 + getEngenhariaRunicaBonusSlots(); // base 1, +1 com Engenharia Rúnica
 }
 
 // ===== Cores do totem =====
@@ -304,7 +311,14 @@ registerSkill({
   getCooldown: (level) =>
     TOTEM_LEVELS[Math.min(level, TOTEM_LEVELS.length) - 1].cooldown,
   use: ({ k, player }) => {
+    // Engenharia Rúnica: respeita limite de totens simultâneos
+    if (_activeTotemCount >= getMaxTotems()) return;
+    _activeTotemCount++;
+
     const data = getLevelData();
+    // Engenharia Rúnica: bônus de 30% no dano do totem
+    const runicDmgBonus = getEngenhariaRunicaDamageBonus();
+    const effectiveDamage = Math.max(1, Math.round(data.damage * (1 + runicDmgBonus)));
     const cx = player.pos.x + (Math.random() - 0.5) * 60;
     const cy = player.pos.y + (Math.random() - 0.5) * 60;
     const totemCenter = { x: cx, y: cy };
@@ -457,6 +471,7 @@ registerSkill({
     function destroyAll(): void {
       if (destroyed) return;
       destroyed = true;
+      _activeTotemCount = Math.max(0, _activeTotemCount - 1);
       const pos = { x: body.pos.x, y: body.pos.y };
       spawnDestroyEffect(k, pos);
       for (const part of allParts) {
@@ -695,7 +710,7 @@ registerSkill({
 
           bullet.onCollide("enemy", (enemy: any) => {
             if (typeof enemy.hp === "number") {
-              enemy.hp -= data.damage;
+              enemy.hp -= effectiveDamage;
               spawnBulletHitEffect(k, { x: bullet.pos.x, y: bullet.pos.y });
               if (enemy.hp <= 0) enemy.destroy();
             }

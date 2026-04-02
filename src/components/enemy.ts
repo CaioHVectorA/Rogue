@@ -8,8 +8,14 @@ import {
   applyRedBehavior,
   applyPurpleBehavior,
   applySmartBehavior,
+  applySpinnerBehavior,
+  applySummonerBehavior,
+  applyRegenBehavior,
+  applyColossusBehavior,
+  applyConeShooterBehavior,
 } from "./behaviors";
 import { gameState } from "../state/gameState";
+import { debug } from "../state/debug";
 import {
   getGoldWeightsByLuck,
   pickGoldTier,
@@ -35,7 +41,25 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   const type = opts.type ?? "red";
   const preset = ENEMY_PRESETS[type];
   const s = opts.size ?? preset.size;
-  const spd = opts.speed ?? preset.speed; // default based on type
+
+  // ── Escalonamento pós-wave 5 ──
+  // A cada ciclo de 5 waves (wave 6+), +50% HP e +50% atk speed para inimigos
+  const wave = gameState.wave;
+  const scaleStacks = wave > 5 ? Math.floor((wave - 1) / 5) : 0; // 0 até wave 5
+  const hpScale = 1 + scaleStacks * 0.5;
+  // Tipos que disparam também escalam atk speed (spinner, green, cone_shooter)
+  const isShooterType = [
+    "spinner",
+    "spinner_elite",
+    "green",
+    "green_elite",
+    "cone_shooter",
+    "cone_shooter_elite",
+  ].includes(type);
+
+  // ── GAME_SPEED multiplicador global ──
+  const gs = debug.GAME_SPEED ?? 1.0;
+  const spd = (opts.speed ?? preset.speed) * gs;
   const margin = opts.margin ?? 32; // avoid spawning inside walls
   const arena = opts.arenaBounds;
   const playerPos = opts.target.pos.clone();
@@ -56,7 +80,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     startPos = playerPos.add(dir.scale(minSpawnDist));
   }
   const color = opts.color ?? preset.color;
-  const maxHP = opts.hp ?? preset.hp;
+  const maxHP = Math.round((opts.hp ?? preset.hp) * hpScale);
   const dmg = opts.damage ?? preset.damage;
 
   const isElite = type.endsWith("_elite");
@@ -112,6 +136,50 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         }
         if (this.enemyType === "smart" || this.enemyType === "smart_elite") {
           applySmartBehavior(k, this as any, opts.target);
+        }
+        if (
+          this.enemyType === "spinner" ||
+          this.enemyType === "spinner_elite"
+        ) {
+          // fire rate escalada para shooters pós-wave 5
+          const fireRateMul =
+            isShooterType && scaleStacks > 0
+              ? Math.max(0.25, 1 / (1 + scaleStacks * 0.5))
+              : 1;
+          const spinData = this as any;
+          if (spinData._spinFireRate !== undefined) {
+            spinData._spinFireRate = 0.55 * fireRateMul;
+          }
+          applySpinnerBehavior(k, this as any, dmg);
+        }
+        if (
+          this.enemyType === "summoner" ||
+          this.enemyType === "summoner_elite"
+        ) {
+          applySummonerBehavior(k, this as any, opts.target, opts.arenaBounds);
+        }
+        if (this.enemyType === "regen" || this.enemyType === "regen_elite") {
+          applyRegenBehavior(k, this as any);
+        }
+        if (
+          this.enemyType === "colossus" ||
+          this.enemyType === "colossus_elite"
+        ) {
+          applyColossusBehavior(k, this as any, opts.target);
+        }
+        if (
+          this.enemyType === "cone_shooter" ||
+          this.enemyType === "cone_shooter_elite"
+        ) {
+          const coneFireMul =
+            isShooterType && scaleStacks > 0
+              ? Math.max(0.6, 1 / (1 + scaleStacks * 0.4))
+              : 1;
+          const coneData = this as any;
+          if (coneData._coneCooldown !== undefined) {
+            coneData._coneCooldown = 2.2 * coneFireMul;
+          }
+          applyConeShooterBehavior(k, this as any, opts.target, dmg);
         }
       },
     },

@@ -109,11 +109,9 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   const MAX_ATTR_LEVEL = 10;
 
   function nextAttrGoldCost(nextLevel: number) {
-    if (nextLevel <= 2) return 1;
-    if (nextLevel <= 4) return 2; // lvl 3-4 -> 2
-    if (nextLevel <= 7) return 3; // lvl 5-7 -> 3
-    if (nextLevel <= 9) return 5; // lvl 8-9 -> 5
-    return 10; // lvl 10 -> 10
+    // custo = (nível atual)² → ex: 1→2 custa 1, 2→3 custa 4, 3→4 custa 9 …
+    const currentLevel = nextLevel - 1;
+    return currentLevel * currentLevel;
   }
 
   const panelW = 460;

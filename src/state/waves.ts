@@ -48,17 +48,20 @@ export const waves: WaveEntry[][] = [
     { type: "red", count: 10 },
     { type: "green", count: 4 },
     { type: "purple", count: 3 },
+    { type: "spinner", count: 2 },
   ],
   // 8
   [
     { type: "purple", count: 8 },
     { type: "blue", count: 2 },
+    { type: "cone_shooter", count: 2 },
   ],
   // 9
   [
     { type: "red", count: 15 },
     { type: "green", count: 4 },
     { type: "purple", count: 4 },
+    { type: "spinner", count: 3 },
   ],
   // 10
   [
@@ -66,6 +69,7 @@ export const waves: WaveEntry[][] = [
     { type: "blue", count: 3 },
     { type: "purple", count: 6 },
     { type: "green", count: 3 },
+    { type: "cone_shooter", count: 3 },
   ],
 
   // ── Wave 11-15: Smart (amarelo) entra ──
@@ -73,23 +77,27 @@ export const waves: WaveEntry[][] = [
   [
     { type: "red", count: 14 },
     { type: "smart", count: 3 },
+    { type: "summoner", count: 1 },
   ],
   // 12
   [
     { type: "purple", count: 8 },
     { type: "smart", count: 4 },
+    { type: "spinner", count: 3 },
   ],
   // 13
   [
     { type: "red", count: 10 },
     { type: "green", count: 5 },
     { type: "smart", count: 4 },
+    { type: "cone_shooter", count: 2 },
   ],
   // 14
   [
     { type: "blue", count: 4 },
     { type: "smart", count: 5 },
     { type: "purple", count: 5 },
+    { type: "summoner", count: 2 },
   ],
   // 15
   [
@@ -97,6 +105,8 @@ export const waves: WaveEntry[][] = [
     { type: "green", count: 4 },
     { type: "smart", count: 4 },
     { type: "stone", count: 1 },
+    { type: "spinner", count: 3 },
+    { type: "cone_shooter", count: 2 },
   ],
 
   // ── Wave 16-20: Stone tanque, pressão crescente ──
@@ -105,12 +115,14 @@ export const waves: WaveEntry[][] = [
     { type: "stone", count: 2 },
     { type: "red", count: 15 },
     { type: "purple", count: 5 },
+    { type: "regen", count: 2 },
   ],
   // 17
   [
     { type: "stone", count: 3 },
     { type: "green", count: 5 },
     { type: "smart", count: 4 },
+    { type: "summoner", count: 2 },
   ],
   // 18
   [
@@ -118,12 +130,15 @@ export const waves: WaveEntry[][] = [
     { type: "blue", count: 4 },
     { type: "stone", count: 2 },
     { type: "purple", count: 6 },
+    { type: "spinner", count: 4 },
   ],
   // 19
   [
     { type: "smart", count: 6 },
     { type: "purple", count: 8 },
     { type: "stone", count: 2 },
+    { type: "cone_shooter", count: 4 },
+    { type: "regen", count: 2 },
   ],
   // 20
   [
@@ -131,6 +146,8 @@ export const waves: WaveEntry[][] = [
     { type: "blue", count: 5 },
     { type: "green", count: 5 },
     { type: "stone", count: 3 },
+    { type: "summoner", count: 2 },
+    { type: "spinner", count: 3 },
   ],
 
   // ── Wave 21-25: Elites começam ──
@@ -139,18 +156,23 @@ export const waves: WaveEntry[][] = [
     { type: "red_elite", count: 3 },
     { type: "red", count: 15 },
     { type: "purple", count: 6 },
+    { type: "colossus", count: 1 },
   ],
   // 22
   [
     { type: "blue_elite", count: 2 },
     { type: "blue", count: 4 },
     { type: "smart", count: 5 },
+    { type: "regen", count: 3 },
+    { type: "summoner", count: 2 },
   ],
   // 23
   [
     { type: "red_elite", count: 5 },
     { type: "green", count: 5 },
     { type: "purple", count: 8 },
+    { type: "spinner", count: 4 },
+    { type: "cone_shooter", count: 3 },
   ],
   // 24
   [
@@ -158,6 +180,8 @@ export const waves: WaveEntry[][] = [
     { type: "stone", count: 3 },
     { type: "smart", count: 5 },
     { type: "red", count: 10 },
+    { type: "colossus", count: 1 },
+    { type: "regen", count: 2 },
   ],
   // 25
   [
@@ -165,6 +189,8 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 2 },
     { type: "purple", count: 10 },
     { type: "green", count: 4 },
+    { type: "summoner", count: 3 },
+    { type: "spinner", count: 4 },
   ],
 
   // ── Wave 26-30: Elites verdes e smart ──
@@ -173,12 +199,15 @@ export const waves: WaveEntry[][] = [
     { type: "green_elite", count: 3 },
     { type: "red_elite", count: 4 },
     { type: "red", count: 12 },
+    { type: "spinner_elite", count: 2 },
+    { type: "cone_shooter", count: 3 },
   ],
   // 27
   [
     { type: "smart_elite", count: 3 },
     { type: "smart", count: 5 },
     { type: "purple", count: 8 },
+    { type: "summoner_elite", count: 2 },
   ],
   // 28
   [
@@ -186,19 +215,26 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 3 },
     { type: "stone", count: 3 },
     { type: "red", count: 10 },
+    { type: "regen_elite", count: 2 },
+    { type: "colossus", count: 1 },
   ],
   // 29
   [
     { type: "smart_elite", count: 4 },
     { type: "purple", count: 10 },
     { type: "red_elite", count: 5 },
+    { type: "cone_shooter_elite", count: 3 },
+    { type: "spinner_elite", count: 3 },
   ],
   // 30
   [
     { type: "red_elite", count: 8 },
     { type: "blue_elite", count: 3 },
     { type: "green_elite", count: 3 },
+    { type: "green_elite", count: 3 },
     { type: "smart_elite", count: 3 },
+    { type: "summoner_elite", count: 2 },
+    { type: "colossus", count: 1 },
   ],
 
   // ── Wave 31-35: Purple elite, stone elite ──
@@ -207,24 +243,32 @@ export const waves: WaveEntry[][] = [
     { type: "purple_elite", count: 5 },
     { type: "stone", count: 4 },
     { type: "red_elite", count: 6 },
+    { type: "regen_elite", count: 2 },
+    { type: "spinner_elite", count: 3 },
   ],
   // 32
   [
     { type: "stone_elite", count: 2 },
     { type: "blue_elite", count: 4 },
     { type: "smart_elite", count: 4 },
+    { type: "cone_shooter_elite", count: 3 },
+    { type: "summoner_elite", count: 2 },
   ],
   // 33
   [
     { type: "purple_elite", count: 8 },
     { type: "green_elite", count: 4 },
     { type: "red_elite", count: 6 },
+    { type: "colossus_elite", count: 1 },
+    { type: "spinner_elite", count: 4 },
   ],
   // 34
   [
     { type: "stone_elite", count: 3 },
     { type: "smart_elite", count: 5 },
     { type: "purple_elite", count: 6 },
+    { type: "regen_elite", count: 3 },
+    { type: "cone_shooter_elite", count: 3 },
   ],
   // 35
   [
@@ -232,6 +276,8 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 4 },
     { type: "purple_elite", count: 6 },
     { type: "stone_elite", count: 2 },
+    { type: "summoner_elite", count: 3 },
+    { type: "colossus_elite", count: 1 },
   ],
 
   // ── Wave 36-40: Composições mistas elite ──
@@ -240,12 +286,16 @@ export const waves: WaveEntry[][] = [
     { type: "red_elite", count: 12 },
     { type: "green_elite", count: 5 },
     { type: "smart_elite", count: 5 },
+    { type: "spinner_elite", count: 4 },
+    { type: "cone_shooter_elite", count: 3 },
   ],
   // 37
   [
     { type: "purple_elite", count: 10 },
     { type: "blue_elite", count: 5 },
     { type: "stone_elite", count: 3 },
+    { type: "regen_elite", count: 3 },
+    { type: "colossus_elite", count: 1 },
   ],
   // 38
   [
@@ -253,6 +303,8 @@ export const waves: WaveEntry[][] = [
     { type: "smart_elite", count: 6 },
     { type: "green_elite", count: 5 },
     { type: "purple_elite", count: 5 },
+    { type: "summoner_elite", count: 3 },
+    { type: "spinner_elite", count: 4 },
   ],
   // 39
   [
@@ -260,6 +312,8 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 5 },
     { type: "purple_elite", count: 8 },
     { type: "smart_elite", count: 5 },
+    { type: "cone_shooter_elite", count: 4 },
+    { type: "regen_elite", count: 3 },
   ],
   // 40
   [
@@ -268,6 +322,8 @@ export const waves: WaveEntry[][] = [
     { type: "green_elite", count: 6 },
     { type: "purple_elite", count: 6 },
     { type: "stone_elite", count: 2 },
+    { type: "colossus_elite", count: 2 },
+    { type: "summoner_elite", count: 3 },
   ],
 
   // ── Wave 41-45: Endgame ──
@@ -276,6 +332,8 @@ export const waves: WaveEntry[][] = [
     { type: "red_elite", count: 20 },
     { type: "smart_elite", count: 8 },
     { type: "purple_elite", count: 8 },
+    { type: "spinner_elite", count: 5 },
+    { type: "cone_shooter_elite", count: 4 },
   ],
   // 42
   [
@@ -283,12 +341,16 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 8 },
     { type: "green_elite", count: 6 },
     { type: "smart_elite", count: 6 },
+    { type: "regen_elite", count: 4 },
+    { type: "colossus_elite", count: 2 },
   ],
   // 43
   [
     { type: "purple_elite", count: 12 },
     { type: "red_elite", count: 15 },
     { type: "smart_elite", count: 8 },
+    { type: "summoner_elite", count: 4 },
+    { type: "spinner_elite", count: 5 },
   ],
   // 44
   [
@@ -297,6 +359,8 @@ export const waves: WaveEntry[][] = [
     { type: "green_elite", count: 8 },
     { type: "purple_elite", count: 10 },
     { type: "smart_elite", count: 6 },
+    { type: "cone_shooter_elite", count: 5 },
+    { type: "regen_elite", count: 4 },
   ],
   // 45
   [
@@ -304,6 +368,9 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 8 },
     { type: "purple_elite", count: 12 },
     { type: "stone_elite", count: 4 },
+    { type: "colossus_elite", count: 2 },
+    { type: "summoner_elite", count: 4 },
+    { type: "spinner_elite", count: 5 },
   ],
 
   // ── Wave 46-50: Boss waves ──
@@ -312,6 +379,9 @@ export const waves: WaveEntry[][] = [
     { type: "stone_elite", count: 6 },
     { type: "red_elite", count: 20 },
     { type: "smart_elite", count: 10 },
+    { type: "colossus_elite", count: 2 },
+    { type: "cone_shooter_elite", count: 5 },
+    { type: "regen_elite", count: 4 },
   ],
   // 47
   [
@@ -319,6 +389,8 @@ export const waves: WaveEntry[][] = [
     { type: "blue_elite", count: 10 },
     { type: "green_elite", count: 10 },
     { type: "smart_elite", count: 8 },
+    { type: "spinner_elite", count: 6 },
+    { type: "summoner_elite", count: 4 },
   ],
   // 48
   [
@@ -326,6 +398,8 @@ export const waves: WaveEntry[][] = [
     { type: "red_elite", count: 25 },
     { type: "purple_elite", count: 12 },
     { type: "smart_elite", count: 10 },
+    { type: "colossus_elite", count: 3 },
+    { type: "cone_shooter_elite", count: 6 },
   ],
   // 49
   [
@@ -334,6 +408,9 @@ export const waves: WaveEntry[][] = [
     { type: "green_elite", count: 10 },
     { type: "purple_elite", count: 15 },
     { type: "smart_elite", count: 10 },
+    { type: "regen_elite", count: 5 },
+    { type: "spinner_elite", count: 6 },
+    { type: "summoner_elite", count: 4 },
   ],
   // 50 — Final wave
   [
@@ -342,5 +419,10 @@ export const waves: WaveEntry[][] = [
     { type: "purple_elite", count: 18 },
     { type: "smart_elite", count: 12 },
     { type: "red_elite", count: 25 },
+    { type: "colossus_elite", count: 3 },
+    { type: "cone_shooter_elite", count: 7 },
+    { type: "spinner_elite", count: 7 },
+    { type: "summoner_elite", count: 5 },
+    { type: "regen_elite", count: 5 },
   ],
 ];
