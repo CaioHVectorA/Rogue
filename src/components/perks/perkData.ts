@@ -89,6 +89,14 @@ export const perkDefs: PerkDef[] = [
     category: "general",
     color: [255, 200, 60],
   },
+  {
+    id: "aura-flamejante",
+    name: "Aura Flamejante",
+    icon: "🔥",
+    desc: "Cria uma aura de fogo ao redor do jogador.\nPassivamente queima inimigos próximos a cada 1.0s.\nDano escala com Poder Arcano.",
+    category: "general",
+    color: [240, 80, 30],
+  },
 ];
 
 export function getPerkById(id: string): PerkDef | undefined {

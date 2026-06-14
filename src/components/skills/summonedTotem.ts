@@ -318,7 +318,7 @@ registerSkill({
     const data = getLevelData();
     // Engenharia Rúnica: bônus de 30% no dano do totem
     const runicDmgBonus = getEngenhariaRunicaDamageBonus();
-    const effectiveDamage = Math.max(1, Math.round(data.damage * (1 + runicDmgBonus)));
+    const effectiveDamage = Math.max(1, Math.round(data.damage * (1 + runicDmgBonus) * gameState.castPower));
     const cx = player.pos.x + (Math.random() - 0.5) * 60;
     const cy = player.pos.y + (Math.random() - 0.5) * 60;
     const totemCenter = { x: cx, y: cy };
@@ -764,7 +764,7 @@ registerSkill({
               if (dist <= explodeRadius) {
                 const ed = en as any;
                 if (typeof ed.hp === "number") {
-                  ed.hp -= Math.max(1, Math.floor(data.damage * 0.8));
+                  ed.hp -= Math.max(1, Math.round(data.damage * 0.8 * gameState.castPower));
                   if (ed.hp <= 0) ed.destroy();
                 }
               }

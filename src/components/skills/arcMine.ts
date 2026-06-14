@@ -326,12 +326,13 @@ registerSkill({
     const {
       radius,
       lifetime,
-      damage,
+      damage: baseDamage,
       warningDelay,
       explosionDelay,
       shakeIntensity,
       shakeSpeed,
     } = MINE_CONFIG;
+    const damage = baseDamage * gameState.castPower;
 
     const mineSize = radius / 9;
     const explosionRadius = radius * 1.5;
@@ -434,6 +435,7 @@ registerSkill({
 
       explosionArea.onCollide("enemy", (enemy: any) => {
         if (typeof enemy.hp === "number") {
+          enemy._lastDamageType = "explosion";
           enemy.hp -= damage;
           if (enemy.hp <= 0) enemy.destroy();
         }

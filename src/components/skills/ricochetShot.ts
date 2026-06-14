@@ -371,7 +371,7 @@ registerSkill({
     const data = getLevelData(level);
     const origin = player.pos.clone();
     const speed = gameState.projectileSpeed * data.speedMul;
-    const baseDamage = gameState.shotDamage;
+    const baseDamage = gameState.shotDamage * gameState.castPower;
 
     // Direção: movimento do jogador ou inimigo mais próximo
     const dir = getPlayerDirection(k, player);

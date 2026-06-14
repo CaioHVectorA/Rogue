@@ -45,6 +45,7 @@ export function spawnChainExplosion(k: any, pos: any, baseDamage: number, isChai
   for (const e of enemies) {
     if (e.pos.dist(pos) <= radius) {
       if (typeof e.hp === "number") {
+        e._lastDamageType = "explosion";
         e.hp -= dmg * gameState.buffs.damageMul;
         if (e.hp <= 0) e.destroy();
       }
@@ -101,6 +102,7 @@ export function triggerSeismic(k: any, pos: any): void {
       if (!hitEnemies.has(e) && e.pos.dist(pos) <= r + 20) {
         hitEnemies.add(e);
         if (typeof e.hp === "number") {
+          e._lastDamageType = "explosion";
           e.hp -= dmg;
           if (e.hp <= 0) e.destroy();
         }
@@ -183,6 +185,7 @@ export function triggerShockExplosion(k: any, pos: any): void {
   for (const e of enemies) {
     if (e.pos.dist(pos) <= radius) {
       if (typeof e.hp === "number") {
+        e._lastDamageType = "shock";
         e.hp -= dmg;
         if (e.hp <= 0) e.destroy();
       }
@@ -209,4 +212,84 @@ export function getEngenhariaRunicaBonusSlots(): number {
 
 export function getEngenhariaRunicaDamageBonus(): number {
   return hasPerk("engenharia-runica") ? 0.3 : 0;
+}
+
+// ══════════════════════════════════════════════════════════
+// AURA FLAMEJANTE — queima passiva no raio 100 a cada 1.0s
+//                   dano = 2.0 * castPower * damageMul
+// ══════════════════════════════════════════════════════════
+let _fireAuraVisual: any = null;
+let _fireAuraTimer = 0;
+
+export function updateFireAuraPerk(k: any, player: any): void {
+  if (!player || !player.exists()) {
+    if (_fireAuraVisual && _fireAuraVisual.exists()) {
+      _fireAuraVisual.destroy();
+    }
+    _fireAuraVisual = null;
+    return;
+  }
+
+  if (!hasPerk("aura-flamejante")) {
+    if (_fireAuraVisual && _fireAuraVisual.exists()) {
+      _fireAuraVisual.destroy();
+    }
+    _fireAuraVisual = null;
+    return;
+  }
+
+  // Se tem a perk, garante o objeto visual
+  const radius = 100;
+  if (!_fireAuraVisual || !_fireAuraVisual.exists()) {
+    _fireAuraVisual = k.add([
+      k.circle(radius),
+      k.pos(player.pos.x + 18, player.pos.y + 18),
+      k.anchor("center"),
+      k.color(240, 80, 30),
+      k.opacity(0.1),
+      k.outline(2, k.rgb(255, 120, 50)),
+      k.z(400),
+      { id: "fire-aura-visual" },
+    ]);
+  } else {
+    _fireAuraVisual.pos.x = player.pos.x + 18;
+    _fireAuraVisual.pos.y = player.pos.y + 18;
+  }
+
+  // Timer para o pulso de dano
+  _fireAuraTimer += k.dt();
+  if (_fireAuraTimer >= 1.0) {
+    _fireAuraTimer = 0;
+
+    const center = player.pos.add(18, 18);
+    const dmg = 2.0 * gameState.castPower * gameState.buffs.damageMul;
+
+    // Visual pulse
+    const pulse = k.add([
+      k.circle(10),
+      k.pos(center.x, center.y),
+      k.color(255, 120, 30),
+      k.opacity(0.55),
+      k.z(401),
+    ]);
+    let elapsed = 0;
+    pulse.onUpdate(() => {
+      elapsed += k.dt();
+      const progress = Math.min(elapsed / 0.25, 1);
+      pulse.use(k.circle(10 + progress * (radius - 10)));
+      pulse.opacity = 0.55 * (1 - progress);
+      if (progress >= 1) pulse.destroy();
+    });
+
+    // Damage enemies
+    const enemies = k.get("enemy") as any[];
+    for (const e of enemies) {
+      if (e.pos.dist(center) <= radius) {
+        if (typeof e.hp === "number") {
+          e.hp -= dmg;
+          if (e.hp <= 0) e.destroy();
+        }
+      }
+    }
+  }
 }

@@ -138,6 +138,7 @@ function triggerMarkExplosion(k: KAPLAYCtx, source: GameObj): void {
 
       // Aplica dano
       if (typeof e.hp === "number") {
+        e._lastDamageType = "marked";
         e.hp -= explosionDamage;
         if (e.hp <= 0) {
           e.destroy();

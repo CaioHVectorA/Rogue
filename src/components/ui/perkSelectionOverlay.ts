@@ -1,11 +1,11 @@
 // ─── Perk Selection Overlay ─────────────────────────────
-// Shows 2 random perk cards with 1 reroll, similar to skill selection.
+// Redesigned: displays all available perks in a grid layout (left)
+// and an inspector detail panel (right) with an Acquire button.
 
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
-import { type PerkDef, PERK_COST } from "../perks/perkData";
-import { samplePerks, canOpenPerkSelection } from "../perks/perkRules";
-import { acquirePerk } from "../perks/perkState";
+import { type PerkDef, perkDefs } from "../perks/perkData";
+import { getAvailablePerks } from "../perks/perkRules";
 import { applyImaMagneticoEffect } from "../perks/perkEffects";
 import { wrapText } from "./helpers";
 
@@ -29,8 +29,8 @@ export function createPerkSelectionOverlay(
     k.add([
       k.rect(k.width(), k.height()),
       k.pos(0, 0),
-      k.color(0, 0, 0),
-      k.opacity(0.7),
+      k.color(10, 10, 15),
+      k.opacity(0.85),
       k.fixed(),
       k.z(5000),
       { id: "perk-overlay-bg" },
@@ -40,30 +40,28 @@ export function createPerkSelectionOverlay(
   // ── Title ──
   const titleText = track(
     k.add([
-      k.text("Escolha uma Perk", { size: 32 }),
+      k.text("Escolha uma Habilidade Passiva", { size: 28 }),
       k.pos(k.width() / 2, 40),
       k.anchor("top"),
       k.color(255, 220, 100),
       k.fixed(),
       k.z(5001),
-      { id: "perk-overlay-title" },
     ]),
   );
 
-  // ── Cost info ──
+  // ── Subtitle ──
   const costText = track(
     k.add([
-      k.text(`★ Custo: ${PERK_COST} pontos de elevação`, { size: 16 }),
+      k.text("Escolha uma Passiva Grátis!", { size: 16 }),
       k.pos(k.width() / 2, 80),
       k.anchor("top"),
       k.color(180, 140, 255),
       k.fixed(),
       k.z(5001),
-      { id: "perk-overlay-cost" },
     ]),
   );
 
-  // ── Perk slots info ──
+  // ── Slots info ──
   const slotsText = track(
     k.add([
       k.text("", { size: 14 }),
@@ -72,203 +70,202 @@ export function createPerkSelectionOverlay(
       k.color(140, 140, 160),
       k.fixed(),
       k.z(5001),
-      { id: "perk-overlay-slots" },
     ]),
   );
 
-  // ── Cards ──
-  const cardW = 340;
-  const cardH = 420;
-  const gap = 40;
+  // ── Grid & Inspector dimensions ──
+  const gridCols = 5;
+  const sqSize = 80;
+  const sqGap = 16;
+  const inspectorW = 360;
+  const inspectorH = 320;
+  const cancelBtnW = 160;
 
-  type PerkCard = {
-    bg: GameObj;
-    iconTxt: GameObj;
-    nameTxt: GameObj;
-    descTxt: GameObj;
-    categoryTxt: GameObj;
-    chooseBtn: GameObj;
-    chooseBtnTxt: GameObj;
-    rerollBtn: GameObj;
-    rerollBtnTxt: GameObj;
-    perkId: string;
-    rerolled: boolean;
+  // Layout calculations
+  const getLayoutPositions = () => {
+    const layoutW = 872; // grid (464) + gap (48) + inspector (360)
+    const startX = Math.floor((k.width() - layoutW) / 2);
+    const startY = Math.floor((k.height() - 250) / 2) + 40;
+    return {
+      gridX: startX,
+      gridY: startY,
+      inspectorX: startX + 464 + 48,
+      inspectorY: startY - 40,
+    };
   };
 
-  function cardPositions() {
-    const totalW = cardW * 2 + gap;
-    const startX = Math.floor((k.width() - totalW) / 2);
-    const y = Math.floor((k.height() - cardH) / 2) + 20;
-    return [k.vec2(startX, y), k.vec2(startX + cardW + gap, y)];
-  }
+  // ── Grid Squares ──
+  type PerkSquare = {
+    bg: GameObj;
+    icon: GameObj;
+    acquiredOverlay: GameObj;
+    acquiredTxt: GameObj;
+    def: PerkDef;
+    index: number;
+  };
+  const squares: PerkSquare[] = [];
 
-  function buildCard(x: number, y: number): PerkCard {
+  for (let i = 0; i < perkDefs.length; i++) {
+    const def = perkDefs[i];
+
     const bg = track(
       k.add([
-        k.rect(cardW, cardH, { radius: 16 }),
-        k.pos(x, y),
-        k.color(28, 28, 36),
-        k.outline(4, k.rgb(180, 140, 255)),
+        k.rect(sqSize, sqSize, { radius: 10 }),
+        k.pos(0, 0),
+        k.color(24, 24, 34),
+        k.outline(1.5, k.rgb(60, 60, 70)),
         k.area(),
         k.fixed(),
         k.z(5002),
-        { id: "perk-card-bg" },
+        { id: `perk-grid-bg-${def.id}` },
       ]),
     );
 
-    const iconTxt = track(
+    const icon = track(
       k.add([
-        k.text("?", { size: 52 }),
-        k.pos(x + cardW / 2, y + 30),
-        k.anchor("top"),
-        k.color(255, 255, 255),
+        k.text(def.icon, { size: 36 }),
+        k.pos(0, 0),
+        k.anchor("center"),
         k.fixed(),
         k.z(5003),
-        { id: "perk-card-icon" },
       ]),
     );
 
-    const nameTxt = track(
+    const acquiredOverlay = track(
       k.add([
-        k.text("Perk", { size: 24 }),
-        k.pos(x + cardW / 2, y + 100),
-        k.anchor("top"),
-        k.color(255, 255, 255),
-        k.fixed(),
-        k.z(5003),
-        { id: "perk-card-name" },
-      ]),
-    );
-
-    const descTxt = track(
-      k.add([
-        k.text("", { size: 17 }),
-        k.pos(x + 20, y + 145),
-        k.color(200, 200, 220),
-        k.fixed(),
-        k.z(5003),
-        { id: "perk-card-desc" },
-      ]),
-    );
-
-    const categoryTxt = track(
-      k.add([
-        k.text("", { size: 13 }),
-        k.pos(x + cardW / 2, y + cardH - 170),
-        k.anchor("top"),
-        k.color(140, 140, 160),
-        k.fixed(),
-        k.z(5003),
-        { id: "perk-card-category" },
-      ]),
-    );
-
-    const btnW = cardW - 40;
-
-    const chooseBtn = track(
-      k.add([
-        k.rect(btnW, 48, { radius: 10 }),
-        k.pos(x + 20, y + cardH - 130),
-        k.color(40, 160, 80),
-        k.outline(3, k.rgb(100, 255, 140)),
-        k.area(),
-        k.fixed(),
-        k.z(5003),
-        { id: "perk-card-choose" },
-      ]),
-    );
-
-    const chooseBtnTxt = track(
-      k.add([
-        k.text("Adquirir", { size: 20 }),
-        k.pos(x + 20 + btnW / 2, y + cardH - 117),
-        k.anchor("top"),
-        k.color(255, 255, 255),
+        k.rect(sqSize, sqSize, { radius: 10 }),
+        k.pos(0, 0),
+        k.color(0, 0, 0),
+        k.opacity(0),
         k.fixed(),
         k.z(5004),
-        { id: "perk-card-choose-txt" },
       ]),
     );
 
-    const rerollBtn = track(
+    const acquiredTxt = track(
       k.add([
-        k.rect(btnW, 44, { radius: 8 }),
-        k.pos(x + 20, y + cardH - 70),
-        k.color(80, 60, 160),
-        k.outline(3, k.rgb(140, 120, 220)),
-        k.area(),
-        k.fixed(),
-        k.z(5003),
-        { id: "perk-card-reroll" },
-      ]),
-    );
-
-    const rerollBtnTxt = track(
-      k.add([
-        k.text("🔀 Trocar", { size: 18 }),
-        k.pos(x + 20 + btnW / 2, y + cardH - 58),
-        k.anchor("top"),
+        k.text("", { size: 10 }),
+        k.pos(0, 0),
+        k.anchor("center"),
         k.color(255, 255, 255),
         k.fixed(),
-        k.z(5004),
-        { id: "perk-card-reroll-txt" },
+        k.z(5005),
       ]),
     );
 
-    return {
+    squares.push({
       bg,
-      iconTxt,
-      nameTxt,
-      descTxt,
-      categoryTxt,
-      chooseBtn,
-      chooseBtnTxt,
-      rerollBtn,
-      rerollBtnTxt,
-      perkId: "",
-      rerolled: false,
-    };
+      icon,
+      acquiredOverlay,
+      acquiredTxt,
+      def,
+      index: i,
+    });
   }
 
-  const positions = cardPositions();
-  const cards: PerkCard[] = positions.map((p) => buildCard(p.x, p.y));
-
-  // ── Cancel button ──
-  const cancelBtnW = 200;
-  const cancelBtn = track(
+  // ── Inspector Panel ──
+  const inspectorBg = track(
     k.add([
-      k.rect(cancelBtnW, 44, { radius: 8 }),
-      k.pos(k.width() / 2 - cancelBtnW / 2, k.height() - 80),
-      k.color(80, 30, 30),
-      k.outline(2, k.rgb(200, 80, 80)),
+      k.rect(inspectorW, inspectorH, { radius: 12 }),
+      k.pos(0, 0),
+      k.color(20, 20, 28),
+      k.outline(3, k.rgb(180, 140, 255)),
+      k.fixed(),
+      k.z(5002),
+    ]),
+  );
+
+  const inspectorIcon = track(
+    k.add([
+      k.text("", { size: 54 }),
+      k.pos(0, 0),
+      k.anchor("center"),
+      k.fixed(),
+      k.z(5003),
+    ]),
+  );
+
+  const inspectorName = track(
+    k.add([
+      k.text("", { size: 20 }),
+      k.pos(0, 0),
+      k.anchor("center"),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(5003),
+    ]),
+  );
+
+  const inspectorCategory = track(
+    k.add([
+      k.text("", { size: 12 }),
+      k.pos(0, 0),
+      k.anchor("center"),
+      k.color(140, 140, 160),
+      k.fixed(),
+      k.z(5003),
+    ]),
+  );
+
+  const inspectorDesc = track(
+    k.add([
+      k.text("", { size: 15 }),
+      k.pos(0, 0),
+      k.color(200, 200, 220),
+      k.fixed(),
+      k.z(5003),
+    ]),
+  );
+
+  const acquireBtnW = inspectorW - 40;
+  const acquireBtn = track(
+    k.add([
+      k.rect(acquireBtnW, 46, { radius: 8 }),
+      k.pos(0, 0),
+      k.color(40, 160, 80),
+      k.outline(2.5, k.rgb(100, 255, 140)),
       k.area(),
       k.fixed(),
       k.z(5003),
-      { id: "perk-cancel-btn" },
+    ]),
+  );
+
+  const acquireBtnTxt = track(
+    k.add([
+      k.text("ADQUIRIR", { size: 18 }),
+      k.pos(0, 0),
+      k.anchor("center"),
+      k.color(255, 255, 255),
+      k.fixed(),
+      k.z(5004),
+    ]),
+  );
+
+  // ── Cancel/Close button ──
+  const cancelBtn = track(
+    k.add([
+      k.rect(cancelBtnW, 36, { radius: 6 }),
+      k.pos(0, 0),
+      k.color(60, 30, 30),
+      k.outline(2, k.rgb(180, 80, 80)),
+      k.area(),
+      k.fixed(),
+      k.z(5003),
     ]),
   );
   const cancelBtnTxt = track(
     k.add([
-      k.text("Cancelar", { size: 18 }),
-      k.pos(k.width() / 2, k.height() - 68),
-      k.anchor("top"),
+      k.text("Voltar", { size: 14 }),
+      k.pos(0, 0),
+      k.anchor("center"),
       k.color(255, 200, 200),
       k.fixed(),
       k.z(5004),
-      { id: "perk-cancel-txt" },
     ]),
   );
 
-  // ── Track rerolls ──
-  let _globalRerollUsed = false;
-
-  // ── Visibility ──
-  const setVisible = (visible: boolean) => {
-    for (const obj of allObjs) obj.hidden = !visible;
-  };
-  setVisible(false);
-
-  // ── Category label map ──
+  // ── State variables ──
+  let selectedPerkId: string = perkDefs[0]?.id ?? "";
   const categoryLabels: Record<string, string> = {
     reset: "⚙ Reset (máx. 1)",
     stack: "∞ Stack Infinito (máx. 1)",
@@ -277,120 +274,230 @@ export function createPerkSelectionOverlay(
     shock: "⚡ Choque",
   };
 
-  // ── Fill a card with perk data ──
-  function fillCard(card: PerkCard, perk: PerkDef) {
-    card.perkId = perk.id;
-    (card.iconTxt as any).text = perk.icon;
-    (card.nameTxt as any).text = perk.name;
-    (card.descTxt as any).text = perk.desc;
-    (card.categoryTxt as any).text =
-      categoryLabels[perk.category] ?? perk.category;
+  const isHoveringLocal = (obj: GameObj, w: number, h: number) => {
+    if (obj.hidden) return false;
+    const mp = k.mousePos();
+    const bx = obj.pos.x;
+    const by = obj.pos.y;
+    return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+  };
 
-    card.bg.outline.color = k.rgb(perk.color[0], perk.color[1], perk.color[2]);
-    card.nameTxt.color = k.rgb(perk.color[0], perk.color[1], perk.color[2]);
-  }
-
-  // ── Reposition ──
+  // ── Reposition elements on screen resize ──
   function reposition() {
-    const pos = cardPositions();
-    for (let i = 0; i < cards.length; i++) {
-      const p = pos[i];
-      const c = cards[i];
-      c.bg.pos = p;
-      c.iconTxt.pos = k.vec2(p.x + cardW / 2, p.y + 30);
-      c.nameTxt.pos = k.vec2(p.x + cardW / 2, p.y + 100);
-      c.descTxt.pos = k.vec2(p.x + 20, p.y + 145);
-      c.categoryTxt.pos = k.vec2(p.x + cardW / 2, p.y + cardH - 170);
-      c.chooseBtn.pos = k.vec2(p.x + 20, p.y + cardH - 130);
-      c.chooseBtnTxt.pos = k.vec2(
-        p.x + 20 + (cardW - 40) / 2,
-        p.y + cardH - 117,
-      );
-      c.rerollBtn.pos = k.vec2(p.x + 20, p.y + cardH - 70);
-      c.rerollBtnTxt.pos = k.vec2(
-        p.x + 20 + (cardW - 40) / 2,
-        p.y + cardH - 58,
-      );
-    }
+    const layout = getLayoutPositions();
 
     (overlayBg as any).width = k.width();
     (overlayBg as any).height = k.height();
+
     titleText.pos = k.vec2(k.width() / 2, 40);
     costText.pos = k.vec2(k.width() / 2, 80);
     slotsText.pos = k.vec2(k.width() / 2, 102);
-    cancelBtn.pos = k.vec2(k.width() / 2 - cancelBtnW / 2, k.height() - 80);
-    cancelBtnTxt.pos = k.vec2(k.width() / 2, k.height() - 68);
+
+    cancelBtn.pos = k.vec2(k.width() / 2 - cancelBtnW / 2, k.height() - 60);
+    cancelBtnTxt.pos = k.vec2(k.width() / 2, k.height() - 42);
+
+    // Reposition grid squares
+    for (const sq of squares) {
+      const col = sq.index % gridCols;
+      const row = Math.floor(sq.index / gridCols);
+      const sx = layout.gridX + col * (sqSize + sqGap);
+      const sy = layout.gridY + row * (sqSize + sqGap);
+
+      sq.bg.pos = k.vec2(sx, sy);
+      sq.icon.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
+      sq.acquiredOverlay.pos = k.vec2(sx, sy);
+      sq.acquiredTxt.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
+    }
+
+    // Reposition inspector
+    inspectorBg.pos = k.vec2(layout.inspectorX, layout.inspectorY);
+    inspectorIcon.pos = k.vec2(layout.inspectorX + inspectorW / 2, layout.inspectorY + 44);
+    inspectorName.pos = k.vec2(layout.inspectorX + inspectorW / 2, layout.inspectorY + 92);
+    inspectorCategory.pos = k.vec2(layout.inspectorX + inspectorW / 2, layout.inspectorY + 114);
+    inspectorDesc.pos = k.vec2(layout.inspectorX + 24, layout.inspectorY + 136);
+
+    acquireBtn.pos = k.vec2(layout.inspectorX + 20, layout.inspectorY + inspectorH - 66);
+    acquireBtnTxt.pos = k.vec2(
+      layout.inspectorX + 20 + acquireBtnW / 2,
+      layout.inspectorY + inspectorH - 43,
+    );
   }
   k.onResize(reposition);
 
-  // ── Actions ──
-  for (const card of cards) {
-    card.chooseBtn.onClick(() => {
-      if (overlayBg.hidden) return; // guard: overlay not visible
-      if (!card.perkId) return;
-      const success = acquirePerk(card.perkId);
-      if (success) {
-        // Apply immediate perk effects
-        if (card.perkId === "ima-magnetico") {
+  // ── Refresh UI representation based on state ──
+  function refresh() {
+    const available = getAvailablePerks();
+    const availableIds = new Set(available.map((p) => p.id));
+    const acquired = gameState.perks?.acquired ?? [];
+    const acquiredIds = new Set(acquired);
+
+    (slotsText as any).text = `Passivas Adquiridas: ${acquired.length}/2`;
+
+    // Refresh grid squares styling
+    for (const sq of squares) {
+      const def = sq.def;
+      const isSelected = selectedPerkId === def.id;
+      const hasIt = acquiredIds.has(def.id);
+      const isLocked = !availableIds.has(def.id) && !hasIt;
+
+      if (isSelected) {
+        sq.bg.outline.color = k.rgb(def.color[0], def.color[1], def.color[2]);
+        sq.bg.outline.width = 4.0;
+        sq.bg.color = k.rgb(36, 36, 48);
+      } else {
+        sq.bg.outline.color = k.rgb(60, 60, 70);
+        sq.bg.outline.width = 1.5;
+        sq.bg.color = k.rgb(24, 24, 34);
+      }
+
+      if (hasIt) {
+        sq.acquiredOverlay.hidden = false;
+        sq.acquiredOverlay.color = k.rgb(0, 40, 10);
+        sq.acquiredOverlay.opacity = 0.65;
+        (sq.acquiredTxt as any).text = "✓ Adquirida";
+        sq.acquiredTxt.hidden = false;
+        sq.acquiredTxt.color = k.rgb(120, 255, 140);
+        sq.icon.opacity = 0.3;
+      } else if (isLocked) {
+        sq.acquiredOverlay.hidden = false;
+        sq.acquiredOverlay.color = k.rgb(30, 30, 35);
+        sq.acquiredOverlay.opacity = 0.75;
+        (sq.acquiredTxt as any).text = "🔒 Bloqueada";
+        sq.acquiredTxt.hidden = false;
+        sq.acquiredTxt.color = k.rgb(200, 100, 100);
+        sq.icon.opacity = 0.25;
+      } else {
+        sq.acquiredOverlay.hidden = true;
+        sq.acquiredTxt.hidden = true;
+        sq.icon.opacity = 1.0;
+      }
+    }
+
+    // Refresh inspector details
+    const activePerk = perkDefs.find((p) => p.id === selectedPerkId);
+    if (activePerk) {
+      (inspectorIcon as any).text = activePerk.icon;
+      (inspectorName as any).text = activePerk.name;
+      inspectorName.color = k.rgb(activePerk.color[0], activePerk.color[1], activePerk.color[2]);
+      (inspectorCategory as any).text = categoryLabels[activePerk.category] ?? activePerk.category;
+      (inspectorDesc as any).text = wrapText(activePerk.desc, 32);
+
+      const hasIt = acquiredIds.has(activePerk.id);
+      const isLocked = !availableIds.has(activePerk.id) && !hasIt;
+      const canBuy = !hasIt && !isLocked && acquired.length < 2;
+
+      inspectorBg.outline.color = k.rgb(activePerk.color[0], activePerk.color[1], activePerk.color[2]);
+
+      if (hasIt) {
+        (acquireBtnTxt as any).text = "JÁ ADQUIRIDA";
+        acquireBtn.color = k.rgb(30, 40, 30);
+        acquireBtn.outline.color = k.rgb(60, 80, 60);
+        (acquireBtn as any).opacity = 0.6;
+      } else if (isLocked) {
+        (acquireBtnTxt as any).text = "BLOQUEADA";
+        acquireBtn.color = k.rgb(40, 20, 20);
+        acquireBtn.outline.color = k.rgb(80, 40, 40);
+        (acquireBtn as any).opacity = 0.6;
+      } else if (acquired.length >= 2) {
+        (acquireBtnTxt as any).text = "LIMITE ALCANÇADO (MÁX 2)";
+        acquireBtn.color = k.rgb(30, 30, 35);
+        acquireBtn.outline.color = k.rgb(60, 60, 70);
+        (acquireBtn as any).opacity = 0.6;
+      } else {
+        (acquireBtnTxt as any).text = "ADQUIRIR";
+        acquireBtn.color = k.rgb(22, 163, 74);
+        acquireBtn.outline.color = k.rgb(74, 222, 128);
+        (acquireBtn as any).opacity = 1.0;
+      }
+    }
+  }
+
+  // ── Frame updates (for hover animations) ──
+  k.onUpdate(() => {
+    if (overlayBg.hidden) return;
+
+    // Hover cancel button
+    const cancelHover = isHoveringLocal(cancelBtn, cancelBtnW, 36);
+    cancelBtn.color = cancelHover ? k.rgb(100, 40, 40) : k.rgb(60, 30, 30);
+    cancelBtn.outline.color = cancelHover ? k.rgb(240, 120, 120) : k.rgb(180, 80, 80);
+    cancelBtn.outline.width = cancelHover ? 3 : 2;
+
+    const activePerk = perkDefs.find((p) => p.id === selectedPerkId);
+    if (activePerk) {
+      const acquired = gameState.perks?.acquired ?? [];
+      const available = getAvailablePerks();
+      const hasIt = acquired.includes(activePerk.id);
+      const isLocked = !available.some((p) => p.id === activePerk.id) && !hasIt;
+      const canBuy = !hasIt && !isLocked && acquired.length < 2;
+
+      if (canBuy) {
+        const buyHover = isHoveringLocal(acquireBtn, acquireBtnW, 46);
+        acquireBtn.color = buyHover ? k.rgb(34, 197, 94) : k.rgb(22, 163, 74);
+        acquireBtn.outline.color = buyHover ? k.rgb(255, 255, 255) : k.rgb(74, 222, 128);
+        acquireBtn.outline.width = buyHover ? 3.5 : 2.5;
+      } else {
+        acquireBtn.outline.width = 1.5;
+      }
+    }
+
+    // Grid square hover
+    for (const sq of squares) {
+      if (sq.bg.hidden) continue;
+      const hover = isHoveringLocal(sq.bg, sqSize, sqSize);
+      if (hover && selectedPerkId !== sq.def.id) {
+        sq.bg.color = k.rgb(30, 30, 42);
+        sq.bg.outline.color = k.rgb(140, 140, 160);
+        sq.bg.outline.width = 2.0;
+      }
+    }
+  });
+
+  // ── Mouse Press Clicks ──
+  k.onMousePress("left", () => {
+    if (overlayBg.hidden) return;
+
+    if (isHoveringLocal(cancelBtn, cancelBtnW, 36)) {
+      hide();
+      return;
+    }
+
+    for (const sq of squares) {
+      if (isHoveringLocal(sq.bg, sqSize, sqSize)) {
+        selectedPerkId = sq.def.id;
+        refresh();
+        return;
+      }
+    }
+
+    const activePerk = perkDefs.find((p) => p.id === selectedPerkId);
+    if (activePerk && isHoveringLocal(acquireBtn, acquireBtnW, 46)) {
+      const acquired = gameState.perks?.acquired ?? [];
+      const available = getAvailablePerks();
+      const hasIt = acquired.includes(activePerk.id);
+      const isLocked = !available.some((p) => p.id === activePerk.id) && !hasIt;
+      const canBuy = !hasIt && !isLocked && acquired.length < 2;
+
+      if (canBuy) {
+        gameState.perks.acquired.push(activePerk.id);
+        if (activePerk.id === "ima-magnetico") {
           applyImaMagneticoEffect();
         }
         hide();
       }
-    });
-
-    card.rerollBtn.onClick(() => {
-      if (overlayBg.hidden) return; // guard: overlay not visible
-      if (card.rerolled || _globalRerollUsed) return;
-      _globalRerollUsed = true;
-
-      const otherIds = new Set(
-        cards.filter((c) => c !== card).map((c) => c.perkId),
-      );
-      const pool = samplePerks(5).filter(
-        (p) => !otherIds.has(p.id) && p.id !== card.perkId,
-      );
-      if (pool.length === 0) return;
-
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      fillCard(card, pick);
-      card.rerolled = true;
-
-      // Disable both reroll buttons visually
-      for (const c of cards) {
-        (c.rerollBtn as any).color = k.rgb(50, 50, 55);
-        c.rerollBtn.outline.color = k.rgb(80, 80, 80);
-        (c.rerollBtnTxt as any).color = k.rgb(100, 100, 100);
-      }
-    });
-  }
-
-  cancelBtn.onClick(() => {
-    if (overlayBg.hidden) return; // guard: overlay not visible
-    hide();
+    }
   });
 
-  // ── Show / Hide ──
   function show() {
-    if (!canOpenPerkSelection()) return;
-
-    _globalRerollUsed = false;
-    const options = samplePerks(2);
-    if (options.length < 2) return; // not enough perks available
-
-    for (let i = 0; i < 2; i++) {
-      fillCard(cards[i], options[i]);
-      cards[i].rerolled = false;
-      // Reset reroll button appearance
-      (cards[i].rerollBtn as any).color = k.rgb(80, 60, 160);
-      cards[i].rerollBtn.outline.color = k.rgb(140, 120, 220);
-      (cards[i].rerollBtnTxt as any).color = k.rgb(255, 255, 255);
+    const available = getAvailablePerks();
+    if (available.length > 0) {
+      selectedPerkId = available[0].id;
+    } else {
+      selectedPerkId = perkDefs[0]?.id ?? "";
     }
-
-    const acquired = gameState.perks?.acquired ?? [];
-    (slotsText as any).text = `Perks: ${acquired.length}/2`;
 
     setVisible(true);
     reposition();
+    refresh();
     (k as any).setTimeScale?.(0);
   }
 
@@ -402,6 +509,11 @@ export function createPerkSelectionOverlay(
   function isVisible() {
     return !overlayBg.hidden;
   }
+
+  const setVisible = (visible: boolean) => {
+    for (const obj of allObjs) obj.hidden = !visible;
+  };
+  setVisible(false);
 
   return { show, hide, isVisible };
 }

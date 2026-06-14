@@ -15,11 +15,7 @@ import { gameState } from "../../state/gameState";
  */
 export function canOpenPerkSelection(): boolean {
   const acquired = gameState.perks?.acquired ?? [];
-  return (
-    gameState.level >= MIN_LEVEL_FOR_PERKS &&
-    acquired.length < MAX_PERKS &&
-    gameState.elevationPoints >= PERK_COST
-  );
+  return acquired.length < 2;
 }
 
 /**

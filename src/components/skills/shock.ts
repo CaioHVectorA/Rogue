@@ -100,8 +100,8 @@ function triggerElectrocution(k: KAPLAYCtx, enemy: GameObj): void {
 
   // Aplica dano
   if (typeof e.hp === "number") {
+    e._lastDamageType = "shock";
     e.hp -= SHOCK_CONFIG.triggerDamage;
-    spawnShockDamageNumber(k, enemy, SHOCK_CONFIG.triggerDamage);
     if (e.hp <= 0) {
       enemy.destroy();
       return;

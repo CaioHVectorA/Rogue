@@ -10,6 +10,7 @@ import { useSkill, initCharges } from "./components/skills";
 import {
   onKillReduceQCooldown,
   getZonaDePerigoDefenseMul,
+  updateFireAuraPerk,
 } from "./components/perks";
 // Register skills
 import "./components/skills/coneShot";
@@ -65,11 +66,30 @@ let arena: ArenaResult = createArena(k, {
   mapState: initialMapState,
 });
 
+// Interpolated camera scale targets
+let targetCamScale = 1.15;
+k.onUpdate(() => {
+  const current = k.camScale();
+  const diff = targetCamScale - current.x;
+  if (Math.abs(diff) > 0.001) {
+    const newVal = k.lerp(current.x, targetCamScale, k.dt() * 3);
+    k.camScale(k.vec2(newVal));
+  }
+  if (player && player.exists()) {
+    updateFireAuraPerk(k, player);
+  }
+});
+
 /**
  * Reconstrói a arena para um novo mapState.
  * Destrói paredes antigas, cria novas, reposiciona jogador e ajusta câmera.
  */
 function rebuildArena(newMapState: number) {
+  const oldX = arena.x;
+  const oldY = arena.y;
+  const oldW = arena.w;
+  const oldH = arena.h;
+
   // Destruir paredes antigas
   arena.walls.forEach((w) => w.destroy());
 
@@ -84,7 +104,59 @@ function rebuildArena(newMapState: number) {
     mapState: newMapState,
   });
 
-  // Ajustar câmera conforme novo mapState
+  const newX = arena.x;
+  const newY = arena.y;
+  const newW = arena.w;
+  const newH = arena.h;
+
+  // Visual expanding blue ring/border animation
+  const ring = k.add([
+    k.rect(oldW, oldH),
+    k.pos(oldX, oldY),
+    k.color(0, 191, 255), // Deep sky blue
+    k.outline(5, k.rgb(0, 255, 255)),
+    k.opacity(0.85),
+    k.z(100),
+  ]);
+
+  // Temporarily dim the new walls and make them color match the ring
+  arena.walls.forEach((w) => {
+    w.opacity = 0.25;
+    w.color = k.rgb(0, 191, 255);
+  });
+
+  let t = 0;
+  const duration = 0.8;
+  const cancelRing = k.onUpdate(() => {
+    t += k.dt();
+    const pct = Math.min(1, t / duration);
+    // Ease out quad
+    const ease = 1 - (1 - pct) * (1 - pct);
+
+    const curX = k.lerp(oldX, newX, ease);
+    const curY = k.lerp(oldY, newY, ease);
+    const curW = k.lerp(oldW, newW, ease);
+    const curH = k.lerp(oldH, newH, ease);
+
+    ring.pos = k.vec2(curX, curY);
+    (ring as any).width = curW;
+    (ring as any).height = curH;
+    ring.opacity = 0.85 * (1 - ease);
+
+    if (pct >= 1) {
+      ring.destroy();
+      // Restore wall opacity and correct color
+      arena.walls.forEach((w) => {
+        w.opacity = 1;
+        w.color = k.rgb(40, 40, 60);
+      });
+      // Small camera shake to celebrate map expansion impact
+      k.shake(2.0);
+      cancelRing.cancel();
+    }
+  });
+
+  // Ajustar câmera conforme novo mapState (smooth zoom transition)
   let camScaleVal: number;
   switch (newMapState) {
     case 1:
@@ -105,7 +177,8 @@ function rebuildArena(newMapState: number) {
     default:
       camScaleVal = 1.0;
   }
-  k.camScale(k.vec2(camScaleVal));
+  // Update target camera scale for smooth zoom-out
+  targetCamScale = camScaleVal;
 
   // Reposicionar jogador no centro se ficou fora dos limites
   const margin = 60;
@@ -150,6 +223,32 @@ k.onCollide("player", "elevation-drop", (p: any, drop: any) => {
   ui.refreshShopStats();
   drop.destroy();
 });
+
+// Check if player has pending perk choices at milestones, then resume/advance wave
+function checkMilestonePerksAndResume() {
+  const level = gameState.level;
+  const acquiredCount = gameState.perks.acquired.length;
+  let needsPerk = false;
+  if (level >= 5 && acquiredCount < 1) {
+    needsPerk = true;
+  } else if (level >= 10 && acquiredCount < 2) {
+    needsPerk = true;
+  }
+
+  if (needsPerk) {
+    ui.showPerkSelection();
+    const checkTimer = k.onUpdate(() => {
+      if (!ui.isPerkSelectionVisible()) {
+        checkTimer.cancel();
+        checkMilestonePerksAndResume();
+      }
+    });
+  } else {
+    gameState.wave += 1;
+    ui.updateWave(gameState.wave);
+    ui.setPlayVisible(true);
+  }
+}
 
 // Track enemies left in current wave
 let enemiesLeft = 0;
@@ -211,17 +310,50 @@ function spawnWave(waveIndex: number) {
 
         // If wave finished, advance wave
         if (enemiesLeft <= 0) {
-          gameState.wave += 1;
-          ui.updateWave(gameState.wave);
-          ui.setPlayVisible(true);
+          collectAllDropsOnArena(k, player);
+
+          k.wait(1.5, () => {
+            checkMilestonePerksAndResume();
+          });
         }
       });
     }
   }
 }
 
-// Start wave when pressing Play
-ui.onPlayClick(() => {
+// Auto-collect all gold and elevation drops at wave end
+function collectAllDropsOnArena(k: any, player: any) {
+  const drops = k.get("gold-drop").concat(k.get("elevation-drop"));
+  for (const drop of drops) {
+    if (drop._isCollecting) continue;
+    drop._isCollecting = true;
+
+    drop.onUpdate(() => {
+      if (!player.exists() || !drop.exists()) return;
+      const dir = player.pos.sub(drop.pos).unit();
+      const dist = player.pos.dist(drop.pos);
+      const speed = Math.max(400, 1200 - dist * 1.5);
+      drop.move(dir.scale(speed));
+
+      if (dist < 24) {
+        if (drop.is("gold-drop")) {
+          gameState.gold += drop.value ?? 1;
+          ui.updateGold(gameState.gold);
+          ui.refreshShopStats();
+        } else if (drop.is("elevation-drop")) {
+          gameState.elevationPoints += 1;
+          ui.refreshShopStats();
+        }
+        drop.destroy();
+      }
+    });
+  }
+}
+
+const startNextWave = () => {
+  // Close the shop panel so the player can see
+  ui.setShopVisible(false);
+
   // Verificar se o mapa precisa crescer antes da nova wave
   const targetMapState = getMapStateForWave(gameState.wave);
   if (targetMapState > gameState.mapState) {
@@ -232,7 +364,35 @@ ui.onPlayClick(() => {
   ui.setPlayVisible(false);
   // start or advance wave
   spawnWave(gameState.wave);
+};
+
+// Start wave when pressing Play
+ui.onPlayClick(startNextWave);
+
+// Keybind to start wave: Space or Enter
+k.onKeyPress("space", () => {
+  const playBtn = k.get("ui-play")[0];
+  if (playBtn && !playBtn.hidden) {
+    startNextWave();
+  }
 });
+k.onKeyPress("enter", () => {
+  const playBtn = k.get("ui-play")[0];
+  if (playBtn && !playBtn.hidden) {
+    startNextWave();
+  }
+});
+
+// Keybind to toggle shop: E, B, or I
+const toggleShop = () => {
+  const shopBg = k.get("shop-bg")[0];
+  if (shopBg) {
+    ui.setShopVisible(shopBg.hidden);
+  }
+};
+k.onKeyPress("e", toggleShop);
+k.onKeyPress("b", toggleShop);
+k.onKeyPress("i", toggleShop);
 
 // Player damage on enemy collision with per-enemy cooldown
 k.onCollide("player", "enemy", (p: any, e: any) => {

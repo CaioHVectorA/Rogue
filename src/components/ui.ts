@@ -24,7 +24,10 @@ export type UIHandles = {
   setUpgradeHandlers: (handlers: Record<string, () => void>) => void;
   setQuickHealHandler: (handler: () => void) => void;
   setSkillUpgradeHandler: (handler: () => void) => void;
+  setExchangeHandler: (handler: () => void) => void;
   refreshShopStats: () => void;
+  showPerkSelection: () => void;
+  isPerkSelectionVisible: () => boolean;
 };
 
 export function setupUI(k: KAPLAYCtx): UIHandles {
@@ -340,14 +343,11 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
     skillUpgradeOverlay.update();
   });
 
-  // Wire shop toggle via TopBar's shopBtn
-  topBar.shopBtn.onClick(() => shop.toggle());
+  // Wire shop toggle via TopBar's shopBtn manually
+  topBar.onShopClick(() => shop.toggle());
 
-  // Wire perk button in shop to open perk selection overlay
-  shop.setPerkHandler(() => {
-    shop.setVisible(false);
-    perkOverlay.show();
-  });
+  // Perk handler is now handled automatically at milestones; dummy handler for backwards compatibility
+  shop.setPerkHandler(() => {});
 
   // Skill upgrade handler (stored here for external wiring)
   let _skillUpgradeHandler: (() => void) | null = null;
@@ -369,6 +369,9 @@ export function setupUI(k: KAPLAYCtx): UIHandles {
       _skillUpgradeHandler = handler;
       shop.setSkillUpgradeHandler(handler);
     },
+    setExchangeHandler: (handler) => shop.setExchangeHandler(handler),
     refreshShopStats: () => shop.refreshStats(),
+    showPerkSelection: () => perkOverlay.show(),
+    isPerkSelectionVisible: () => perkOverlay.isVisible(),
   };
 }

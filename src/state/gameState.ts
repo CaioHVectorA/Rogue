@@ -19,6 +19,7 @@ export type GameState = {
   luck: number;
   abilityHaste: number; // % cooldown reduction (0.0 = 0%, 0.5 = 50%)
   shotDamage: number; // base shot damage (affects shot-based skills)
+  castPower: number; // Poder de Conjuração
   elevationPoints: number; // pontos de elevação para comprar atributos e upar skills
   mapState: number; // tamanho do mapa (1..5), cresce a cada 5 waves
   wave: number;
@@ -73,6 +74,7 @@ export const gameState: GameState = {
   luck: 1.0,
   abilityHaste: 0.0,
   shotDamage: 1.25,
+  castPower: 1.0,
   elevationPoints: debug.INITIAL_ELEVATION ?? 25,
   mapState:
     debug.INITIAL_MAP_STATE ?? getMapStateForWave(debug.INITIAL_WAVE ?? 1),

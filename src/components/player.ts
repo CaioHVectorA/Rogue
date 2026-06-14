@@ -54,6 +54,7 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
     k.outline(outline, k.rgb(255, 255, 255)),
     k.area(),
     k.body(),
+    k.scale(1),
     size({ width: s, height: s }),
     speed({ value: spd }),
     movimentable(k),
@@ -70,6 +71,15 @@ export function createPlayer(k: any, opts: PlayerOptions = {}): GameObj {
       },
     },
   ]) as GameObj & { hp: number };
+
+  player.add([
+    k.rect(s * 0.45, s * 0.45),
+    k.pos(s / 2, s / 2),
+    k.anchor("center"),
+    k.rotate(45),
+    k.color(255, 255, 255),
+    "player-core",
+  ]);
 
   return player;
 }

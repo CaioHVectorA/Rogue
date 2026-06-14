@@ -7,6 +7,7 @@ export type TopBarHandles = {
   updateWave: (wave: number) => void;
   updateXP: (xp: number, xpToLevel: number, level: number) => void;
   onPlayClick: (handler: () => void) => void;
+  onShopClick: (handler: () => void) => void;
   setPlayVisible: (visible: boolean) => void;
   shopBtn: GameObj;
 };
@@ -179,55 +180,121 @@ export function createTopBar(k: KAPLAYCtx): TopBarHandles {
   ]);
 
   const playBtn = k.add([
-    k.rect(40, 40),
-    k.pos(k.width() / 2 - 50, 20),
-    k.color(30, 140, 30),
-    k.outline(3, k.rgb(255, 255, 255)),
+    k.rect(160, 44, { radius: 8 }),
+    k.pos(k.width() / 2 - 170, 20),
+    k.color(34, 197, 94), // Green 500
+    k.outline(2, k.rgb(200, 200, 200)),
     k.area(),
     k.fixed(),
     k.z(1100),
+    "ui-play",
     { id: "ui-play" },
   ]);
-  const playIcon = k.add([
-    k.text("▶", { size: 26 }),
-    k.pos(playBtn.pos.x + 10, playBtn.pos.y + 6),
+  const playText = k.add([
+    k.text("▶ INICIAR ONDA", { size: 12 }),
+    k.pos(playBtn.pos.x + 80, playBtn.pos.y + 22),
+    k.anchor("center"),
     k.color(255, 255, 255),
     k.fixed(),
     k.z(1101),
-    { id: "ui-play-icon" },
+    { id: "ui-play-text" },
   ]);
   let playHandler: (() => void) | null = null;
-  playBtn.onClick(() => {
-    if (playBtn.hidden) return; // guard: button not visible
-    if (playHandler) playHandler();
+  let shopHandler: (() => void) | null = null;
+
+  k.onMousePress("left", () => {
+    const mp = k.mousePos();
+    const isHovering = (btn: GameObj, w: number, h: number) => {
+      if (btn.hidden) return false;
+      const bx = btn.pos.x;
+      const by = btn.pos.y;
+      return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+    };
+
+    if (isHovering(playBtn, 160, 44)) {
+      if (playHandler) playHandler();
+    }
+    if (isHovering(shopBtn, 160, 44)) {
+      if (shopHandler) shopHandler();
+    }
   });
 
   const shopBtn = k.add([
-    k.rect(40, 40),
+    k.rect(160, 44, { radius: 8 }),
     k.pos(k.width() / 2 + 10, 20),
-    k.color(60, 60, 160),
-    k.outline(3, k.rgb(255, 255, 255)),
+    k.color(99, 102, 241), // Indigo 500
+    k.outline(2, k.rgb(200, 200, 200)),
     k.area(),
     k.fixed(),
-    k.z(1002),
+    k.z(1100),
     { id: "ui-shop" },
   ]);
-  const shopIcon = k.add([
-    k.rect(20, 14),
-    k.pos(shopBtn.pos.x + 10, shopBtn.pos.y + 15),
+  const shopText = k.add([
+    k.text("MENU LOJA", { size: 12 }),
+    k.pos(shopBtn.pos.x + 80, shopBtn.pos.y + 22),
+    k.anchor("center"),
     k.color(255, 255, 255),
     k.fixed(),
-    k.z(1003),
-    { id: "ui-shop-icon" },
+    k.z(1101),
+    { id: "ui-shop-text" },
   ]);
+
+  // Glowing red dot for pending elevation points
+  const shopBadge = k.add([
+    k.circle(6),
+    k.pos(shopBtn.pos.x + 152, shopBtn.pos.y + 8),
+    k.color(239, 68, 68), // Red 500
+    k.outline(1.5, k.rgb(255, 255, 255)),
+    k.scale(1),
+    k.fixed(),
+    k.z(1102),
+    { id: "ui-shop-badge" },
+  ]);
+  shopBadge.hidden = true;
+
   const positionTopButtons = () => {
-    playBtn.pos = k.vec2(k.width() / 2 - 50, 20);
-    playIcon.pos = k.vec2(playBtn.pos.x + 10, playBtn.pos.y + 6);
-    shopBtn.pos = k.vec2(k.width() / 2 + 10, 20);
-    shopIcon.pos = k.vec2(shopBtn.pos.x + 10, shopBtn.pos.y + 15);
+    const cx = k.width() / 2;
+    playBtn.pos = k.vec2(cx - 170, 20);
+    playText.pos = k.vec2(playBtn.pos.x + 80, playBtn.pos.y + 22);
+    
+    shopBtn.pos = k.vec2(cx + 10, 20);
+    shopText.pos = k.vec2(shopBtn.pos.x + 80, shopBtn.pos.y + 22);
+    
+    shopBadge.pos = k.vec2(shopBtn.pos.x + 152, shopBtn.pos.y + 8);
   };
   k.onResize(positionTopButtons);
   positionTopButtons();
+
+  // Hover states & notification dot pulsing in top bar
+  k.onUpdate(() => {
+    const mp = k.mousePos();
+    const isHovering = (btn: GameObj, w: number, h: number) => {
+      if (btn.hidden) return false;
+      const bx = btn.pos.x;
+      const by = btn.pos.y;
+      return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+    };
+
+    // Play button hover
+    const playHover = isHovering(playBtn, 160, 44);
+    playBtn.color = playHover ? k.rgb(22, 163, 74) : k.rgb(34, 197, 94);
+    playBtn.outline.color = playHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
+    playBtn.outline.width = playHover ? 3.5 : 2;
+
+    // Shop button hover
+    const shopHover = isHovering(shopBtn, 160, 44);
+    shopBtn.color = shopHover ? k.rgb(79, 70, 229) : k.rgb(99, 102, 241);
+    shopBtn.outline.color = shopHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
+    shopBtn.outline.width = shopHover ? 3.5 : 2;
+
+    // Pulse notification dot if elevation points are available
+    const hasPoints = gameState.elevationPoints > 0;
+    shopBadge.hidden = !hasPoints;
+    if (hasPoints) {
+      const sc = 1.0 + Math.sin(k.time() * 8) * 0.22;
+      shopBadge.scale = k.vec2(sc);
+    }
+  });
 
   return {
     updateHearts: updateHP,
@@ -245,9 +312,12 @@ export function createTopBar(k: KAPLAYCtx): TopBarHandles {
     onPlayClick: (handler) => {
       playHandler = handler;
     },
+    onShopClick: (handler) => {
+      shopHandler = handler;
+    },
     setPlayVisible: (visible) => {
       playBtn.hidden = !visible;
-      playIcon.hidden = !visible;
+      playText.hidden = !visible;
     },
     shopBtn,
   };

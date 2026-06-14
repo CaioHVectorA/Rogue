@@ -278,7 +278,7 @@ function spawnOrbs(k: KAPLAYCtx, player: GameObj) {
           if (flash.t >= 0.2) flash.destroy();
         });
 
-        const dmg = getOrbDamage(gameState.skills.levels["orbital-orbs"] ?? 1);
+        const dmg = getOrbDamage(gameState.skills.levels["orbital-orbs"] ?? 1) * gameState.castPower;
         enemy.hp -= dmg;
         if (enemy.hp <= 0) enemy.destroy();
       }

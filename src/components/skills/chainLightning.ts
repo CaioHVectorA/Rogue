@@ -315,7 +315,9 @@ function chainFromEnemy(
   radius: number,
   depth: number = 0,
 ): void {
-  const { damage, maxChainTargets, chainShockStacks } = getLevelData();
+  const levelData = getLevelData();
+  const damage = levelData.damage * gameState.castPower;
+  const { maxChainTargets, chainShockStacks } = levelData;
 
   // Se o inimigo já é imune ou não existe, não faz nada
   if (!enemy.exists() || isImmune(enemy)) return;
@@ -323,6 +325,7 @@ function chainFromEnemy(
   // Aplica dano
   const e = enemy as any;
   if (typeof e.hp === "number") {
+    e._lastDamageType = "shock";
     e.hp -= damage;
     if (e.hp <= 0) e.destroy();
   }
@@ -378,7 +381,8 @@ registerSkill({
     ensurePassive(k);
 
     const levelData = getLevelData();
-    const { damage, initialRadius, maxChainTargets, baseShockStacks } =
+    const damage = levelData.damage * gameState.castPower;
+    const { initialRadius, maxChainTargets, baseShockStacks } =
       levelData;
     const { projectileSpeed, projectileSize } = CHAIN_CONFIG;
 
@@ -415,6 +419,7 @@ registerSkill({
 
       // Aplica dano ao primeiro inimigo
       if (typeof enemy.hp === "number") {
+        enemy._lastDamageType = "shock";
         enemy.hp -= damage;
         if (enemy.hp <= 0) enemy.destroy();
       }

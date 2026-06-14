@@ -36,10 +36,9 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     const lv = gameState.upgrades[key] as number;
     const nextLv = lv + 1;
     const goldCost = nextLevelCost(nextLv); // new cost scheme
-    // Cannot buy level 10 if maxed attributes limit reached (2) unless luck is maxed
+    // Cannot buy level 10 if maxed attributes limit reached (2)
     if (nextLv === MAX_ATTR_LEVEL) {
-      const maxAllowed =
-        (gameState.upgrades as any).luck >= MAX_ATTR_LEVEL ? 3 : 2;
+      const maxAllowed = 2;
       if (countMaxedAttributes() >= maxAllowed) return false;
     }
     return (
@@ -61,8 +60,7 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       return false;
     // If buying to level 10, enforce maxed count
     if (nextLv === MAX_ATTR_LEVEL) {
-      const maxAllowed =
-        (gameState.upgrades as any).luck >= MAX_ATTR_LEVEL ? 3 : 2;
+      const maxAllowed = 2;
       if (countMaxedAttributes() >= maxAllowed) return false;
     }
     gameState.elevationPoints -= ATTR_COST;
@@ -123,32 +121,6 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
-    onLuck: () => {
-      if (!canUpgradeAttr("luck")) return;
-      if (!spendAttr("luck")) return;
-      gameState.luck = Number((gameState.luck + 0.12).toFixed(2));
-      // +15% bonus at max level
-      if (gameState.upgrades.luck >= MAX_ATTR_LEVEL) {
-        gameState.luck = Number(
-          (gameState.luck * (1 + MAX_LEVEL_BONUS)).toFixed(2),
-        );
-      }
-      ui.updateGold(gameState.gold);
-      ui.refreshShopStats();
-    },
-    onProjectile: () => {
-      if (!canUpgradeAttr("projectileSpeed")) return;
-      if (!spendAttr("projectileSpeed")) return;
-      gameState.projectileSpeed += 60;
-      // +15% bonus at max level
-      if (gameState.upgrades.projectileSpeed >= MAX_ATTR_LEVEL) {
-        gameState.projectileSpeed = Math.floor(
-          gameState.projectileSpeed * (1 + MAX_LEVEL_BONUS),
-        );
-      }
-      ui.updateGold(gameState.gold);
-      ui.refreshShopStats();
-    },
     onAbilityHaste: () => {
       if (!canUpgradeAttr("abilityHaste")) return;
       if (!spendAttr("abilityHaste")) return;
@@ -178,10 +150,16 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
-    onMagnetRadius: () => {
-      if (!canUpgradeAttr("magnetRadius")) return;
-      if (!spendAttr("magnetRadius")) return;
-      // magnetRadius effect is read dynamically from upgrades (global magnet at max)
+    onCastPower: () => {
+      if (!canUpgradeAttr("castPower")) return;
+      if (!spendAttr("castPower")) return;
+      gameState.castPower = Number((gameState.castPower + 0.15).toFixed(2));
+      // +15% bonus at max level
+      if (gameState.upgrades.castPower >= MAX_ATTR_LEVEL) {
+        gameState.castPower = Number(
+          (gameState.castPower * (1 + MAX_LEVEL_BONUS)).toFixed(2),
+        );
+      }
       ui.updateGold(gameState.gold);
       ui.refreshShopStats();
     },
@@ -218,6 +196,17 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       gameState.maxHealth,
     );
     ui.updateHearts((player as any).hp);
+    ui.updateGold(gameState.gold);
+    ui.refreshShopStats();
+  });
+
+  // Gold -> Elevation exchange
+  ui.setExchangeHandler(() => {
+    const cost = Math.pow(3, gameState.bonusElevationsBought + 1);
+    if (gameState.gold < cost) return;
+    gameState.gold -= cost;
+    gameState.elevationPoints += 1;
+    gameState.bonusElevationsBought += 1;
     ui.updateGold(gameState.gold);
     ui.refreshShopStats();
   });

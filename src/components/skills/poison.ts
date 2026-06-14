@@ -95,12 +95,10 @@ function initPoisonTick(k: KAPLAYCtx, enemy: GameObj): void {
       e.poisonTickTimer -= POISON_CONFIG.tickInterval;
 
       // Aplica dano
-      const dmg = stacks * POISON_CONFIG.damagePerStack;
+      const dmg = Math.max(1, Math.round(stacks * POISON_CONFIG.damagePerStack * gameState.castPower));
       if (typeof e.hp === "number") {
+        e._lastDamageType = "poison";
         e.hp -= dmg;
-
-        // Número de dano flutuante
-        spawnDamageNumber(k, enemy, dmg);
 
         if (e.hp <= 0) {
           enemy.destroy();

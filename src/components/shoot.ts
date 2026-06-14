@@ -74,6 +74,39 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     const effectiveSpeed =
       projSpeedUpgrade >= 10 ? Math.max(1600, speed) : speed;
 
+    // --- Juice: Recoil, Muzzle Flash and Screen Shake ---
+    let recoilTime = 0.05;
+    const recoilDir = dir.scale(-1);
+    const recoilSpeed = 300;
+    const cancelRecoil = self.onUpdate(() => {
+      recoilTime -= k.dt();
+      if (recoilTime <= 0) {
+        cancelRecoil.cancel();
+        return;
+      }
+      self.move(recoilDir.scale(recoilSpeed));
+    });
+
+    const muzzleDist = self.getSize().width / 2 + 5;
+    const muzzlePos = self.pos.add(k.vec2(self.getSize().width / 2, self.getSize().height / 2)).add(dir.scale(muzzleDist));
+    const muzzle = k.add([
+      k.circle(12),
+      k.pos(muzzlePos.x, muzzlePos.y),
+      k.anchor("center"),
+      k.color(255, 255, 200),
+      k.opacity(0.8),
+      k.z(550),
+      k.lifespan(0.08, { fade: 0.06 }),
+    ]);
+    muzzle.scale = k.vec2(0.5);
+    muzzle.onUpdate(() => {
+      if (muzzle.exists()) {
+        muzzle.scale = k.vec2(0.5 + (1 - muzzle.opacity) * 1.5);
+      }
+    });
+
+    k.shake(0.8);
+
     const spawnProjectile = (offsetAngle = 0) => {
       const ang = Math.atan2(dir.y, dir.x) + offsetAngle;
       const d = k.vec2(Math.cos(ang), Math.sin(ang));
@@ -98,6 +131,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
           // Zona de Perigo: +5% dano por inimigo próximo
           const zonaMul = getZonaDePerigoAttackMul(k, self.pos);
           const damage = baseDamage * gameState.buffs.damageMul * zonaMul;
+          (e as any)._lastDamageType = "normal";
           e.hp -= damage;
           if (e.hp <= 0) e.destroy();
           // Reação em Cadeia: 10% de explosão
@@ -247,6 +281,44 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         if (rightLine) rightLine.color = col;
         if (bottomLine) bottomLine.color = col;
         if (leftLine) leftLine.color = col;
+
+        const wasReady = (this as any)._reloadReadyPlayed ?? false;
+        const isReady = charge >= chargeTime;
+        
+        if (isReady && !wasReady) {
+          (this as any)._reloadReadyPlayed = true;
+          
+          const outlineFlash = (line: GameObj) => {
+            const origColor = line.color;
+            line.color = k.rgb(255, 255, 255);
+            k.wait(0.12, () => {
+              if (line.exists()) {
+                line.color = origColor;
+              }
+            });
+          };
+          if (topLine) outlineFlash(topLine);
+          if (rightLine) outlineFlash(rightLine);
+          if (bottomLine) outlineFlash(bottomLine);
+          if (leftLine) outlineFlash(leftLine);
+
+          const origScale = this.scale || k.vec2(1);
+          let pulseTime = 0.12;
+          const cancelPulse = this.onUpdate(() => {
+            pulseTime -= k.dt();
+            if (pulseTime <= 0) {
+              cancelPulse.cancel();
+              if (this.exists()) this.scale = origScale;
+              return;
+            }
+            const p = pulseTime / 0.12;
+            this.scale = k.vec2(1 + p * 0.12);
+          });
+        }
+        
+        if (!isReady) {
+          (this as any)._reloadReadyPlayed = false;
+        }
 
         if (charge >= chargeTime) {
           if (still) {

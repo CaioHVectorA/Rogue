@@ -37,17 +37,359 @@ export type EnemyOptions = {
   damage?: number;
 };
 
+// Helper for visual feedback when receiving damage
+function triggerDamageFeedback(k: KAPLAYCtx, enemy: any, dmg: number) {
+  const type = enemy._lastDamageType ?? "normal";
+  enemy._lastDamageType = "normal"; // reset to avoid leaks
+
+  const preset = ENEMY_PRESETS[enemy.enemyType as Enemies] || ENEMY_PRESETS.red;
+  const size = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
+  const cx = enemy.pos.x + size.width / 2;
+  const cy = enemy.pos.y + size.height / 2;
+
+  // 1. Damage Flash (Flash White / Red)
+  const isElite = enemy.enemyType.endsWith("_elite");
+  const flashColor = isElite ? k.rgb(255, 230, 150) : k.rgb(255, 255, 255);
+  
+  enemy.color = flashColor;
+  if (enemy._flashTimeout) {
+    clearTimeout(enemy._flashTimeout);
+  }
+  enemy._flashTimeout = setTimeout(() => {
+    if (enemy.exists()) {
+      const orig = enemy._originalColor || k.rgb(preset.color[0], preset.color[1], preset.color[2]);
+      enemy.color = orig;
+    }
+  }, 80);
+
+  // 2. Camera Shake based on damage type and enemy type (reduced by ~40% for better playability)
+  let shakeIntensity = 0.7;
+  if (type === "shock") shakeIntensity = 1.5;
+  if (type === "explosion") shakeIntensity = 2.0;
+  if (type === "marked") shakeIntensity = 1.6;
+  if (enemy.enemyType.includes("colossus")) shakeIntensity *= 1.5;
+  if (enemy.enemyType.includes("stone")) shakeIntensity *= 1.3;
+  if (isElite) shakeIntensity *= 1.2;
+  k.shake(shakeIntensity);
+
+  // 3. Floating Damage Number
+  let textColor = k.rgb(255, 255, 255);
+  let outlineColor = k.rgb(0, 0, 0);
+  let labelPrefix = "";
+  let fontSize = 14;
+
+  if (type === "poison") {
+    textColor = k.rgb(80, 240, 80);
+    outlineColor = k.rgb(0, 60, 0);
+    labelPrefix = "☠";
+    fontSize = 12;
+  } else if (type === "shock") {
+    textColor = k.rgb(255, 240, 80);
+    outlineColor = k.rgb(80, 50, 0);
+    labelPrefix = "⚡";
+    fontSize = 15;
+  } else if (type === "fire") {
+    textColor = k.rgb(255, 120, 30);
+    outlineColor = k.rgb(80, 20, 0);
+    labelPrefix = "🔥";
+    fontSize = 14;
+  } else if (type === "explosion") {
+    textColor = k.rgb(255, 60, 20);
+    outlineColor = k.rgb(0, 0, 0);
+    fontSize = 18;
+  } else if (type === "marked") {
+    textColor = k.rgb(255, 100, 180);
+    outlineColor = k.rgb(50, 0, 30);
+    labelPrefix = "🎯";
+    fontSize = 16;
+  }
+
+  const dispDmg = typeof dmg === "number" ? Math.round(dmg * 10) / 10 : dmg;
+  const labelText = `${labelPrefix}${dispDmg}`;
+
+  const label = k.add([
+    k.text(labelText, { size: fontSize }),
+    k.pos(cx + k.rand(-10, 10), enemy.pos.y - 12),
+    k.anchor("center"),
+    k.color(textColor),
+    k.outline(2, outlineColor),
+    k.z(850),
+    k.opacity(1),
+    k.lifespan(0.7, { fade: 0.35 }),
+    {
+      vx: k.rand(-30, 30),
+      vy: -70 - k.rand(0, 30),
+    }
+  ]);
+  label.onUpdate(() => {
+    label.pos.x += label.vx * k.dt();
+    label.pos.y += label.vy * k.dt();
+    label.vy *= 0.96;
+  });
+
+  // 4. Hit sparks (particles)
+  let sparkColor = k.rgb(preset.color[0], preset.color[1], preset.color[2]);
+  if (type === "poison") sparkColor = k.rgb(80, 220, 60);
+  else if (type === "shock") sparkColor = k.rgb(255, 255, 140);
+  else if (type === "fire" || type === "explosion") sparkColor = k.rgb(255, 120, 40);
+  else if (type === "marked") sparkColor = k.rgb(255, 100, 180);
+
+  const sparkCount = type === "explosion" ? 8 : type === "poison" ? 2 : 4;
+  const sparkSize = type === "explosion" ? 4 : 2;
+  const sparkSpeedRange = type === "explosion" ? [120, 240] : [80, 160];
+
+  for (let i = 0; i < sparkCount; i++) {
+    const angle = k.rand(0, Math.PI * 2);
+    const spd = k.rand(sparkSpeedRange[0], sparkSpeedRange[1]);
+    const sz = k.rand(sparkSize, sparkSize + 2);
+    const p = k.add([
+      k.rect(sz, sz),
+      k.pos(cx, cy),
+      k.anchor("center"),
+      k.color(sparkColor),
+      k.opacity(0.85),
+      k.z(650),
+      k.lifespan(0.35, { fade: 0.25 }),
+      {
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+      }
+    ]);
+    p.onUpdate(() => {
+      p.pos.x += p.vx * k.dt();
+      p.pos.y += p.vy * k.dt();
+      p.vx *= 0.93;
+      p.vy *= 0.93;
+    });
+  }
+}
+
+// Helper for physical debris and visual effects on death
+function explodeEnemyDebris(k: KAPLAYCtx, pos: Vec2, type: string) {
+  const preset = ENEMY_PRESETS[type as Enemies] || ENEMY_PRESETS.red;
+  const isElite = type.endsWith("_elite");
+  const color = preset.color;
+
+  let count = 8;
+  let sizeRange = [3, 6];
+  let gravity = 450;
+  let speedRange = [100, 220];
+  let dustCloud = false;
+  let dustColor = k.rgb(180, 180, 180);
+  let specialEffect = "";
+
+  if (type.includes("stone")) {
+    count = 14;
+    sizeRange = [5, 9];
+    gravity = 650;
+    speedRange = [80, 180];
+    dustCloud = true;
+    dustColor = k.rgb(140, 120, 100);
+  } else if (type.includes("colossus")) {
+    count = 24;
+    sizeRange = [6, 12];
+    gravity = 800;
+    speedRange = [120, 280];
+    dustCloud = true;
+    dustColor = k.rgb(150, 130, 110);
+    specialEffect = "colossus-slam";
+  } else if (type.includes("blue")) {
+    count = 12;
+    sizeRange = [4, 8];
+    gravity = 550;
+    speedRange = [90, 200];
+    dustCloud = true;
+    dustColor = k.rgb(100, 140, 180);
+  } else if (type.includes("purple")) {
+    count = 6;
+    sizeRange = [2, 5];
+    gravity = 300;
+    speedRange = [150, 320];
+  } else if (type.includes("green") || type.includes("regen")) {
+    specialEffect = "green-sparks";
+  } else if (type.includes("summoner")) {
+    specialEffect = "purple-smoke";
+  } else if (type.includes("spinner")) {
+    specialEffect = "orange-sparks";
+  }
+
+  // 1. Shake screen on death based on weight (reduced by ~40%)
+  let deathShake = 1.2;
+  if (type.includes("stone")) deathShake = 2.4;
+  if (type.includes("colossus")) deathShake = 4.0;
+  if (type.includes("blue")) deathShake = 1.8;
+  if (isElite) deathShake *= 1.2;
+  k.shake(deathShake);
+
+  // 2. Dust cloud
+  if (dustCloud) {
+    const dustCount = type.includes("colossus") ? 10 : 5;
+    for (let i = 0; i < dustCount; i++) {
+      const angle = k.rand(0, Math.PI * 2);
+      const dist = k.rand(10, 30);
+      const sz = k.rand(15, 30);
+      const dust = k.add([
+        k.circle(sz / 2),
+        k.pos(pos.x + Math.cos(angle) * dist, pos.y + Math.sin(angle) * dist),
+        k.anchor("center"),
+        k.color(dustColor),
+        k.opacity(0.35),
+        k.z(90),
+        k.lifespan(0.45, { fade: 0.35 }),
+        {
+          vx: Math.cos(angle) * k.rand(20, 60),
+          vy: Math.sin(angle) * k.rand(20, 60),
+        }
+      ]);
+      dust.onUpdate(() => {
+        dust.pos.x += dust.vx * k.dt();
+        dust.pos.y += dust.vy * k.dt();
+        dust.vx *= 0.94;
+        dust.vy *= 0.94;
+      });
+    }
+  }
+
+  // 3. Debris pieces
+  for (let i = 0; i < count; i++) {
+    const angle = k.rand(0, Math.PI * 2);
+    const spd = k.rand(speedRange[0], speedRange[1]);
+    const sz = k.rand(sizeRange[0], sizeRange[1]);
+    
+    const colorVariance = k.rand(-25, 25);
+    const r = k.clamp(color[0] + colorVariance, 0, 255);
+    const g = k.clamp(color[1] + colorVariance, 0, 255);
+    const b = k.clamp(color[2] + colorVariance, 0, 255);
+    
+    const debColor = isElite ? k.rgb(255, 215, 0) : k.rgb(r, g, b);
+    const rotSpeed = k.rand(-360, 360);
+
+    const piece = k.add([
+      k.rect(sz, sz),
+      k.pos(pos.x, pos.y),
+      k.anchor("center"),
+      k.color(debColor),
+      k.opacity(1),
+      k.z(590),
+      k.lifespan(0.55, { fade: 0.3 }),
+      k.rotate(k.rand(0, 360)),
+      {
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd - k.rand(50, 120),
+        rotSpd: rotSpeed,
+      }
+    ]);
+
+    piece.onUpdate(() => {
+      piece.vy += gravity * k.dt();
+      piece.pos.x += piece.vx * k.dt();
+      piece.pos.y += piece.vy * k.dt();
+      piece.angle += piece.rotSpd * k.dt();
+      piece.rotSpd *= 0.98;
+    });
+  }
+
+  // 4. Elite Sparkles (Golden stars)
+  if (isElite) {
+    for (let i = 0; i < 6; i++) {
+      const angle = k.rand(0, Math.PI * 2);
+      const spd = k.rand(40, 100);
+      const star = k.add([
+        k.circle(3),
+        k.pos(pos.x, pos.y),
+        k.anchor("center"),
+        k.color(255, 220, 80),
+        k.opacity(0.9),
+        k.z(600),
+        k.lifespan(0.6, { fade: 0.4 }),
+        {
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd - 30,
+        }
+      ]);
+      star.onUpdate(() => {
+        star.pos.x += star.vx * k.dt();
+        star.pos.y += star.vy * k.dt();
+        star.vy -= 15 * k.dt();
+      });
+    }
+  }
+
+  // 5. Special effects
+  if (specialEffect === "green-sparks") {
+    for (let i = 0; i < 5; i++) {
+      const bubble = k.add([
+        k.circle(k.rand(2, 4)),
+        k.pos(pos.x + k.rand(-15, 15), pos.y + k.rand(-15, 15)),
+        k.anchor("center"),
+        k.color(80, 220, 60),
+        k.opacity(0.7),
+        k.z(95),
+        k.lifespan(0.5, { fade: 0.3 }),
+        {
+          vx: k.rand(-15, 15),
+          vy: -k.rand(30, 65),
+        }
+      ]);
+      bubble.onUpdate(() => {
+        bubble.pos.x += bubble.vx * k.dt();
+        bubble.pos.y += bubble.vy * k.dt();
+      });
+    }
+  } else if (specialEffect === "purple-smoke") {
+    for (let i = 0; i < 3; i++) {
+      const ring = k.add([
+        k.circle(12),
+        k.pos(pos.x + k.rand(-10, 10), pos.y + k.rand(-10, 10)),
+        k.anchor("center"),
+        k.color(140, 60, 200),
+        k.opacity(0.4),
+        k.z(92),
+        k.scale(0.5),
+        k.lifespan(0.4, { fade: 0.3 }),
+        { t: 0, maxScale: k.rand(1.5, 2.2) }
+      ]) as GameObj & { t: number, maxScale: number };
+      ring.onUpdate(() => {
+        ring.t += k.dt();
+        const p = Math.min(ring.t / 0.4, 1);
+        ring.scale = k.vec2(0.5 + p * (ring.maxScale - 0.5));
+      });
+    }
+  } else if (specialEffect === "orange-sparks") {
+    for (let i = 0; i < 6; i++) {
+      const angle = k.rand(0, Math.PI * 2);
+      const spd = k.rand(120, 190);
+      const spark = k.add([
+        k.rect(5, 2),
+        k.pos(pos.x, pos.y),
+        k.anchor("center"),
+        k.rotate(k.rad2deg(angle)),
+        k.color(255, 140, 40),
+        k.opacity(0.9),
+        k.z(595),
+        k.lifespan(0.3, { fade: 0.2 }),
+        {
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+        }
+      ]);
+      spark.onUpdate(() => {
+        spark.pos.x += spark.vx * k.dt();
+        spark.pos.y += spark.vy * k.dt();
+      });
+    }
+  }
+}
+
 export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   const type = opts.type ?? "red";
   const preset = ENEMY_PRESETS[type];
   const s = opts.size ?? preset.size;
 
   // ── Escalonamento pós-wave 5 ──
-  // A cada ciclo de 5 waves (wave 6+), +50% HP e +50% atk speed para inimigos
   const wave = gameState.wave;
   const scaleStacks = wave > 5 ? Math.floor((wave - 1) / 5) : 0; // 0 até wave 5
   const hpScale = 1 + scaleStacks * 0.5;
-  // Tipos que disparam também escalam atk speed (spinner, green, cone_shooter)
   const isShooterType = [
     "spinner",
     "spinner_elite",
@@ -87,7 +429,8 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   const outlineColor = isElite ? k.rgb(255, 215, 0) : k.rgb(0, 0, 0);
   const outlineThick = isElite ? 4 : 3;
 
-  const enemy = k.add([
+  let enemy: any;
+  enemy = k.add([
     k.rect(s, s),
     k.pos(startPos.x, startPos.y),
     k.color(color[0], color[1], color[2]),
@@ -105,7 +448,18 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
       id: "enemy",
       enemyType: type,
       name: preset.name,
-      hp: maxHP,
+      _hp: maxHP,
+      _originalColor: k.rgb(color[0], color[1], color[2]),
+      get hp() {
+        return this._hp;
+      },
+      set hp(val: number) {
+        const diff = this._hp - val;
+        if (diff > 0 && enemy.exists()) {
+          triggerDamageFeedback(k, enemy, diff);
+        }
+        this._hp = val;
+      },
       maxHp: maxHP,
       marks: 0,
       marksDecayTimer: 0, // tempo desde última marca (reseta ao estacar)
@@ -183,16 +537,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
         }
       },
     },
-  ]) as GameObj & {
-    hp: number;
-    maxHp: number;
-    marks: number;
-    marksDecayTimer: number;
-    speed?: number;
-    damage: number;
-    lastDamageTime: number;
-    enemyType: "red" | "blue";
-  };
+  ]) as any;
 
   // Collide with walls: body handles resolution; add small bounce feedback
   enemy.onCollide("arena-wall", () => {
@@ -363,6 +708,9 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   });
 
   enemy.onDestroy(() => {
+    // Visual debris explosion based on enemy type
+    explodeEnemyDebris(k, enemy.pos.clone(), type);
+
     // Compute gold drop based on luck table
     const luck = gameState.luck;
     const weights = getGoldWeightsByLuck(luck);
@@ -426,6 +774,115 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
       });
     }
   });
+
+  // --- Geometric sub-shapes for visual differentiation ---
+  // Tanks: double border/inner concentric box
+  if (type.includes("stone") || type.includes("colossus") || type.includes("blue")) {
+    enemy.add([
+      k.rect(s * 0.6, s * 0.6),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(k.rgb(Math.max(0, color[0] - 40), Math.max(0, color[1] - 40), Math.max(0, color[2] - 40))),
+      k.outline(2, k.rgb(color[0], color[1], color[2])),
+      "enemy-tank-inner",
+    ]);
+  }
+  // Shooters: aim pointer
+  else if (type.includes("spinner") || type.includes("cone_shooter") || type.includes("green")) {
+    const turret = enemy.add([
+      k.polygon([k.vec2(-8, -6), k.vec2(10, 0), k.vec2(-8, 6)]),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(255, 255, 255),
+      k.outline(1.5, k.rgb(0, 0, 0)),
+      "enemy-aim-pointer",
+    ]);
+    turret.onUpdate(() => {
+      if (enemy.exists() && opts.target && opts.target.exists()) {
+        const angle = k.rad2deg(Math.atan2(opts.target.pos.y - enemy.pos.y, opts.target.pos.x - enemy.pos.x));
+        turret.angle = angle;
+      }
+    });
+  }
+  // Veloxio: speed chevron/diamond
+  else if (type.includes("purple")) {
+    enemy.add([
+      k.rect(s * 0.3, s * 0.65),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.rotate(45),
+      k.color(255, 255, 255),
+      k.outline(1.5, k.rgb(0, 0, 0)),
+      "enemy-speed-diamond",
+    ]);
+  }
+  // Summoners: concentric pulsing circle
+  else if (type.includes("summoner")) {
+    const orb = enemy.add([
+      k.circle(s * 0.25),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(140, 60, 200),
+      k.outline(1.5, k.rgb(255, 255, 255)),
+      "enemy-summoner-orb",
+    ]);
+    orb.onUpdate(() => {
+      if (orb.exists()) {
+        const sc = 1.0 + Math.sin(k.time() * 10) * 0.18;
+        orb.scale = k.vec2(sc);
+      }
+    });
+  }
+  // Regenerators: green plus sign
+  else if (type.includes("regen")) {
+    // Horiz
+    enemy.add([
+      k.rect(s * 0.5, 4),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(80, 220, 60),
+      k.outline(1, k.rgb(0, 0, 0)),
+      "enemy-plus-h",
+    ]);
+    // Vert
+    enemy.add([
+      k.rect(4, s * 0.5),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(80, 220, 60),
+      k.outline(1, k.rgb(0, 0, 0)),
+      "enemy-plus-v",
+    ]);
+  }
+  // Grunts: simple black inner square
+  else {
+    enemy.add([
+      k.rect(s * 0.35, s * 0.35),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(0, 0, 0),
+      "enemy-grunt-inner",
+    ]);
+  }
+
+  // Elite Crown / Halo above Elite heads
+  if (isElite) {
+    const halo = enemy.add([
+      k.circle(s * 0.25),
+      k.pos(s / 2, -s * 0.22),
+      k.anchor("center"),
+      k.color(0, 0, 0, 0), // transparent prefill
+      k.opacity(1),
+      k.outline(2.5, k.rgb(255, 215, 0)),
+      "enemy-elite-halo",
+    ]);
+    halo.onUpdate(() => {
+      if (halo.exists()) {
+        // Subtle floating pulse
+        halo.pos.y = -s * 0.22 + Math.sin(k.time() * 5) * 2;
+      }
+    });
+  }
 
   return enemy;
 }

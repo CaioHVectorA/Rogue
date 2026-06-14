@@ -42,4 +42,5 @@ export {
   applyImaMagneticoEffect,
   getEngenhariaRunicaBonusSlots,
   getEngenhariaRunicaDamageBonus,
+  updateFireAuraPerk,
 } from "./perkEffects";

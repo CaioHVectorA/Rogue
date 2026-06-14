@@ -294,7 +294,7 @@ registerSkill({
     spawnConeWave(k, { x: spawnOrigin.x, y: spawnOrigin.y }, baseAngle, arcRad);
 
     const speed = gameState.projectileSpeed * data.speedMul;
-    const damage = gameState.shotDamage;
+    const damage = gameState.shotDamage * gameState.castPower;
     const maxDist = k.width() * CONE_CONFIG.maxRange;
     const projSize = CONE_CONFIG.projectileSize;
 
@@ -342,6 +342,7 @@ registerSkill({
 
       c.onCollide("enemy", (e: any) => {
         if (typeof e.hp === "number") {
+          e._lastDamageType = "fire";
           e.hp -= damage;
           if (e.hp <= 0) e.destroy();
         }

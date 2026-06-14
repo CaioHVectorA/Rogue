@@ -15,6 +15,8 @@ type AttrDef = {
   tooltip: string;
   color: [number, number, number];
   handler: string;
+  col: number;
+  row: number;
 };
 
 const ATTR_DEFS: AttrDef[] = [
@@ -22,17 +24,21 @@ const ATTR_DEFS: AttrDef[] = [
     key: "moveSpeed",
     icon: "➤",
     label: "Velocidade",
-    tooltip: "Aumenta a velocidade\nde movimento do jogador.",
+    tooltip: "Aumenta a velocidade\nde movimento.",
     color: [60, 200, 120],
     handler: "onMoveSpeed",
+    row: 0,
+    col: 0,
   },
   {
     key: "maxHealth",
     icon: "❤",
     label: "Vida",
-    tooltip: "Aumenta a vida máxima\ne restaura um pouco de HP.",
+    tooltip: "Aumenta a vida máxima\ne cura um pouco.",
     color: [220, 70, 80],
     handler: "onHealth",
+    row: 0,
+    col: 1,
   },
   {
     key: "reloadSpeed",
@@ -41,22 +47,18 @@ const ATTR_DEFS: AttrDef[] = [
     tooltip: "Reduz o tempo de\nrecarga do tiro básico.",
     color: [80, 100, 220],
     handler: "onReload",
+    row: 0,
+    col: 2,
   },
   {
-    key: "luck",
-    icon: "✦",
-    label: "Sorte",
-    tooltip: "Aumenta a chance de\ndrops melhores.",
-    color: [220, 190, 50],
-    handler: "onLuck",
-  },
-  {
-    key: "projectileSpeed",
-    icon: "➲",
-    label: "Vel. Projétil",
-    tooltip: "Aumenta a velocidade\ndos projéteis.",
-    color: [100, 120, 240],
-    handler: "onProjectile",
+    key: "shotDamage",
+    icon: "🗡",
+    label: "Dano de Tiro",
+    tooltip: "Aumenta o dano base\ndos tiros básicos.",
+    color: [240, 140, 50],
+    handler: "onShotDamage",
+    row: 0,
+    col: 3,
   },
   {
     key: "abilityHaste",
@@ -65,30 +67,28 @@ const ATTR_DEFS: AttrDef[] = [
     tooltip: "Reduz o tempo de\nrecarga das habilidades.",
     color: [60, 180, 240],
     handler: "onAbilityHaste",
+    row: 1,
+    col: 0.5,
   },
   {
-    key: "shotDamage",
-    icon: "🗡",
-    label: "Dano de Tiro",
-    tooltip: "Aumenta o dano base\ndos tiros e skills de tiro.",
-    color: [240, 140, 50],
-    handler: "onShotDamage",
-  },
-  {
-    key: "magnetRadius",
-    icon: "🧲",
-    label: "Imã de Ouro",
-    tooltip: "Aumenta o raio de\natração de ouro.",
-    color: [255, 200, 60],
-    handler: "onMagnetRadius",
+    key: "castPower",
+    icon: "✨",
+    label: "Poder Arcano",
+    tooltip: "Aumenta o dano e a eficácia\ndas habilidades ativas (Q).",
+    color: [160, 80, 255],
+    handler: "onCastPower",
+    row: 1,
+    col: 1.5,
   },
   {
     key: "vampirism",
     icon: "❤+",
     label: "Vampirismo",
-    tooltip: "Cura o jogador ao matar inimigos; cura fixa + % da vida perdida.",
+    tooltip: "Cura o jogador ao matar inimigos;\ncura fixa + % da vida perdida.",
     color: [200, 60, 120],
     handler: "onVampirism",
+    row: 1,
+    col: 2.5,
   },
 ];
 
@@ -100,6 +100,7 @@ export type ShopPanelHandles = {
   setQuickHealHandler: (handler: () => void) => void;
   setPerkHandler: (handler: () => void) => void;
   setSkillUpgradeHandler: (handler: () => void) => void;
+  setExchangeHandler: (handler: () => void) => void;
   toggle: () => void;
 };
 
@@ -115,7 +116,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   }
 
   const panelW = 460;
-  const panelH = 700;
+  const panelH = 500;
   const panelX = () => Math.floor((k.width() - panelW) / 2);
   const panelY = () => Math.floor((k.height() - panelH) / 2);
 
@@ -131,11 +132,12 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     k.add([
       k.rect(panelW, panelH, { radius: 16 }),
       k.pos(panelX(), panelY()),
-      k.color(18, 18, 24),
-      k.outline(3, k.rgb(60, 60, 80)),
+      k.color(15, 15, 22), // Deep slate dark mode
+      k.outline(3, k.rgb(99, 102, 241)), // Indigo outline
       k.area(),
       k.fixed(),
       k.z(2000),
+      "shop-bg",
       { id: "shop-bg" },
     ]),
   );
@@ -222,8 +224,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
   for (let i = 0; i < ATTR_DEFS.length; i++) {
     const def = ATTR_DEFS[i];
-    const col = i % gridCols;
-    const row = Math.floor(i / gridCols);
+    const col = def.col;
+    const row = def.row;
     const sx = gridXFn() + col * (sqSize + sqGap);
     const sy = gridYFn() + row * (sqSize + sqGap + 20);
 
@@ -231,8 +233,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       k.add([
         k.rect(sqSize, sqSize, { radius: 10 }),
         k.pos(sx, sy),
-        k.color(def.color[0], def.color[1], def.color[2]),
-        k.outline(3, k.rgb(255, 255, 255)),
+        k.color(24, 24, 34), // Dark card base color
+        k.outline(2, k.rgb(60, 60, 70)),
         k.area(),
         k.fixed(),
         k.z(2002),
@@ -246,7 +248,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         k.text(def.icon, { size: 32 }),
         k.pos(sx + sqSize / 2, sy + 12),
         k.anchor("top"),
-        k.color(255, 255, 255),
+        k.color(def.color[0], def.color[1], def.color[2]), // Colored icon!
         k.fixed(),
         k.z(2003),
         { id: `shop-icon-${def.key}` },
@@ -258,7 +260,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         k.text(def.label, { size: 11 }),
         k.pos(sx + sqSize / 2, sy + sqSize + 2),
         k.anchor("top"),
-        k.color(200, 200, 220),
+        k.color(160, 160, 180),
         k.fixed(),
         k.z(2003),
         { id: `shop-lbl-${def.key}` },
@@ -334,8 +336,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   // ── Quick heal ──
   const quickBtn = track(
     k.add([
-      k.rect(panelW - 40, 40, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 100),
+      k.rect(panelW - 40, 42, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + 430),
       k.color(180, 140, 40),
       k.outline(2, k.rgb(255, 215, 0)),
       k.area(),
@@ -346,8 +348,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   );
   const quickBtnText = track(
     k.add([
-      k.text("❤ Curar 100HP (20 gold)", { size: 16 }),
-      k.pos(quickBtn.pos.x + (panelW - 40) / 2, quickBtn.pos.y + 10),
+      k.text("❤ Curar 100HP (20 gold)", { size: 15 }),
+      k.pos(quickBtn.pos.x + (panelW - 40) / 2, quickBtn.pos.y + 12),
       k.anchor("top"),
       k.color(255, 255, 255),
       k.fixed(),
@@ -356,12 +358,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     ]),
   );
 
-  // ── Gold display ──
-  // Layout from bottom: Quick Heal (-60), Exchange (-120), Skill Upgrade (-180), Perks (-240), Gold label (-280)
+  // ── Gold display (Header top-right) ──
   const goldLabel = track(
     k.add([
-      k.text("⎔ 0", { size: 18 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 300),
+      k.text("⎔ 0", { size: 20 }),
+      k.pos(panel.pos.x + panelW - 130, panel.pos.y + 50),
       k.color(255, 215, 0),
       k.fixed(),
       k.z(2001),
@@ -369,36 +370,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     ]),
   );
 
-  // ── Perks button ──
-  const perkBtn = track(
-    k.add([
-      k.rect(panelW - 40, 44, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 280),
-      k.color(100, 60, 180),
-      k.outline(2, k.rgb(180, 140, 255)),
-      k.area(),
-      k.fixed(),
-      k.z(2002),
-      { id: "shop-perks-btn" },
-    ]),
-  );
-  const perkBtnText = track(
-    k.add([
-      k.text("🔮 Perks (★5)", { size: 16 }),
-      k.pos(perkBtn.pos.x + (panelW - 40) / 2, perkBtn.pos.y + 12),
-      k.anchor("top"),
-      k.color(255, 255, 255),
-      k.fixed(),
-      k.z(2003),
-      { id: "shop-perks-btn-txt" },
-    ]),
-  );
-
   // ── Skill upgrade button ──
   const skillUpBtn = track(
     k.add([
-      k.rect(panelW - 40, 44, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 220),
+      k.rect(panelW - 40, 42, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + 326),
       k.color(60, 120, 200),
       k.outline(2, k.rgb(120, 180, 255)),
       k.area(),
@@ -422,8 +398,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   // ── Gold → Elevation exchange button ──
   const exchangeBtn = track(
     k.add([
-      k.rect(panelW - 40, 44, { radius: 8 }),
-      k.pos(panel.pos.x + 20, panel.pos.y + panelH - 160),
+      k.rect(panelW - 40, 42, { radius: 8 }),
+      k.pos(panel.pos.x + 20, panel.pos.y + 378),
       k.color(180, 140, 40),
       k.outline(2, k.rgb(255, 215, 0)),
       k.area(),
@@ -445,55 +421,103 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   );
 
   // ─── Handlers ─────────────────────────────────────────
+  let hoveredSquare: AttrSquare | null = null;
   let upgradeHandlers: Record<string, () => void> = {};
   let quickHealHandler: (() => void) | null = null;
   let perkHandler: (() => void) | undefined = undefined;
   let skillUpgradeHandler: (() => void) | null = null;
+  let exchangeHandler: (() => void) | null = null;
 
   /** Cost of next gold→elevation exchange: 3^(bonusElevationsBought+1) */
   function getExchangeCost(): number {
     return Math.pow(3, gameState.bonusElevationsBought + 1);
   }
 
-  // Wire clicks
-  for (const sq of squares) {
-    sq.bg.onClick(() => {
-      if (panel.hidden) return; // guard: panel not visible
-      const handlerKey = sq.def.handler;
-      if (handlerKey && upgradeHandlers[handlerKey]) {
-        upgradeHandlers[handlerKey]();
-      }
-    });
-  }
-  closeBtn.onClick(() => {
-    if (panel.hidden) return;
-    setVisible(false);
-  });
-  quickBtn.onClick(() => {
-    if (panel.hidden) return;
-    if (quickHealHandler) quickHealHandler();
-  });
-  perkBtn.onClick(() => {
-    if (panel.hidden) return;
-    if (perkHandler) perkHandler();
-  });
-  exchangeBtn.onClick(() => {
-    if (panel.hidden) return;
-    const cost = getExchangeCost();
-    if (gameState.gold < cost) return;
-    gameState.gold -= cost;
-    gameState.elevationPoints += 1;
-    gameState.bonusElevationsBought += 1;
-    refreshStats();
-  });
-  skillUpBtn.onClick(() => {
-    if (panel.hidden) return;
-    if (skillUpgradeHandler) skillUpgradeHandler();
-    refreshStats();
-  });
+  const isHovering = (obj: GameObj, w: number, h: number) => {
+    if (obj.hidden) return false;
+    const mp = k.mousePos();
+    const bx = obj.pos.x;
+    const by = obj.pos.y;
+    return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+  };
 
-  // ─── Hover tooltip logic ──────────────────────────────
-  let hoveredSquare: AttrSquare | null = null;
+  // Wire clicks manually in screen-space
+  k.onMousePress("left", () => {
+    if (panel.hidden) return;
+    const mp = k.mousePos();
+
+    // Check close button
+    if (isHovering(closeBtn, 28, 28)) {
+      setVisible(false);
+      return;
+    }
+
+    // Check quick heal button
+    const healCost = 20 + gameState.healUseCount * 5;
+    if (gameState.gold >= healCost && isHovering(quickBtn, panelW - 40, 42)) {
+      if (quickHealHandler) {
+        quickHealHandler();
+        refreshStats();
+      }
+      return;
+    }
+
+    // Check skill upgrade button
+    const skillId = gameState.skills.skill1;
+    const skillLv = skillId ? (gameState.skills.levels[skillId] ?? 1) : 1;
+    const canSkillUp = skillId && skillLv < 5 && gameState.elevationPoints >= 3;
+    if (canSkillUp && isHovering(skillUpBtn, panelW - 40, 42)) {
+      if (skillUpgradeHandler) {
+        skillUpgradeHandler();
+        refreshStats();
+      }
+      return;
+    }
+
+    // Check gold->elevation exchange button
+    const exchCost = getExchangeCost();
+    if (gameState.gold >= exchCost && isHovering(exchangeBtn, panelW - 40, 42)) {
+      if (exchangeHandler) {
+        exchangeHandler();
+        refreshStats();
+      }
+      return;
+    }
+
+    // Check attribute squares
+    for (const sq of squares) {
+      if (sq.bg.hidden) continue;
+      const bx = sq.bg.pos.x;
+      const by = sq.bg.pos.y;
+      if (
+        mp.x >= bx &&
+        mp.x <= bx + sqSize &&
+        mp.y >= by &&
+        mp.y <= by + sqSize
+      ) {
+        // Enforce the canUpgradeAttr check manually to prevent illegal buy
+        const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
+        const nextLv = lv + 1;
+        const goldCost = nextAttrGoldCost(nextLv);
+        const canUp =
+          lv < MAX_ATTR_LEVEL &&
+          gameState.elevationPoints >= ATTR_COST &&
+          gameState.gold >= goldCost;
+        if (nextLv === MAX_ATTR_LEVEL) {
+          const maxAllowed = 2;
+          if (countMaxedAttributes() >= maxAllowed) continue;
+        }
+
+        if (canUp) {
+          const handlerKey = sq.def.handler;
+          if (handlerKey && upgradeHandlers[handlerKey]) {
+            upgradeHandlers[handlerKey]();
+          }
+        }
+        break;
+      }
+    }
+  });
 
   k.onUpdate(() => {
     if (panel.hidden) return;
@@ -516,49 +540,150 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       }
     }
 
+    // Function to check button hover
+    const isHoveringLocal = (obj: GameObj, w: number, h: number) => {
+      if (obj.hidden) return false;
+      const bx = obj.pos.x;
+      const by = obj.pos.y;
+      return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+    };
+
+    // Update squares styling dynamically with hover highlights
+    for (const sq of squares) {
+      const hovered = (found === sq);
+      const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
+      const nextLv = lv + 1;
+      const goldCost = nextAttrGoldCost(nextLv);
+      const canUp =
+        lv < MAX_ATTR_LEVEL &&
+        gameState.elevationPoints >= ATTR_COST &&
+        gameState.gold >= goldCost;
+
+      sq.bg.color = hovered ? k.rgb(38, 38, 50) : k.rgb(24, 24, 34);
+
+      if (lv >= MAX_ATTR_LEVEL) {
+        sq.bg.outline.color = k.rgb(255, 215, 0); // Gold
+        sq.bg.outline.width = hovered ? 4 : 3;
+        (sq.bg as any).opacity = 0.8;
+      } else if (canUp) {
+        sq.bg.outline.color = k.rgb(sq.def.color[0], sq.def.color[1], sq.def.color[2]);
+        sq.bg.outline.width = hovered ? 4 : 2.5;
+        (sq.bg as any).opacity = 1.0;
+      } else {
+        sq.bg.outline.color = k.rgb(60, 60, 70);
+        sq.bg.outline.width = hovered ? 3 : 1.5;
+        (sq.bg as any).opacity = 0.45;
+      }
+    }
+
+    // Close button hover
+    const closeHover = isHoveringLocal(closeBtn, 28, 28);
+    closeBtn.color = closeHover ? k.rgb(120, 40, 40) : k.rgb(70, 30, 30);
+    closeBtn.outline.color = closeHover ? k.rgb(255, 140, 140) : k.rgb(200, 80, 80);
+    closeBtn.outline.width = closeHover ? 3 : 2;
+
+    // Bottom action buttons styling & hover effects
+    const updateBtnStyle = (
+      btn: GameObj,
+      w: number,
+      h: number,
+      affordable: boolean,
+      baseOutlineColor: any,
+      baseBtnColor: any,
+      hoverBtnColor: any,
+    ) => {
+      const hovered = isHoveringLocal(btn, w, h);
+      if (!affordable) {
+        btn.color = k.rgb(24, 24, 30);
+        btn.outline.color = k.rgb(55, 55, 65);
+        btn.outline.width = 1.5;
+        (btn as any).opacity = 0.45;
+      } else {
+        (btn as any).opacity = 1.0;
+        btn.color = hovered ? hoverBtnColor : baseBtnColor;
+        btn.outline.color = hovered ? k.rgb(255, 255, 255) : baseOutlineColor;
+        btn.outline.width = hovered ? 3.5 : 2;
+      }
+    };
+
+    // Quick Heal
+    const healCost = 20 + (gameState as any).healUseCount * 5;
+    const canHeal = gameState.gold >= healCost;
+    updateBtnStyle(
+      quickBtn,
+      panelW - 40,
+      42,
+      canHeal,
+      k.rgb(255, 215, 0),
+      k.rgb(120, 90, 20),
+      k.rgb(150, 115, 25),
+    );
+
+    // Skill Upgrade
+    const skillId = gameState.skills.skill1;
+    const skillLv = skillId ? (gameState.skills.levels[skillId] ?? 1) : 1;
+    const canSkillUp = skillId && skillLv < 5 && gameState.elevationPoints >= 3;
+    updateBtnStyle(
+      skillUpBtn,
+      panelW - 40,
+      42,
+      !!canSkillUp,
+      k.rgb(120, 180, 255),
+      k.rgb(40, 80, 150),
+      k.rgb(55, 105, 190),
+    );
+
+    // Exchange Gold
+    const exchCost = getExchangeCost();
+    const canExchange = gameState.gold >= exchCost;
+    updateBtnStyle(
+      exchangeBtn,
+      panelW - 40,
+      42,
+      canExchange,
+      k.rgb(255, 215, 0),
+      k.rgb(120, 90, 20),
+      k.rgb(150, 115, 25),
+    );
+
+    // Tooltip logic
     if (found) {
-      if (hoveredSquare !== found) {
-        hoveredSquare = found;
-        const def = found.def;
-        const lv = (gameState.upgrades as any)[def.key] ?? 0;
-        const goldCost = nextAttrGoldCost(lv + 1);
-        const canUp =
-          lv < MAX_ATTR_LEVEL &&
-          gameState.elevationPoints >= ATTR_COST &&
-          gameState.gold >= goldCost;
+      const def = found.def;
+      const lv = (gameState.upgrades as any)[def.key] ?? 0;
+      const goldCost = nextAttrGoldCost(lv + 1);
+      const canUp =
+        lv < MAX_ATTR_LEVEL &&
+        gameState.elevationPoints >= ATTR_COST &&
+        gameState.gold >= goldCost;
 
-        let tx = found.bg.pos.x + sqSize + 8;
-        let ty = found.bg.pos.y;
-        if (tx + tooltipW > k.width() - 10) {
-          tx = found.bg.pos.x - tooltipW - 8;
-        }
-        if (ty + tooltipH > k.height() - 10) {
-          ty = k.height() - tooltipH - 10;
-        }
-
-        tooltipBg.pos = k.vec2(tx, ty);
-        tooltipTitle.pos = k.vec2(tx + 10, ty + 8);
-        tooltipDesc.pos = k.vec2(tx + 10, ty + 28);
-        tooltipLv.pos = k.vec2(tx + 10, ty + tooltipH - 20);
-
-        (tooltipTitle as any).text = def.label;
-        (tooltipDesc as any).text = def.tooltip;
-        (tooltipLv as any).text =
-          `Nv ${lv}/${MAX_ATTR_LEVEL}${canUp ? `  ★-1 ⎔-${goldCost}` : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem recursos"}`;
-
-        tooltipBg.hidden = false;
-        tooltipTitle.hidden = false;
-        tooltipDesc.hidden = false;
-        tooltipLv.hidden = false;
+      let tx = found.bg.pos.x + sqSize + 8;
+      let ty = found.bg.pos.y;
+      if (tx + tooltipW > k.width() - 10) {
+        tx = found.bg.pos.x - tooltipW - 8;
       }
+      if (ty + tooltipH > k.height() - 10) {
+        ty = k.height() - tooltipH - 10;
+      }
+
+      tooltipBg.pos = k.vec2(tx, ty);
+      tooltipTitle.pos = k.vec2(tx + 10, ty + 8);
+      tooltipDesc.pos = k.vec2(tx + 10, ty + 28);
+      tooltipLv.pos = k.vec2(tx + 10, ty + tooltipH - 20);
+
+      (tooltipTitle as any).text = def.label;
+      (tooltipDesc as any).text = def.tooltip;
+      (tooltipLv as any).text =
+        `Nv ${lv}/${MAX_ATTR_LEVEL}${canUp ? `  ★-1 ⎔-${goldCost}` : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem recursos"}`;
+
+      tooltipBg.hidden = false;
+      tooltipTitle.hidden = false;
+      tooltipDesc.hidden = false;
+      tooltipLv.hidden = false;
     } else {
-      if (hoveredSquare) {
-        hoveredSquare = null;
-        tooltipBg.hidden = true;
-        tooltipTitle.hidden = true;
-        tooltipDesc.hidden = true;
-        tooltipLv.hidden = true;
-      }
+      tooltipBg.hidden = true;
+      tooltipTitle.hidden = true;
+      tooltipDesc.hidden = true;
+      tooltipLv.hidden = true;
     }
   });
 
@@ -585,29 +710,28 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     closeTxt.pos = k.vec2(closeBtn.pos.x + 7, closeBtn.pos.y + 4);
     epLabel.pos = k.vec2(px + 20, py + 50);
     costHint.pos = k.vec2(px + 100, py + 54);
-    goldLabel.pos = k.vec2(px + 20, py + panelH - 300);
-    perkBtn.pos = k.vec2(px + 20, py + panelH - 280);
-    perkBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, perkBtn.pos.y + 12);
-    skillUpBtn.pos = k.vec2(px + 20, py + panelH - 220);
+    goldLabel.pos = k.vec2(px + panelW - 130, py + 50);
+
+    skillUpBtn.pos = k.vec2(px + 20, py + 326);
     skillUpBtnText.pos = k.vec2(
       px + 20 + (panelW - 40) / 2,
       skillUpBtn.pos.y + 12,
     );
-    exchangeBtn.pos = k.vec2(px + 20, py + panelH - 160);
+    exchangeBtn.pos = k.vec2(px + 20, py + 378);
     exchangeBtnText.pos = k.vec2(
       px + 20 + (panelW - 40) / 2,
       exchangeBtn.pos.y + 12,
     );
-    quickBtn.pos = k.vec2(px + 20, py + panelH - 100);
-    quickBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, quickBtn.pos.y + 10);
+    quickBtn.pos = k.vec2(px + 20, py + 430);
+    quickBtnText.pos = k.vec2(px + 20 + (panelW - 40) / 2, quickBtn.pos.y + 12);
 
     const gx =
       px +
       Math.floor((panelW - (sqSize * gridCols + sqGap * (gridCols - 1))) / 2);
     const gy = py + 86;
     for (const sq of squares) {
-      const sx = gx + sq.col * (sqSize + sqGap);
-      const sy = gy + sq.row * (sqSize + sqGap + 20);
+      const sx = gx + sq.def.col * (sqSize + sqGap);
+      const sy = gy + sq.def.row * (sqSize + sqGap + 20);
       sq.bg.pos = k.vec2(sx, sy);
       sq.icon.pos = k.vec2(sx + sqSize / 2, sy + 12);
       sq.label.pos = k.vec2(sx + sqSize / 2, sy + sqSize + 2);
@@ -623,108 +747,26 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
     for (const sq of squares) {
       const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
-      const nextLv = lv + 1;
-      const goldCost = nextAttrGoldCost(nextLv);
-      const canUp =
-        lv < MAX_ATTR_LEVEL &&
-        gameState.elevationPoints >= ATTR_COST &&
-        gameState.gold >= goldCost;
-
       (sq.lvLabel as any).text = `${lv}`;
-
-      if (lv >= MAX_ATTR_LEVEL) {
-        sq.bg.outline.color = k.rgb(255, 215, 0);
-        sq.bg.outline.width = 3;
-        (sq.bg as any).opacity = 0.7;
-      } else if (canUp) {
-        sq.bg.outline.color = k.rgb(255, 255, 255);
-        sq.bg.outline.width = 3;
-        (sq.bg as any).opacity = 1;
-      } else {
-        sq.bg.outline.color = k.rgb(60, 60, 70);
-        sq.bg.outline.width = 2;
-        (sq.bg as any).opacity = 0.45;
-      }
     }
 
     const healCost = 20 + (gameState as any).healUseCount * 5;
-    const canHeal = gameState.gold >= healCost;
-    (quickBtn as any).opacity = canHeal ? 1 : 0.4;
-    quickBtn.outline.color = canHeal ? k.rgb(255, 215, 0) : k.rgb(80, 80, 80);
     (quickBtnText as any).text = `❤ Curar 100HP (${healCost} gold)`;
 
-    // ── Perk button state ──
-    const canPerk = canOpenPerkSelection();
-    const acquiredCount = gameState.perks.acquired.length;
-    if (acquiredCount >= MAX_PERKS) {
-      (perkBtnText as any).text =
-        `🔮 Perks (${acquiredCount}/${MAX_PERKS} MÁX)`;
-      (perkBtn as any).opacity = 0.35;
-      perkBtn.outline.color = k.rgb(80, 80, 80);
-    } else if (gameState.level < MIN_LEVEL_FOR_PERKS) {
-      (perkBtnText as any).text = `🔮 Perks (Nível ${MIN_LEVEL_FOR_PERKS}+)`;
-      (perkBtn as any).opacity = 0.35;
-      perkBtn.outline.color = k.rgb(80, 80, 80);
-    } else if (!canPerk) {
-      (perkBtnText as any).text = `🔮 Perks (★ insuficiente)`;
-      (perkBtn as any).opacity = 0.4;
-      perkBtn.outline.color = k.rgb(80, 80, 80);
-    } else {
-      (perkBtnText as any).text = `🔮 Adquirir Perk (★${PERK_COST})`;
-      (perkBtn as any).opacity = 1;
-      perkBtn.outline.color = k.rgb(180, 140, 255);
-    }
-
-    if (hoveredSquare) {
-      const def = hoveredSquare.def;
-      const lv = (gameState.upgrades as any)[def.key] ?? 0;
-      const nextLv = lv + 1;
-      const goldCostHov = nextAttrGoldCost(nextLv);
-      const canHov =
-        lv < MAX_ATTR_LEVEL &&
-        gameState.elevationPoints >= ATTR_COST &&
-        gameState.gold >= goldCostHov;
-      (tooltipLv as any).text =
-        `Nv ${lv}/${MAX_ATTR_LEVEL}${canHov ? `  ★-1 ⎔-${goldCostHov}` : lv >= MAX_ATTR_LEVEL ? "  MÁX" : "  sem recursos"}`;
-    }
-
-    // ── Exchange button state ──
     const exchCost = getExchangeCost();
-    const canExchange = gameState.gold >= exchCost;
-    (exchangeBtnText as any).text =
-      `⎔→★ Trocar Gold por Elevação (⎔${exchCost})`;
-    (exchangeBtn as any).opacity = canExchange ? 1 : 0.4;
-    exchangeBtn.outline.color = canExchange
-      ? k.rgb(255, 215, 0)
-      : k.rgb(80, 80, 80);
+    (exchangeBtnText as any).text = `⎔→★ Trocar Gold por Elevação (⎔${exchCost})`;
 
-    // ── Skill upgrade button state ──
-    const SKILL_UP_COST = 3;
-    const MAX_SKILL_LVL = 5;
     const skillId = gameState.skills.skill1;
     if (skillId) {
       const skillLv = gameState.skills.levels[skillId] ?? 1;
-      const canSkillUp =
-        skillLv < MAX_SKILL_LVL && gameState.elevationPoints >= SKILL_UP_COST;
-      if (skillLv >= MAX_SKILL_LVL) {
+      if (skillLv >= 5) {
         (skillUpBtnText as any).text = `⬆ Habilidade (MÁX)`;
-        (skillUpBtn as any).opacity = 0.35;
-        skillUpBtn.outline.color = k.rgb(80, 80, 80);
-      } else if (canSkillUp) {
-        (skillUpBtnText as any).text =
-          `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★${SKILL_UP_COST})`;
-        (skillUpBtn as any).opacity = 1;
-        skillUpBtn.outline.color = k.rgb(120, 180, 255);
       } else {
-        (skillUpBtnText as any).text =
-          `⬆ Aprimorar Habilidade (★ insuficiente)`;
-        (skillUpBtn as any).opacity = 0.4;
-        skillUpBtn.outline.color = k.rgb(80, 80, 80);
+        (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★3)`;
       }
       skillUpBtn.hidden = false;
       skillUpBtnText.hidden = false;
     } else {
-      // No skill equipped yet
       skillUpBtn.hidden = true;
       skillUpBtnText.hidden = true;
     }
@@ -745,6 +787,9 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     },
     setSkillUpgradeHandler: (handler: () => void) => {
       skillUpgradeHandler = handler;
+    },
+    setExchangeHandler: (handler: () => void) => {
+      exchangeHandler = handler;
     },
     toggle: () => setVisible(panel.hidden),
   };
