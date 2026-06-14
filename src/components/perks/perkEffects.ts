@@ -3,6 +3,7 @@
 
 import { hasPerk } from "./perkState";
 import { gameState } from "../../state/gameState";
+import { addPoisonStacks } from "../skills/poison";
 
 // ══════════════════════════════════════════════════════════
 // EXECUÇÃO LIMPA — matar reduz CD de Q em 40%; elite = reset
@@ -199,7 +200,7 @@ export function triggerShockExplosion(k: any, pos: any): void {
 // IMÃ MAGNÉTICO — dobra raio imã, +0.3 sorte (1x na aquisição)
 // ══════════════════════════════════════════════════════════
 export function applyImaMagneticoEffect(): void {
-  if (!hasPerk("ima-magnetico")) return;
+  if (!hasPerk("ima-magnetico") && !hasPerk("super-ima")) return;
   gameState.luck = Number((gameState.luck + 0.3).toFixed(2));
 }
 
@@ -215,77 +216,176 @@ export function getEngenhariaRunicaDamageBonus(): number {
 }
 
 // ══════════════════════════════════════════════════════════
-// AURA FLAMEJANTE — queima passiva no raio 100 a cada 1.0s
-//                   dano = 2.0 * castPower * damageMul
+// RASTRO NOCIVO — rastro tóxico ao correr
 // ══════════════════════════════════════════════════════════
-let _fireAuraVisual: any = null;
+let _rastroTimer = 0;
+export function updateRastroNocivo(k: any, player: any): void {
+  if (!player || !player.exists() || !hasPerk("rastro-nocivo")) return;
+
+  const vel = player.pos.sub(player._lastPos ?? player.pos);
+  player._lastPos = player.pos.clone();
+  const isMoving = vel.len() > 1;
+
+  if (!isMoving) return;
+
+  _rastroTimer += k.dt();
+  if (_rastroTimer >= 0.15) {
+    _rastroTimer = 0;
+    const center = player.pos.add(18, 18);
+    const trail = k.add([
+      k.circle(24),
+      k.pos(center.x, center.y),
+      k.color(180, 50, 255),
+      k.opacity(0.4),
+      k.area({ collisionIgnore: ["player"] }),
+      k.z(-1),
+      { id: "poison-trail", t: 0 },
+    ]);
+
+    trail.onUpdate(() => {
+      trail.t += k.dt();
+      trail.opacity = 0.4 * (1 - trail.t / 1.5);
+      if (trail.t >= 1.5) {
+        trail.destroy();
+      }
+    });
+
+    trail.onCollide("enemy", (e: any) => {
+      if (typeof e.hp === "number") {
+        e.hp -= 0.6 * gameState.castPower * gameState.buffs.damageMul;
+        if (e.hp <= 0) e.destroy();
+      }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ONDA DE CHOQUE — ao sofrer dano ou a cada 3s em combate
+// ══════════════════════════════════════════════════════════
+let _shockwaveTimer = 0;
+
+export function triggerOndaDeChoquePerk(k: any, player: any): void {
+  if (!player || !player.exists()) return;
+  const center = player.pos.add(18, 18);
+  const radius = 100;
+  const dmg = Math.max(2, Math.round(gameState.maxHealth * 0.08));
+
+  // Visual pulse ring
+  const wave = k.add([
+    k.circle(10),
+    k.pos(center.x, center.y),
+    k.color(255, 140, 60),
+    k.opacity(0.6),
+    k.z(-1),
+    { t: 0 },
+  ]);
+  wave.onUpdate(() => {
+    const t = wave.t ?? 0;
+    wave.t = t + k.dt();
+    const progress = Math.min(wave.t / 0.3, 1);
+    wave.use(k.circle(10 + progress * (radius - 10)));
+    wave.opacity = 0.6 * (1 - progress);
+    if (progress >= 1) wave.destroy();
+  });
+
+  // Damage and push enemies
+  const enemies = k.get("enemy") as any[];
+  for (const e of enemies) {
+    if (e.pos.dist(center) <= radius) {
+      if (typeof e.hp === "number") {
+        e.hp -= dmg * gameState.buffs.damageMul;
+        if (e.hp <= 0) e.destroy();
+      }
+      // Push enemy back
+      const dir = e.pos.sub(center).unit();
+      e.pos.x += dir.x * 20;
+      e.pos.y += dir.y * 20;
+    }
+  }
+}
+
+export function updateOndaDeChoquePerk(k: any, player: any): void {
+  if (!player || !player.exists() || !hasPerk("onda-de-choque")) return;
+
+  const enemies = k.get("enemy") as any[];
+  if (enemies.length === 0) {
+    _shockwaveTimer = 0;
+    return;
+  }
+
+  _shockwaveTimer += k.dt();
+  if (_shockwaveTimer >= 3.0) {
+    _shockwaveTimer = 0;
+    triggerOndaDeChoquePerk(k, player);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// AURA FLAMEJANTE — aura de fogo constante ao redor do player
+// ══════════════════════════════════════════════════════════
+let _fireAuraObj: any = null;
 let _fireAuraTimer = 0;
 
 export function updateFireAuraPerk(k: any, player: any): void {
-  if (!player || !player.exists()) {
-    if (_fireAuraVisual && _fireAuraVisual.exists()) {
-      _fireAuraVisual.destroy();
+  if (!player || !player.exists() || !hasPerk("aura-flamejante")) {
+    if (_fireAuraObj && _fireAuraObj.exists()) {
+      _fireAuraObj.destroy();
+      _fireAuraObj = null;
     }
-    _fireAuraVisual = null;
     return;
   }
 
-  if (!hasPerk("aura-flamejante")) {
-    if (_fireAuraVisual && _fireAuraVisual.exists()) {
-      _fireAuraVisual.destroy();
-    }
-    _fireAuraVisual = null;
-    return;
-  }
-
-  // Se tem a perk, garante o objeto visual
   const radius = 100;
-  if (!_fireAuraVisual || !_fireAuraVisual.exists()) {
-    _fireAuraVisual = k.add([
+  const pSize = player.getSize ? player.getSize() : { width: 36, height: 36 };
+  const center = player.pos.add(pSize.width / 2, pSize.height / 2);
+
+  // Se o objeto visual não existe, cria ele
+  if (!_fireAuraObj || !_fireAuraObj.exists()) {
+    _fireAuraObj = k.add([
       k.circle(radius),
-      k.pos(player.pos.x + 18, player.pos.y + 18),
+      k.pos(center.x, center.y),
       k.anchor("center"),
       k.color(240, 80, 30),
-      k.opacity(0.1),
-      k.outline(2, k.rgb(255, 120, 50)),
-      k.z(400),
-      { id: "fire-aura-visual" },
+      k.opacity(0.12),
+      k.outline(1.5, k.rgb(255, 120, 30)),
+      k.z(-2), // below player and enemies
+      { id: "fire-aura-visual" }
     ]);
   } else {
-    _fireAuraVisual.pos.x = player.pos.x + 18;
-    _fireAuraVisual.pos.y = player.pos.y + 18;
+    // Mantém atualizado no centro do player
+    _fireAuraObj.pos = center;
   }
 
-  // Timer para o pulso de dano
+  // Pulso de dano a cada 1.0s
   _fireAuraTimer += k.dt();
   if (_fireAuraTimer >= 1.0) {
     _fireAuraTimer = 0;
 
-    const center = player.pos.add(18, 18);
-    const dmg = 2.0 * gameState.castPower * gameState.buffs.damageMul;
-
-    // Visual pulse
+    // Onda de calor se expandindo (visual pulse effect)
     const pulse = k.add([
       k.circle(10),
       k.pos(center.x, center.y),
-      k.color(255, 120, 30),
-      k.opacity(0.55),
-      k.z(401),
+      k.anchor("center"),
+      k.color(255, 100, 30),
+      k.opacity(0.4),
+      k.z(-2),
+      { t: 0 }
     ]);
-    let elapsed = 0;
     pulse.onUpdate(() => {
-      elapsed += k.dt();
-      const progress = Math.min(elapsed / 0.25, 1);
+      pulse.t += k.dt();
+      const progress = Math.min(pulse.t / 0.45, 1);
       pulse.use(k.circle(10 + progress * (radius - 10)));
-      pulse.opacity = 0.55 * (1 - progress);
+      pulse.opacity = 0.4 * (1 - progress);
       if (progress >= 1) pulse.destroy();
     });
 
-    // Damage enemies
+    // Causa dano nos inimigos dentro do raio
+    const dmg = 2.0 * gameState.castPower * gameState.buffs.damageMul;
     const enemies = k.get("enemy") as any[];
     for (const e of enemies) {
       if (e.pos.dist(center) <= radius) {
         if (typeof e.hp === "number") {
+          e._lastDamageType = "fire";
           e.hp -= dmg;
           if (e.hp <= 0) e.destroy();
         }
@@ -293,3 +393,203 @@ export function updateFireAuraPerk(k: any, player: any): void {
     }
   }
 }
+
+// ══════════════════════════════════════════════════════════
+// PASSIVAS ADICIONADAS POSTERIORMENTE
+// ══════════════════════════════════════════════════════════
+
+let _passoEspiritualUntil = 0;
+
+export function triggerPassoEspiritual(): void {
+  if (hasPerk("passo-espiritual")) {
+    _passoEspiritualUntil = Date.now() + 2000;
+  }
+}
+
+export function getPlayerSpeedMultiplier(player: any): number {
+  let mul = 1.0;
+  mul += getLigeirinhoSpeedBonus();
+  
+  if (hasPerk("sobrevida-veloz") && player && player.exists()) {
+    const maxHP = gameState.maxHealth;
+    const currentHP = player.hp ?? maxHP;
+    if (currentHP / maxHP <= 0.3) {
+      mul += 0.35;
+    }
+  }
+  
+  if (hasPerk("passo-espiritual") && Date.now() < _passoEspiritualUntil) {
+    mul += 0.20;
+  }
+  
+  return mul;
+}
+
+export function applySoproGeladoSlow(k: any, enemy: any): void {
+  if (!enemy || !enemy.exists()) return;
+  const originalSpeed = enemy.defaultSpeed ?? enemy.speed ?? 100;
+  enemy.speed = originalSpeed * 0.6; // 40% slow
+  
+  const prevColor = enemy._originalColor || enemy.color || k.rgb(255, 255, 255);
+  enemy.color = k.rgb(100, 180, 255);
+  
+  if (enemy._slowTimeout) clearTimeout(enemy._slowTimeout);
+  enemy._slowTimeout = setTimeout(() => {
+    if (enemy.exists()) {
+      enemy.speed = originalSpeed;
+      enemy.color = prevColor;
+    }
+  }, 2500);
+}
+
+export function showLuckyBlockFeedback(k: any, pos: any): void {
+  k.add([
+    k.text("🍀 BLOQUEADO!", { size: 14 }),
+    k.pos(pos.x, pos.y - 30),
+    k.anchor("center"),
+    k.color(120, 255, 200),
+    k.outline(2, k.rgb(0, 50, 0)),
+    k.lifespan(0.8, { fade: 0.4 }),
+    k.z(1000)
+  ]);
+}
+
+export function triggerRetaliacaoSombria(k: any, pos: any): void {
+  if (!hasPerk("retaliacao-sombria")) return;
+  const numDaggers = 8;
+  const angleStep = (Math.PI * 2) / numDaggers;
+  const baseDmg = 8 * gameState.castPower;
+  
+  for (let i = 0; i < numDaggers; i++) {
+    const angle = i * angleStep;
+    const dir = k.vec2(Math.cos(angle), Math.sin(angle));
+    
+    const dagger = k.add([
+      k.rect(14, 6),
+      k.pos(pos.x, pos.y),
+      k.color(180, 50, 255),
+      k.outline(1.5, k.rgb(0, 0, 0)),
+      k.rotate(k.rad2deg(angle)),
+      k.anchor("center"),
+      k.area(),
+      k.z(200),
+      { id: "poison-dagger", damage: baseDmg }
+    ]);
+    
+    dagger.onUpdate(() => {
+      if (!dagger.exists()) return;
+      dagger.move(dir.scale(450));
+    });
+    
+    dagger.onCollide("enemy", (e: any) => {
+      if (typeof e.hp === "number") {
+        e._lastDamageType = "poison";
+        e.hp -= baseDmg * gameState.buffs.damageMul;
+        if (e.hp <= 0) e.destroy();
+        addPoisonStacks(k, e, 2);
+      }
+      dagger.destroy();
+    });
+    
+    dagger.onCollide("arena-wall", () => {
+      if (dagger.exists()) dagger.destroy();
+    });
+    
+    k.wait(5, () => {
+      if (dagger.exists()) dagger.destroy();
+    });
+  }
+}
+
+export function checkIntangibilidadeTrigger(k: any, player: any): void {
+  if (!player || !player.exists()) return;
+  if (!hasPerk("intangibilidade")) return;
+  if (gameState.intangibleUsedThisWave) return;
+  
+  const currentHP = player.hp ?? gameState.maxHealth;
+  if (currentHP > 0 && currentHP / gameState.maxHealth <= 0.25) {
+    gameState.intangibleUsedThisWave = true;
+    gameState.intangibleUntil = Date.now() + 3000;
+    
+    const origOpacity = player.opacity ?? 1.0;
+    const interval = setInterval(() => {
+      if (player.exists() && Date.now() < gameState.intangibleUntil) {
+        player.opacity = player.opacity === 0.3 ? 0.8 : 0.3;
+      } else {
+        clearInterval(interval);
+        if (player.exists()) player.opacity = origOpacity;
+      }
+    }, 150);
+
+    const barrier = k.add([
+      k.circle(48),
+      k.pos(player.pos.x + 30, player.pos.y + 30),
+      k.anchor("center"),
+      k.color(200, 200, 255),
+      k.opacity(0.25),
+      k.outline(2.5, k.rgb(255, 255, 255)),
+      k.z(100)
+    ]);
+    
+    barrier.onUpdate(() => {
+      if (!player.exists() || Date.now() >= gameState.intangibleUntil) {
+        barrier.destroy();
+      } else {
+        barrier.pos = player.pos.add(30, 30);
+        barrier.scale = k.vec2(1.0 + Math.sin(k.time() * 8) * 0.1);
+      }
+    });
+
+    if (hasPerk("retaliacao-sombria")) {
+      triggerRetaliacaoSombria(k, player.pos.add(30, 30));
+    }
+  }
+}
+
+export function triggerToxinaExplosivaExplosion(k: any, pos: any, stacks: number): void {
+  const radius = 80;
+  const baseDmg = (4 + stacks * 1.5) * gameState.castPower;
+  
+  const circle = k.add([
+    k.circle(radius),
+    k.pos(pos.x, pos.y),
+    k.color(140, 60, 255),
+    k.opacity(0.6),
+    k.z(100),
+  ]);
+  
+  for (let i = 0; i < 8; i++) {
+    const angle = k.rand(0, Math.PI * 2);
+    const spd = k.rand(80, 160);
+    const p = k.add([
+      k.circle(k.rand(3, 6)),
+      k.pos(pos.x, pos.y),
+      k.color(180, 50, 255),
+      k.opacity(0.8),
+      k.z(110),
+      k.lifespan(0.4, { fade: 0.2 }),
+      { vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd }
+    ]);
+    p.onUpdate(() => {
+      p.pos.x += p.vx * k.dt();
+      p.pos.y += p.vy * k.dt();
+    });
+  }
+
+  const enemies = k.get("enemy") as any[];
+  for (const e of enemies) {
+    if (e.pos.dist(pos) <= radius) {
+      if (typeof e.hp === "number") {
+        e._lastDamageType = "poison";
+        e.hp -= baseDmg * gameState.buffs.damageMul;
+        if (e.hp <= 0) e.destroy();
+        addPoisonStacks(k, e, 2);
+      }
+    }
+  }
+
+  k.wait(0.25, () => {
+    if (circle.exists()) circle.destroy();
+  });
+}
+

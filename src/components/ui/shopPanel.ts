@@ -1,5 +1,6 @@
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
+import { countMaxedAttributes } from "../shop";
 import {
   canOpenPerkSelection,
   MAX_PERKS,
@@ -51,16 +52,6 @@ const ATTR_DEFS: AttrDef[] = [
     col: 2,
   },
   {
-    key: "shotDamage",
-    icon: "🗡",
-    label: "Dano de Tiro",
-    tooltip: "Aumenta o dano base\ndos tiros básicos.",
-    color: [240, 140, 50],
-    handler: "onShotDamage",
-    row: 0,
-    col: 3,
-  },
-  {
     key: "abilityHaste",
     icon: "⏱",
     label: "Aceleração",
@@ -68,7 +59,7 @@ const ATTR_DEFS: AttrDef[] = [
     color: [60, 180, 240],
     handler: "onAbilityHaste",
     row: 1,
-    col: 0.5,
+    col: 0,
   },
   {
     key: "castPower",
@@ -78,7 +69,7 @@ const ATTR_DEFS: AttrDef[] = [
     color: [160, 80, 255],
     handler: "onCastPower",
     row: 1,
-    col: 1.5,
+    col: 1,
   },
   {
     key: "vampirism",
@@ -88,7 +79,7 @@ const ATTR_DEFS: AttrDef[] = [
     color: [200, 60, 120],
     handler: "onVampirism",
     row: 1,
-    col: 2.5,
+    col: 2,
   },
 ];
 
@@ -202,7 +193,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   );
 
   // ── Attribute grid ──
-  const gridCols = 4;
+  const gridCols = 3;
   const sqSize = 80;
   const sqGap = 16;
   const gridXFn = () =>
@@ -215,6 +206,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     icon: GameObj;
     label: GameObj;
     lvLabel: GameObj;
+    costEp: GameObj;
+    costGold: GameObj;
     def: AttrDef;
     col: number;
     row: number;
@@ -227,7 +220,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     const col = def.col;
     const row = def.row;
     const sx = gridXFn() + col * (sqSize + sqGap);
-    const sy = gridYFn() + row * (sqSize + sqGap + 20);
+    const sy = gridYFn() + row * (sqSize + sqGap + 28);
 
     const bg = track(
       k.add([
@@ -279,7 +272,31 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       ]),
     );
 
-    squares.push({ bg, icon, label, lvLabel, def, col, row });
+    const costEp = track(
+      k.add([
+        k.text("★1", { size: 10 }),
+        k.pos(sx + sqSize / 2 - 20, sy + sqSize + 14),
+        k.anchor("top"),
+        k.color(255, 255, 255),
+        k.fixed(),
+        k.z(2003),
+        { id: `shop-costep-${def.key}` },
+      ]),
+    );
+
+    const costGold = track(
+      k.add([
+        k.text("⎔0", { size: 10 }),
+        k.pos(sx + sqSize / 2 + 20, sy + sqSize + 14),
+        k.anchor("top"),
+        k.color(255, 255, 255),
+        k.fixed(),
+        k.z(2003),
+        { id: `shop-costgold-${def.key}` },
+      ]),
+    );
+
+    squares.push({ bg, icon, label, lvLabel, costEp, costGold, def, col, row });
   }
 
   // ── Tooltip (hidden by default) ──
@@ -444,6 +461,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   // Wire clicks manually in screen-space
   k.onMousePress("left", () => {
     if (panel.hidden) return;
+    if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+    if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
     const mp = k.mousePos();
 
     // Check close button
@@ -731,11 +750,13 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     const gy = py + 86;
     for (const sq of squares) {
       const sx = gx + sq.def.col * (sqSize + sqGap);
-      const sy = gy + sq.def.row * (sqSize + sqGap + 20);
+      const sy = gy + sq.def.row * (sqSize + sqGap + 28);
       sq.bg.pos = k.vec2(sx, sy);
       sq.icon.pos = k.vec2(sx + sqSize / 2, sy + 12);
       sq.label.pos = k.vec2(sx + sqSize / 2, sy + sqSize + 2);
       sq.lvLabel.pos = k.vec2(sx + sqSize - 6, sy + sqSize - 6);
+      sq.costEp.pos = k.vec2(sx + sqSize / 2 - 20, sy + sqSize + 14);
+      sq.costGold.pos = k.vec2(sx + sqSize / 2 + 20, sy + sqSize + 14);
     }
   };
   k.onResize(reposition);
@@ -748,6 +769,33 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     for (const sq of squares) {
       const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
       (sq.lvLabel as any).text = `${lv}`;
+
+      const goldCost = nextAttrGoldCost(lv + 1);
+      if (lv >= MAX_ATTR_LEVEL) {
+        (sq.costEp as any).text = "MÁX";
+        sq.costEp.color = k.rgb(255, 215, 0);
+        sq.costEp.pos = k.vec2(sq.bg.pos.x + sqSize / 2, sq.bg.pos.y + sqSize + 14);
+        sq.costGold.hidden = true;
+      } else {
+        sq.costGold.hidden = false;
+        sq.costEp.pos = k.vec2(sq.bg.pos.x + sqSize / 2 - 20, sq.bg.pos.y + sqSize + 14);
+        (sq.costEp as any).text = "★1";
+        (sq.costGold as any).text = `⎔${goldCost}`;
+        
+        // Color coding ep
+        if (gameState.elevationPoints >= 1) {
+          sq.costEp.color = k.rgb(100, 255, 120);
+        } else {
+          sq.costEp.color = k.rgb(244, 63, 94);
+        }
+        
+        // Color coding gold
+        if (gameState.gold >= goldCost) {
+          sq.costGold.color = k.rgb(100, 255, 120);
+        } else {
+          sq.costGold.color = k.rgb(244, 63, 94);
+        }
+      }
     }
 
     const healCost = 20 + (gameState as any).healUseCount * 5;

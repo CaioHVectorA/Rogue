@@ -20,6 +20,8 @@ export type GameState = {
   abilityHaste: number; // % cooldown reduction (0.0 = 0%, 0.5 = 50%)
   shotDamage: number; // base shot damage (affects shot-based skills)
   castPower: number; // Poder de Conjuração
+  intangibleUntil: number;
+  intangibleUsedThisWave: boolean;
   elevationPoints: number; // pontos de elevação para comprar atributos e upar skills
   mapState: number; // tamanho do mapa (1..5), cresce a cada 5 waves
   wave: number;
@@ -65,6 +67,8 @@ export type GameState = {
   healUseCount: number;
 };
 
+let _baseCastPower = 1.0;
+
 export const gameState: GameState = {
   moveSpeed: 600,
   reloadSpeed: 3,
@@ -74,7 +78,22 @@ export const gameState: GameState = {
   luck: 1.0,
   abilityHaste: 0.0,
   shotDamage: 1.25,
-  castPower: 1.0,
+  get castPower() {
+    let val = _baseCastPower;
+    if (this.perks && this.perks.acquired.includes("forca-vital")) {
+      val *= (1 + Math.floor(this.maxHealth / 10) * 0.02);
+    }
+    if (this.perks && this.perks.acquired.includes("furia-vital")) {
+      const lostHpPct = 1 - (this.playerHealth / this.maxHealth);
+      val *= (1 + lostHpPct * 1.5);
+    }
+    return val;
+  },
+  set castPower(val: number) {
+    _baseCastPower = val;
+  },
+  intangibleUntil: 0,
+  intangibleUsedThisWave: false,
   elevationPoints: debug.INITIAL_ELEVATION ?? 25,
   mapState:
     debug.INITIAL_MAP_STATE ?? getMapStateForWave(debug.INITIAL_WAVE ?? 1),

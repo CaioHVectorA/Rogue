@@ -4,7 +4,7 @@
 
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
-import { type PerkDef, perkDefs } from "../perks/perkData";
+import { type PerkDef, type PerkClass, perkDefs } from "../perks/perkData";
 import { getAvailablePerks } from "../perks/perkRules";
 import { applyImaMagneticoEffect } from "../perks/perkEffects";
 import { wrapText } from "./helpers";
@@ -31,8 +31,10 @@ export function createPerkSelectionOverlay(
       k.pos(0, 0),
       k.color(10, 10, 15),
       k.opacity(0.85),
+      k.area(),
       k.fixed(),
       k.z(5000),
+      "perk-overlay-bg",
       { id: "perk-overlay-bg" },
     ]),
   );
@@ -74,23 +76,35 @@ export function createPerkSelectionOverlay(
   );
 
   // ── Grid & Inspector dimensions ──
-  const gridCols = 5;
-  const sqSize = 80;
-  const sqGap = 16;
+  const classes: PerkClass[] = ["Geral", "Atirador", "Conjurador", "Colosso"];
+  const classIcons: Record<PerkClass, string> = {
+    Geral: "🎯 Geral / Híbridos",
+    Atirador: "🏹 Atirador",
+    Conjurador: "✨ Conjurador",
+    Colosso: "🛡 Colosso / Tanque",
+  };
+  const sqSize = 56;
+  const sqGap = 10;
+  const rowSpacing = 16;
+  const headerHeight = 16;
+  const headerGap = 6;
   const inspectorW = 360;
-  const inspectorH = 320;
+  const inspectorH = 340;
   const cancelBtnW = 160;
 
   // Layout calculations
   const getLayoutPositions = () => {
-    const layoutW = 872; // grid (464) + gap (48) + inspector (360)
+    // 4 rows, each has header + gap + square + spacing (except last)
+    const gridH = 4 * sqSize + 4 * (headerHeight + headerGap) + 3 * rowSpacing;
+    const gridW = 7 * sqSize + 6 * sqGap; // max 7 perks in Colosso row
+    const layoutW = gridW + 48 + inspectorW;
     const startX = Math.floor((k.width() - layoutW) / 2);
-    const startY = Math.floor((k.height() - 250) / 2) + 40;
+    const startY = Math.floor((k.height() - gridH) / 2) + 20;
     return {
       gridX: startX,
       gridY: startY,
-      inspectorX: startX + 464 + 48,
-      inspectorY: startY - 40,
+      inspectorX: startX + gridW + 48,
+      inspectorY: Math.floor((k.height() - inspectorH) / 2),
     };
   };
 
@@ -105,62 +119,90 @@ export function createPerkSelectionOverlay(
   };
   const squares: PerkSquare[] = [];
 
-  for (let i = 0; i < perkDefs.length; i++) {
-    const def = perkDefs[i];
+  // Grouped by class
+  const perksByClass: Record<PerkClass, PerkDef[]> = {
+    Geral: perkDefs.filter((p) => p.class === "Geral"),
+    Atirador: perkDefs.filter((p) => p.class === "Atirador"),
+    Conjurador: perkDefs.filter((p) => p.class === "Conjurador"),
+    Colosso: perkDefs.filter((p) => p.class === "Colosso"),
+  };
 
-    const bg = track(
+  const headerLabels: GameObj[] = [];
+  for (let classIndex = 0; classIndex < classes.length; classIndex++) {
+    const c = classes[classIndex];
+    const label = track(
       k.add([
-        k.rect(sqSize, sqSize, { radius: 10 }),
+        k.text(classIcons[c], { size: 14 }),
         k.pos(0, 0),
-        k.color(24, 24, 34),
-        k.outline(1.5, k.rgb(60, 60, 70)),
-        k.area(),
+        k.color(200, 200, 220),
         k.fixed(),
         k.z(5002),
-        { id: `perk-grid-bg-${def.id}` },
-      ]),
+      ])
     );
+    headerLabels.push(label);
+  }
 
-    const icon = track(
-      k.add([
-        k.text(def.icon, { size: 36 }),
-        k.pos(0, 0),
-        k.anchor("center"),
-        k.fixed(),
-        k.z(5003),
-      ]),
-    );
+  let indexCounter = 0;
+  for (let classIndex = 0; classIndex < classes.length; classIndex++) {
+    const c = classes[classIndex];
+    const classPerks = perksByClass[c];
+    for (let col = 0; col < classPerks.length; col++) {
+      const def = classPerks[col];
 
-    const acquiredOverlay = track(
-      k.add([
-        k.rect(sqSize, sqSize, { radius: 10 }),
-        k.pos(0, 0),
-        k.color(0, 0, 0),
-        k.opacity(0),
-        k.fixed(),
-        k.z(5004),
-      ]),
-    );
+      const bg = track(
+        k.add([
+          k.rect(sqSize, sqSize, { radius: 8 }),
+          k.pos(0, 0),
+          k.color(24, 24, 34),
+          k.outline(1.5, k.rgb(60, 60, 70)),
+          k.area(),
+          k.fixed(),
+          k.z(5002),
+          { id: `perk-grid-bg-${def.id}` },
+        ]),
+      );
 
-    const acquiredTxt = track(
-      k.add([
-        k.text("", { size: 10 }),
-        k.pos(0, 0),
-        k.anchor("center"),
-        k.color(255, 255, 255),
-        k.fixed(),
-        k.z(5005),
-      ]),
-    );
+      const icon = track(
+        k.add([
+          k.text(def.icon, { size: 28 }),
+          k.pos(0, 0),
+          k.anchor("center"),
+          k.fixed(),
+          k.z(5003),
+        ]),
+      );
 
-    squares.push({
-      bg,
-      icon,
-      acquiredOverlay,
-      acquiredTxt,
-      def,
-      index: i,
-    });
+      const acquiredOverlay = track(
+        k.add([
+          k.rect(sqSize, sqSize, { radius: 8 }),
+          k.pos(0, 0),
+          k.color(0, 0, 0),
+          k.opacity(0),
+          k.fixed(),
+          k.z(5004),
+        ]),
+      );
+
+      const acquiredTxt = track(
+        k.add([
+          k.text("", { size: 8 }),
+          k.pos(0, 0),
+          k.anchor("center"),
+          k.color(255, 255, 255),
+          k.fixed(),
+          k.z(5005),
+        ]),
+      );
+
+      squares.push({
+        bg,
+        icon,
+        acquiredOverlay,
+        acquiredTxt,
+        def,
+        index: indexCounter++,
+      });
+    }
   }
 
   // ── Inspector Panel ──
@@ -296,17 +338,26 @@ export function createPerkSelectionOverlay(
     cancelBtn.pos = k.vec2(k.width() / 2 - cancelBtnW / 2, k.height() - 60);
     cancelBtnTxt.pos = k.vec2(k.width() / 2, k.height() - 42);
 
-    // Reposition grid squares
-    for (const sq of squares) {
-      const col = sq.index % gridCols;
-      const row = Math.floor(sq.index / gridCols);
-      const sx = layout.gridX + col * (sqSize + sqGap);
-      const sy = layout.gridY + row * (sqSize + sqGap);
+    // Reposition header labels and squares
+    let currentY = layout.gridY;
+    for (let classIndex = 0; classIndex < classes.length; classIndex++) {
+      const c = classes[classIndex];
+      const header = headerLabels[classIndex];
+      header.pos = k.vec2(layout.gridX, currentY);
 
-      sq.bg.pos = k.vec2(sx, sy);
-      sq.icon.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
-      sq.acquiredOverlay.pos = k.vec2(sx, sy);
-      sq.acquiredTxt.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
+      const classPerks = squares.filter((sq) => sq.def.class === c);
+      for (let col = 0; col < classPerks.length; col++) {
+        const sq = classPerks[col];
+        const sx = layout.gridX + col * (sqSize + sqGap);
+        const sy = currentY + headerHeight + headerGap;
+
+        sq.bg.pos = k.vec2(sx, sy);
+        sq.icon.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
+        sq.acquiredOverlay.pos = k.vec2(sx, sy);
+        sq.acquiredTxt.pos = k.vec2(sx + sqSize / 2, sy + sqSize / 2);
+      }
+
+      currentY += headerHeight + headerGap + sqSize + rowSpacing;
     }
 
     // Reposition inspector
@@ -479,7 +530,7 @@ export function createPerkSelectionOverlay(
 
       if (canBuy) {
         gameState.perks.acquired.push(activePerk.id);
-        if (activePerk.id === "ima-magnetico") {
+        if (activePerk.id === "super-ima" || activePerk.id === "ima-magnetico") {
           applyImaMagneticoEffect();
         }
         hide();

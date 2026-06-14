@@ -21,8 +21,8 @@ export function getEffectiveMagnetRadius(): number {
   if (upgradeLv >= 10) {
     radius = Math.floor(radius * 1.15);
   }
-  // Perk: imã magnético doubles radius
-  if (gameState.perks.acquired.includes("ima-magnetico")) {
+  // Perk: super-ima doubles radius
+  if (gameState.perks.acquired.includes("super-ima") || gameState.perks.acquired.includes("ima-magnetico")) {
     radius *= 2;
   }
   // Max-level magnet makes it effectively global

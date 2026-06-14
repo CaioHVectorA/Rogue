@@ -7,11 +7,9 @@ import {
   spawnChainExplosion,
   canTriggerSeismic,
   triggerSeismic,
-  onShotHitLigeirinho,
-  onShotMissLigeirinho,
-  getLigeirinhoSpeedBonus,
-  getLigeirinhoReloadBonus,
   getZonaDePerigoAttackMul,
+  hasPerk,
+  applySoproGeladoSlow,
 } from "./perks";
 
 export type ShootOptions = {
@@ -36,6 +34,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
   let bottomLine: GameObj | null = null;
   let leftLine: GameObj | null = null;
   const lineThickness = opts.outlineSize ?? 4;
+  let shotCount = 0;
 
   function isStationary(self: GameObj) {
     if (!lastPos) return false;
@@ -58,6 +57,36 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     return nearest;
   }
 
+  function showShieldBlockFeedback(k: KAPLAYCtx, enemy: any) {
+    const size = enemy.getSize ? enemy.getSize() : { width: 30, height: 30 };
+    const cx = enemy.pos.x + size.width / 2;
+    const cy = enemy.pos.y - 12;
+
+    const label = k.add([
+      k.text("BLOQUEADO", { size: 11 }),
+      k.pos(cx, cy),
+      k.anchor("center"),
+      k.color(180, 180, 200),
+      k.outline(2, k.rgb(0, 0, 0)),
+      k.z(850),
+      k.opacity(1),
+      k.lifespan(0.5, { fade: 0.25 }),
+    ]);
+    label.onUpdate(() => {
+      label.pos.y -= 40 * k.dt();
+    });
+
+    k.add([
+      k.circle(20),
+      k.pos(cx, enemy.pos.y + size.height / 2),
+      k.anchor("center"),
+      k.color(180, 200, 255),
+      k.opacity(0.5),
+      k.z(600),
+      k.lifespan(0.15, { fade: 0.1 }),
+    ]);
+  }
+
   function fire(self: GameObj) {
     const target = findNearestEnemy(self.pos);
     if (!target) return;
@@ -71,8 +100,28 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
 
     // If projectileSpeed upgrade is maxed, make projectiles extremely fast
     const projSpeedUpgrade = (gameState.upgrades as any).projectileSpeed ?? 0;
-    const effectiveSpeed =
+    let effectiveSpeed =
       projSpeedUpgrade >= 10 ? Math.max(1600, speed) : speed;
+
+    // Sobrecarga (attack-buff) speed multiplier
+    const buffActive = gameState.buffs.activeUntil > Date.now();
+    if (buffActive) {
+      effectiveSpeed *= 1.5;
+    }
+
+    // Um, Dois, Três, Quatro... CINCO!
+    let isSuperShot = false;
+    if (hasPerk("um-dois-tres-quatro-cinco")) {
+      shotCount++;
+      if (shotCount >= 5) {
+        isSuperShot = true;
+        shotCount = 0;
+      }
+    }
+
+    if (isSuperShot) {
+      effectiveSpeed *= 2.0;
+    }
 
     // --- Juice: Recoil, Muzzle Flash and Screen Shake ---
     let recoilTime = 0.05;
@@ -110,60 +159,147 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     const spawnProjectile = (offsetAngle = 0) => {
       const ang = Math.atan2(dir.y, dir.x) + offsetAngle;
       const d = k.vec2(Math.cos(ang), Math.sin(ang));
+
+      const finalSize = isSuperShot ? projSize * 2 : projSize;
+      const finalColor = isSuperShot ? [255, 60, 0] : projColor;
+      const finalOutlineColor = isSuperShot ? k.rgb(255, 220, 100) : k.rgb(255, 255, 255);
+      const finalOutlineWidth = isSuperShot ? 3.5 : 2;
+
+      const maxHits = hasPerk("tiro-perfurante") ? 2 : 1;
+
       const p = k.add([
-        k.rect(projSize, projSize),
+        k.rect(finalSize, finalSize),
         k.pos(self.pos.x, self.pos.y),
-        k.color(projColor[0], projColor[1], projColor[2]),
-        k.outline(2, k.rgb(255, 255, 255)),
+        k.color(finalColor[0], finalColor[1], finalColor[2]),
+        k.outline(finalOutlineWidth, finalOutlineColor),
         k.area(),
-        { id: "projectile", vel: d.scale(effectiveSpeed) },
-      ]);
+        {
+          id: "projectile",
+          vel: d.scale(effectiveSpeed),
+          hitsLeft: maxHits,
+          hitEnemies: new Set<any>(),
+        },
+      ]) as any;
+
       p.onUpdate(() => {
         p.move(p.vel);
         // remove if too far from camera
         if (p.pos.dist(self.pos) > k.width() * 2) p.destroy();
       });
+
       // hit enemy
-      p.onCollide("enemy", (e: GameObj & { hp?: number }) => {
+      p.onCollide("enemy", (e: GameObj & { hp?: number; enemyType?: string }) => {
+        if (!p.hitEnemies) p.hitEnemies = new Set<any>();
+        if (p.hitEnemies.has(e)) return;
+        p.hitEnemies.add(e);
+
+        // Shield Guard front block check
+        const isShieldGuard = e.enemyType === "shield_guard" || e.enemyType === "shield_guard_elite";
+        let finalDamageFactor = damageFactor;
+
+        if (isShieldGuard) {
+          const isStaggered = (e as any).staggeredUntil && (e as any).staggeredUntil > Date.now();
+          if (!isStaggered) {
+            const toPlayer = self.pos.sub(e.pos).unit(); // enemy to player vector
+            const projDir = p.vel.unit();
+            if (toPlayer.dot(projDir) < -0.3) {
+              showShieldBlockFeedback(k, e);
+              finalDamageFactor = 0; // zero damage!
+
+              // Increment shield hits
+              const currentHits = ((e as any).shieldHits || 0) + 1;
+              (e as any).shieldHits = currentHits;
+
+              if (currentHits >= 3) {
+                (e as any).staggeredUntil = Date.now() + 2500; // 2.5 seconds stagger
+                (e as any).shieldHits = 0;
+
+                // Show floating text "🛡 QUEBRA DE GUARDA!"
+                const size = e.getSize ? e.getSize() : { width: 30, height: 30 };
+                const cx = e.pos.x + size.width / 2;
+                const cy = e.pos.y - 12;
+                const label = k.add([
+                  k.text("🛡 QUEBRA DE GUARDA!", { size: 12 }),
+                  k.pos(cx, cy - 10),
+                  k.anchor("center"),
+                  k.color(255, 100, 100),
+                  k.outline(2, k.rgb(0, 0, 0)),
+                  k.z(850),
+                  k.opacity(1),
+                  k.lifespan(0.8, { fade: 0.4 }),
+                ]);
+                label.onUpdate(() => {
+                  label.pos.y -= 30 * k.dt();
+                });
+              }
+            }
+          }
+        }
+
         // Apply damage: reduce HP and destroy on 0
-        if (typeof e.hp === "number") {
-          const baseDamage = 1 * gameState.shotDamage;
+        if (typeof e.hp === "number" && finalDamageFactor > 0) {
+          const baseDamage = 1 * gameState.shotDamage * (isSuperShot ? 2.0 : 1.0);
           // Zona de Perigo: +5% dano por inimigo próximo
           const zonaMul = getZonaDePerigoAttackMul(k, self.pos);
-          const damage = baseDamage * gameState.buffs.damageMul * zonaMul;
+
+          // Estação de Defesa: +35% dano se parado por >= 0.5s
+          const isStationaryBuff = hasPerk("estacao-de-defesa") && (gameState.stationaryTimer ?? 0) >= 0.5;
+          const defenseStationaryMul = isStationaryBuff ? 1.35 : 1.0;
+
+          // Fúria Indomável: up to +50% damage based on missing HP ratio
+          const missingHpRatio = 1 - (((self as any).hp ?? gameState.maxHealth) / gameState.maxHealth);
+          const furiaMul = hasPerk("furia-indomavel") ? 1.0 + missingHpRatio * 0.5 : 1.0;
+
+          // Força Vital: +2% dano por 10 de vida máxima
+          const forcaVitalMul = hasPerk("forca-vital") ? (1 + Math.floor(gameState.maxHealth / 10) * 0.02) : 1.0;
+
+          const damage = baseDamage * gameState.buffs.damageMul * zonaMul * defenseStationaryMul * furiaMul * forcaVitalMul * finalDamageFactor;
           (e as any)._lastDamageType = "normal";
           e.hp -= damage;
           if (e.hp <= 0) e.destroy();
+          
+          // Sopro Gelado slow application (20% chance on basic shot hit)
+          if (hasPerk("sopro-gelado") && Math.random() < 0.2 && e.exists()) {
+            applySoproGeladoSlow(k, e);
+          }
+
           // Reação em Cadeia: 10% de explosão
           if (shouldTriggerChainExplosion()) {
             spawnChainExplosion(k, e.pos ? e.pos.clone() : p.pos.clone(), damage);
           }
         }
+
         // Impacto Sísmico: substitui o tiro por onda circular
-        if (canTriggerSeismic()) {
+        if (canTriggerSeismic() && finalDamageFactor > 0) {
           triggerSeismic(k, p.pos.clone());
         }
-        // Ligeirinho: acerto acumula velocidade
-        onShotHitLigeirinho();
+
         // Adicionar marca se buff do markedShot está ativo
-        if (gameState.buffs.markedShot.active && e.exists()) {
+        if (gameState.buffs.markedShot.active && e.exists() && finalDamageFactor > 0) {
           addMark(k, e);
         }
-        p.destroy();
+
+        p.hitsLeft--;
+        if (p.hitsLeft <= 0 || finalDamageFactor === 0) {
+          p.destroy();
+        }
       });
+
       // hit walls
       p.onCollide("arena-wall", () => {
-        // Ligeirinho: errar (bater na parede) reseta stacks
-        onShotMissLigeirinho();
         p.destroy();
       });
     };
 
     // If reloadSpeed upgrade is maxed, fire double projectiles (slightly spread)
     const reloadUpgrade = (gameState.upgrades as any).reloadSpeed ?? 0;
-    if (reloadUpgrade >= 10) {
-      spawnProjectile(-0.03);
-      spawnProjectile(0.03);
+    const hasDouble = hasPerk("disparo-duplo");
+    const isDouble = hasDouble || reloadUpgrade >= 10;
+    const damageFactor = hasDouble ? 0.85 : 1.0;
+
+    if (isDouble) {
+      spawnProjectile(-0.06);
+      spawnProjectile(0.06);
     } else {
       spawnProjectile(0);
     }
@@ -219,17 +355,25 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         const still = isStationary(this);
         // charge even while moving (slower when moving)
         // Interpret reloadSpeed as reload time (seconds). Convert to a rate.
-        // Apply buff multiplier to reload speed + GAME_SPEED + Ligeirinho
         const gs = debug.GAME_SPEED ?? 1.0;
-        const ligeirinhoReload = 1 + getLigeirinhoReloadBonus();
-        const baseReloadTime = Math.max(0.0001, gameState.reloadSpeed / (gs * ligeirinhoReload));
+        const baseReloadTime = Math.max(0.0001, gameState.reloadSpeed / gs);
         const reloadTime = baseReloadTime / gameState.buffs.reloadSpeedMul; // Buff diminui o tempo
         const base = 1 / reloadTime; // higher when reload time is lower
-        const movePenalty = gameState.reloadMovePenalty; // e.g., 0.5
+        const movePenalty = gameState.reloadMovePenalty; // e.g., 0.8
+
+        if (still) {
+          gameState.stationaryTimer = (gameState.stationaryTimer ?? 0) + k.dt();
+        } else {
+          gameState.stationaryTimer = 0;
+        }
+
+        // Fúria Indomável: reload speed bonus based on missing HP
+        const missingHpRatio = 1 - (((this as any).hp ?? gameState.maxHealth) / gameState.maxHealth);
+        const furiaReloadMul = hasPerk("furia-indomavel") ? 1.0 + missingHpRatio * 0.5 : 1.0;
 
         // Se o buff está ativo, não há penalidade por movimento
         const buffActive = gameState.buffs.activeUntil > Date.now();
-        const rate = still || buffActive ? base : base * movePenalty;
+        const rate = (still || buffActive ? base : base * movePenalty) * furiaReloadMul;
 
         channeling = true;
         charge += k.dt() * rate;

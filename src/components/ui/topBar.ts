@@ -203,6 +203,8 @@ export function createTopBar(k: KAPLAYCtx): TopBarHandles {
   let shopHandler: (() => void) | null = null;
 
   k.onMousePress("left", () => {
+    if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+    if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
     const mp = k.mousePos();
     const isHovering = (btn: GameObj, w: number, h: number) => {
       if (btn.hidden) return false;
@@ -267,25 +269,40 @@ export function createTopBar(k: KAPLAYCtx): TopBarHandles {
 
   // Hover states & notification dot pulsing in top bar
   k.onUpdate(() => {
-    const mp = k.mousePos();
-    const isHovering = (btn: GameObj, w: number, h: number) => {
-      if (btn.hidden) return false;
-      const bx = btn.pos.x;
-      const by = btn.pos.y;
-      return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
-    };
+    const isSkillActive = k.get("ui-skill-overlay").some((o) => !o.hidden);
+    const isPerkActive = k.get("perk-overlay-bg").some((o) => !o.hidden);
+    const overlayActive = isSkillActive || isPerkActive;
 
-    // Play button hover
-    const playHover = isHovering(playBtn, 160, 44);
-    playBtn.color = playHover ? k.rgb(22, 163, 74) : k.rgb(34, 197, 94);
-    playBtn.outline.color = playHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
-    playBtn.outline.width = playHover ? 3.5 : 2;
+    if (!overlayActive) {
+      const mp = k.mousePos();
+      const isHovering = (btn: GameObj, w: number, h: number) => {
+        if (btn.hidden) return false;
+        const bx = btn.pos.x;
+        const by = btn.pos.y;
+        return mp.x >= bx && mp.x <= bx + w && mp.y >= by && mp.y <= by + h;
+      };
 
-    // Shop button hover
-    const shopHover = isHovering(shopBtn, 160, 44);
-    shopBtn.color = shopHover ? k.rgb(79, 70, 229) : k.rgb(99, 102, 241);
-    shopBtn.outline.color = shopHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
-    shopBtn.outline.width = shopHover ? 3.5 : 2;
+      // Play button hover
+      const playHover = isHovering(playBtn, 160, 44);
+      playBtn.color = playHover ? k.rgb(22, 163, 74) : k.rgb(34, 197, 94);
+      playBtn.outline.color = playHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
+      playBtn.outline.width = playHover ? 3.5 : 2;
+
+      // Shop button hover
+      const shopHover = isHovering(shopBtn, 160, 44);
+      shopBtn.color = shopHover ? k.rgb(79, 70, 229) : k.rgb(99, 102, 241);
+      shopBtn.outline.color = shopHover ? k.rgb(255, 255, 255) : k.rgb(200, 200, 200);
+      shopBtn.outline.width = shopHover ? 3.5 : 2;
+    } else {
+      // Reset button hover highlights if overlay is active
+      playBtn.color = k.rgb(34, 197, 94);
+      playBtn.outline.color = k.rgb(200, 200, 200);
+      playBtn.outline.width = 2;
+
+      shopBtn.color = k.rgb(99, 102, 241);
+      shopBtn.outline.color = k.rgb(200, 200, 200);
+      shopBtn.outline.width = 2;
+    }
 
     // Pulse notification dot if elevation points are available
     const hasPoints = gameState.elevationPoints > 0;

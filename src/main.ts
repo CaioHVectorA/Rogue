@@ -11,6 +11,12 @@ import {
   onKillReduceQCooldown,
   getZonaDePerigoDefenseMul,
   updateFireAuraPerk,
+  updateRastroNocivo,
+  updateOndaDeChoquePerk,
+  triggerOndaDeChoquePerk,
+  hasPerk,
+  checkIntangibilidadeTrigger,
+  showLuckyBlockFeedback,
 } from "./components/perks";
 // Register skills
 import "./components/skills/coneShot";
@@ -77,6 +83,8 @@ k.onUpdate(() => {
   }
   if (player && player.exists()) {
     updateFireAuraPerk(k, player);
+    updateRastroNocivo(k, player);
+    updateOndaDeChoquePerk(k, player);
   }
 });
 
@@ -163,16 +171,16 @@ function rebuildArena(newMapState: number) {
       camScaleVal = 1.15;
       break;
     case 2:
-      camScaleVal = 1.0;
+      camScaleVal = 1.00;
       break;
     case 3:
-      camScaleVal = 0.8;
+      camScaleVal = 0.85;
       break;
     case 4:
       camScaleVal = 0.72;
       break;
     case 5:
-      camScaleVal = 0.82;
+      camScaleVal = 0.62;
       break;
     default:
       camScaleVal = 1.0;
@@ -253,70 +261,121 @@ function checkMilestonePerksAndResume() {
 // Track enemies left in current wave
 let enemiesLeft = 0;
 function spawnWave(waveIndex: number) {
+  gameState.intangibleUsedThisWave = false;
   const waveDef = gameState.waves[waveIndex - 1];
   if (!waveDef) return;
-  enemiesLeft = 0;
+
+  let totalCount = 0;
+  for (const entry of waveDef) {
+    totalCount += entry.count;
+  }
+  enemiesLeft = totalCount;
+
+  const handleEnemyDeath = (e: any) => {
+    enemiesLeft -= 1;
+    // XP varies per enemy type
+    const xpReward = ENEMY_XP_REWARDS[(e as any).enemyType] ?? 1;
+    gameState.xp += xpReward;
+    if (gameState.xp >= gameState.xpToLevel) {
+      gameState.xp -= gameState.xpToLevel;
+      gameState.level += 1;
+      gameState.elevationPoints += 3;
+      gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
+    }
+    ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
+
+    // Execução Limpa: matar reduz CD da skill Q
+    const isElite = ((e as any).enemyType ?? "").endsWith("_elite");
+    onKillReduceQCooldown(isElite);
+
+    // Vampirism: heal player on kill
+    try {
+      const vampLv = (gameState.upgrades as any).vampirism ?? 0;
+      if (vampLv > 0) {
+        const players = k.get("player");
+        if (players.length > 0) {
+          const p = players[0] as any;
+          const missing = Math.max(
+            0,
+            gameState.maxHealth - (p.hp ?? gameState.maxHealth),
+          );
+          const fixedHeal = vampLv * 2;
+          const pct = Math.min(0.5, 0.03 * vampLv); // 3% per level up to 50%
+          const heal = fixedHeal + Math.round(missing * pct);
+          p.hp = Math.min(
+            gameState.maxHealth,
+            (p.hp ?? gameState.maxHealth) + heal,
+          );
+          gameState.playerHealth = p.hp;
+          ui.updateHearts(p.hp);
+        }
+      }
+    } catch (err) {
+      // ignore if UI/player not available
+    }
+
+    // Escudo de Cura (escudo-vital): curar ao matar elite com Q
+    const killedBySkill = (e as any)._lastDamageType && (e as any)._lastDamageType !== "normal";
+    if (isElite && killedBySkill && hasPerk("escudo-vital")) {
+      const players = k.get("player");
+      if (players.length > 0) {
+        const p = players[0] as any;
+        const heal = Math.round(gameState.maxHealth * 0.08);
+        p.hp = Math.min(
+          gameState.maxHealth,
+          (p.hp ?? gameState.maxHealth) + heal,
+        );
+        gameState.playerHealth = p.hp;
+        ui.updateHearts(p.hp);
+        
+        k.add([
+          k.text(`+${heal} HP`, { size: 16 }),
+          k.pos(p.pos.x + 30, p.pos.y - 20),
+          k.anchor("center"),
+          k.color(100, 255, 150),
+          k.outline(2, k.rgb(0, 50, 0)),
+          k.lifespan(1.0, { fade: 0.5 }),
+          k.z(1000)
+        ]);
+      }
+    }
+
+    // If wave finished, advance wave
+    if (enemiesLeft <= 0) {
+      collectAllDropsOnArena(k, player);
+
+      k.wait(1.5, () => {
+        checkMilestonePerksAndResume();
+      });
+    }
+  };
 
   // spawn based on array of types
-  for (const entry of waveDef) {
-    for (let i = 0; i < entry.count; i++) {
-      const e = createEnemy(k, {
-        target: player,
-        arenaBounds: arena,
-        type: entry.type,
-      });
-      enemiesLeft += 1;
-      e.onDestroy(() => {
-        enemiesLeft -= 1;
-        // XP varies per enemy type
-        const xpReward = ENEMY_XP_REWARDS[(e as any).enemyType] ?? 1;
-        gameState.xp += xpReward;
-        if (gameState.xp >= gameState.xpToLevel) {
-          gameState.xp -= gameState.xpToLevel;
-          gameState.level += 1;
-          gameState.elevationPoints += 3;
-          gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
-        }
-        ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
-
-        // Execução Limpa: matar reduz CD da skill Q
-        const isElite = ((e as any).enemyType ?? "").endsWith("_elite");
-        onKillReduceQCooldown(isElite);
-
-        // Vampirism: heal player on kill
-        try {
-          const vampLv = (gameState.upgrades as any).vampirism ?? 0;
-          if (vampLv > 0) {
-            const players = k.get("player");
-            if (players.length > 0) {
-              const p = players[0] as any;
-              const missing = Math.max(
-                0,
-                gameState.maxHealth - (p.hp ?? gameState.maxHealth),
-              );
-              const fixedHeal = vampLv * 2;
-              const pct = Math.min(0.5, 0.03 * vampLv); // 3% per level up to 50%
-              const heal = fixedHeal + Math.round(missing * pct);
-              p.hp = Math.min(
-                gameState.maxHealth,
-                (p.hp ?? gameState.maxHealth) + heal,
-              );
-              ui.updateHearts(p.hp);
-            }
-          }
-        } catch (err) {
-          // ignore if UI/player not available
-        }
-
-        // If wave finished, advance wave
-        if (enemiesLeft <= 0) {
-          collectAllDropsOnArena(k, player);
-
-          k.wait(1.5, () => {
-            checkMilestonePerksAndResume();
+  if (waveIndex >= 9) {
+    for (const entry of waveDef) {
+      for (let i = 0; i < entry.count; i++) {
+        const delay = Math.random() * 3.5;
+        k.wait(delay, () => {
+          if (!player.exists()) return;
+          const e = createEnemy(k, {
+            target: player,
+            arenaBounds: arena,
+            type: entry.type,
           });
-        }
-      });
+          e.onDestroy(() => handleEnemyDeath(e));
+        });
+      }
+    }
+  } else {
+    for (const entry of waveDef) {
+      for (let i = 0; i < entry.count; i++) {
+        const e = createEnemy(k, {
+          target: player,
+          arenaBounds: arena,
+          type: entry.type,
+        });
+        e.onDestroy(() => handleEnemyDeath(e));
+      }
     }
   }
 }
@@ -371,12 +430,18 @@ ui.onPlayClick(startNextWave);
 
 // Keybind to start wave: Space or Enter
 k.onKeyPress("space", () => {
+  if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+  if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
+  if (k.get("shop-bg").some((o) => !o.hidden)) return;
   const playBtn = k.get("ui-play")[0];
   if (playBtn && !playBtn.hidden) {
     startNextWave();
   }
 });
 k.onKeyPress("enter", () => {
+  if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+  if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
+  if (k.get("shop-bg").some((o) => !o.hidden)) return;
   const playBtn = k.get("ui-play")[0];
   if (playBtn && !playBtn.hidden) {
     startNextWave();
@@ -385,6 +450,8 @@ k.onKeyPress("enter", () => {
 
 // Keybind to toggle shop: E, B, or I
 const toggleShop = () => {
+  if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+  if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
   const shopBg = k.get("shop-bg")[0];
   if (shopBg) {
     ui.setShopVisible(shopBg.hidden);
@@ -396,24 +463,79 @@ k.onKeyPress("i", toggleShop);
 
 // Player damage on enemy collision with per-enemy cooldown
 k.onCollide("player", "enemy", (p: any, e: any) => {
+  if (gameState.intangibleUntil > Date.now()) return;
+
   const now = Date.now();
   if ((e.lastDamageTime ?? 0) + gameState.enemyDamageCooldownMs > now) return;
   e.lastDamageTime = now;
   const dmg = e.damage ?? 1;
   // Zona de Perigo: +3% dano recebido por inimigo próximo
   const zonaDef = getZonaDePerigoDefenseMul(k, p.pos);
-  (p as any).hp = Math.max(0, ((p as any).hp ?? gameState.maxHealth) - dmg * zonaDef);
+  let finalDmg = dmg * zonaDef;
+  if (hasPerk("casca-grossa")) {
+    finalDmg -= Math.floor(gameState.maxHealth / 150);
+  }
+  if (hasPerk("estacao-de-defesa") && (gameState.stationaryTimer ?? 0) >= 0.5) {
+    finalDmg *= 0.9;
+  }
+  finalDmg = Math.max(0, Math.round(finalDmg));
+
+  if (finalDmg > 0) {
+    if (hasPerk("imunidade-critica") && Math.random() < 0.5 * gameState.luck) {
+      showLuckyBlockFeedback(k, p.pos.clone());
+      return;
+    }
+  }
+
+  (p as any).hp = Math.max(0, ((p as any).hp ?? gameState.maxHealth) - finalDmg);
+  gameState.playerHealth = (p as any).hp;
   ui.updateHearts((p as any).hp);
+
+  if (hasPerk("onda-de-choque") && finalDmg > 0) {
+    triggerOndaDeChoquePerk(k, p);
+  }
+
+  checkIntangibilidadeTrigger(k, p);
+
   if ((p as any).hp <= 0) {
     k.addKaboom(p.pos.clone());
   }
 });
 k.onCollide("player", "enemy-bullet", (p: any, bb: any) => {
+  if (gameState.intangibleUntil > Date.now()) {
+    bb.destroy();
+    return;
+  }
+
   bb.destroy();
   const bulletDmg = bb.damage ?? 30;
   const zonaDef = getZonaDePerigoDefenseMul(k, p.pos);
-  (p as any).hp = Math.max(0, (p as any).hp - bulletDmg * zonaDef);
+  let finalDmg = bulletDmg * zonaDef;
+  if (hasPerk("casca-grossa")) {
+    finalDmg -= Math.floor(gameState.maxHealth / 150);
+  }
+  if (hasPerk("estacao-de-defesa") && (gameState.stationaryTimer ?? 0) >= 0.5) {
+    finalDmg *= 0.9;
+  }
+  finalDmg = Math.max(0, Math.round(finalDmg));
+
+  if (finalDmg > 0) {
+    if (hasPerk("imunidade-critica") && Math.random() < 0.5 * gameState.luck) {
+      showLuckyBlockFeedback(k, p.pos.clone());
+      return;
+    }
+  }
+
+  (p as any).hp = Math.max(0, (p as any).hp - finalDmg);
+  gameState.playerHealth = (p as any).hp;
   ui.updateHearts((p as any).hp);
+
+  if (hasPerk("onda-de-choque") && finalDmg > 0) {
+    triggerOndaDeChoquePerk(k, p);
+  }
+
+  checkIntangibilidadeTrigger(k, p);
+
   if ((p as any).hp <= 0) {
     k.addKaboom(p.pos.clone());
   }
@@ -433,7 +555,16 @@ if (gameState.skills.skill1) {
 }
 
 k.onKeyPress("q", () => {
+  if (k.get("ui-skill-overlay").some((o) => !o.hidden)) return;
+  if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
+  if (k.get("shop-bg").some((o) => !o.hidden)) return;
   const id = gameState.skills.skill1;
   if (!id) return;
   useSkill(id, k, player);
 });
+
+(window as any).gameState = gameState;
+(window as any).player = player;
+(window as any).k = k;
+(window as any).ui = ui;
+

@@ -81,7 +81,7 @@ const PRESETS = {
 // ║  TROQUE AQUI O PRESET ATIVO PARA TESTAR:     ║
 // ║  "initial" | "midgame" | "lategame" | "boss"  ║
 // ╚═══════════════════════════════════════════════╝
-const ACTIVE_PRESET: keyof typeof PRESETS = "lategame";
+const ACTIVE_PRESET: keyof typeof PRESETS = "initial";
 
 const preset = PRESETS[ACTIVE_PRESET];
 

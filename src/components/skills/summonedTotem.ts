@@ -1,7 +1,7 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import { registerSkill } from "./registry";
 import { gameState } from "../../state/gameState";
-import { getEngenhariaRunicaBonusSlots, getEngenhariaRunicaDamageBonus } from "../perks";
+import { getEngenhariaRunicaBonusSlots, getEngenhariaRunicaDamageBonus, hasPerk } from "../perks";
 
 // ===== Tabela de escalamento por nível =====
 type TotemLevelData = {
@@ -318,7 +318,11 @@ registerSkill({
     const data = getLevelData();
     // Engenharia Rúnica: bônus de 30% no dano do totem
     const runicDmgBonus = getEngenhariaRunicaDamageBonus();
-    const effectiveDamage = Math.max(1, Math.round(data.damage * (1 + runicDmgBonus) * gameState.castPower));
+    let dmgMul = 1 + runicDmgBonus;
+    if (hasPerk("luz-divina")) {
+      dmgMul *= 1.3;
+    }
+    const effectiveDamage = Math.max(1, Math.round(data.damage * dmgMul * gameState.castPower));
     const cx = player.pos.x + (Math.random() - 0.5) * 60;
     const cy = player.pos.y + (Math.random() - 0.5) * 60;
     const totemCenter = { x: cx, y: cy };
@@ -365,8 +369,9 @@ registerSkill({
         hp: data.hp,
         maxHp: data.hp,
         nextFire: 0.5, // delay inicial antes de começar a atirar
+        lifetime: data.lifetime * (hasPerk("luz-divina") ? 1.3 : 1.0),
       },
-    ]) as GameObj & { t: number; hp: number; maxHp: number; nextFire: number };
+    ]) as GameObj & { t: number; hp: number; maxHp: number; nextFire: number; lifetime: number };
 
     // ===== Detalhe rúnico central (quadradinho brilhante) =====
     const runeEye = k.add([
@@ -515,7 +520,7 @@ registerSkill({
       const dt = k.dt();
       body.t += dt;
 
-      const lifetime = data.lifetime;
+      const lifetime = body.lifetime ?? data.lifetime;
       const timeLeft = lifetime - body.t;
 
       // --- Fade in (0.3s) ---

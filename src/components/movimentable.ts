@@ -1,5 +1,5 @@
 import type { GameObj, Vec2 } from "kaplay";
-import { getLigeirinhoSpeedBonus } from "./perks";
+import { getPlayerSpeedMultiplier } from "./perks";
 
 export type MovimentableOptions = {
     keys?: {
@@ -34,17 +34,26 @@ export function movimentable(k: any, opts: MovimentableOptions = {}) {
                 if (opts.getDirection) {
                     dir = opts.getDirection(this);
                 } else {
-                    const d = k.vec2(0, 0);
-                    if (keys.left.some((key) => k.isKeyDown(key))) d.x -= 1;
-                    if (keys.right.some((key) => k.isKeyDown(key))) d.x += 1;
-                    if (keys.up.some((key) => k.isKeyDown(key))) d.y -= 1;
-                    if (keys.down.some((key) => k.isKeyDown(key))) d.y += 1;
-                    dir = d;
+                    const isSkillActive = k.get("ui-skill-overlay").some((o: any) => !o.hidden);
+                    const isPerkActive = k.get("perk-overlay-bg").some((o: any) => !o.hidden);
+                    const isShopActive = k.get("shop-bg").some((o: any) => !o.hidden);
+                    if (isSkillActive || isPerkActive || isShopActive) {
+                        dir = null;
+                    } else {
+                        const d = k.vec2(0, 0);
+                        if (keys.left.some((key) => k.isKeyDown(key))) d.x -= 1;
+                        if (keys.right.some((key) => k.isKeyDown(key))) d.x += 1;
+                        if (keys.up.some((key) => k.isKeyDown(key))) d.y -= 1;
+                        if (keys.down.some((key) => k.isKeyDown(key))) d.y += 1;
+                        dir = d;
+                    }
                 }
 
                 if (dir && (dir.x !== 0 || dir.y !== 0)) {
-                    const ligeirinho = 1 + getLigeirinhoSpeedBonus();
-                    const spd = (this.speed ?? 220) * (opts.getDirection ? 1 : ligeirinho);
+                    let spd = this.speed ?? 220;
+                    if (!opts.getDirection) {
+                        spd *= getPlayerSpeedMultiplier(this);
+                    }
                     const move = dir.unit().scale(spd);
                     this.move(move);
                 }

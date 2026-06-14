@@ -1,4 +1,6 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
+import { gameState } from "../state/gameState";
+import { hasPerk, showLuckyBlockFeedback, checkIntangibilidadeTrigger } from "./perks";
 
 export function applyGreenBehavior(
   k: KAPLAYCtx,
@@ -564,3 +566,573 @@ export function applyConeShooterBehavior(
     });
   }
 }
+
+export function applyBerserkerBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  const maxHp = data.maxHp ?? 5;
+  const currentHp = data.hp ?? maxHp;
+  const missingHpRatio = 1 - currentHp / maxHp;
+  const speedBoost = 1.0 + missingHpRatio * 1.0; // up to 2x speed when almost dead
+  const baseSpeed = data.defaultSpeed ?? 110;
+
+  if (self.setSpeed) (self as any).setSpeed(baseSpeed * speedBoost);
+  else data.speed = baseSpeed * speedBoost;
+}
+
+export function applyShieldGuardBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  // Shield Guard moves slow and blocks projectiles.
+  // The block logic is fully implemented in shoot.ts using direction checks.
+  // Chasing is handled by the default movimentable component.
+}
+
+export function applyChargerBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._chargerState === undefined) {
+    data._chargerState = "walk";
+    data._chargerTimer = 0;
+    data._chargerDir = k.vec2(0, 0);
+  }
+
+  data._chargerTimer += k.dt();
+  const baseSpeed = data.defaultSpeed ?? 140;
+
+  if (data._chargerState === "walk") {
+    const toPlayer = target.pos.sub(self.pos);
+    const dist = toPlayer.len();
+    
+    if (dist < 260 && data._chargerTimer > 2.0) {
+      data._chargerState = "telegraph";
+      data._chargerTimer = 0;
+      data._chargerDir = toPlayer.unit();
+      if (self.setSpeed) self.setSpeed(0);
+      else data.speed = 0;
+    } else {
+      if (self.setSpeed) self.setSpeed(baseSpeed);
+      else data.speed = baseSpeed;
+      self.move(toPlayer.unit().scale(baseSpeed));
+    }
+  } 
+  else if (data._chargerState === "telegraph") {
+    const colorVal = Math.floor(k.time() * 20) % 2 === 0 ? k.rgb(255, 50, 50) : k.rgb(255, 200, 50);
+    self.color = colorVal;
+    
+    k.drawLine({
+      p1: self.pos.add(14, 14),
+      p2: self.pos.add(14, 14).add(data._chargerDir.scale(300)),
+      color: k.rgb(255, 0, 0),
+      width: 2,
+    });
+
+    if (data._chargerTimer >= 0.8) {
+      data._chargerState = "dash";
+      data._chargerTimer = 0;
+      self.color = data._originalColor || k.rgb(255, 100, 100);
+    }
+  } 
+  else if (data._chargerState === "dash") {
+    const dashSpeed = baseSpeed * 3.5;
+    self.move(data._chargerDir.scale(dashSpeed));
+
+    if (data._chargerTimer >= 0.4) {
+      data._chargerState = "cooldown";
+      data._chargerTimer = 0;
+      if (self.setSpeed) self.setSpeed(0);
+      else data.speed = 0;
+    }
+  } 
+  else if (data._chargerState === "cooldown") {
+    self.color = k.rgb(150, 150, 200);
+    if (data._chargerTimer >= 0.8) {
+      data._chargerState = "walk";
+      data._chargerTimer = 0;
+      self.color = data._originalColor || k.rgb(255, 100, 100);
+    }
+  }
+}
+
+export function applyPhantomBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._phantomTimer === undefined) {
+    data._phantomTimer = 0;
+  }
+
+  data._phantomTimer += k.dt();
+  const toPlayer = target.pos.sub(self.pos);
+  const baseSpeed = data.defaultSpeed ?? 110;
+  self.move(toPlayer.unit().scale(baseSpeed));
+
+  if (data._phantomTimer >= 4.0) {
+    data._phantomTimer = 0;
+    
+    for (let i = 0; i < 4; i++) {
+      k.add([
+        k.circle(k.rand(8, 14)),
+        k.pos(self.pos.x + k.rand(-10, 10), self.pos.y + k.rand(-10, 10)),
+        k.color(140, 60, 200),
+        k.opacity(0.6),
+        k.lifespan(0.4, { fade: 0.25 }),
+        k.z(100)
+      ]);
+    }
+    
+    const angle = k.rand(0, Math.PI * 2);
+    const offset = k.vec2(Math.cos(angle), Math.sin(angle)).scale(150);
+    self.pos = target.pos.add(offset);
+    
+    for (let i = 0; i < 4; i++) {
+      k.add([
+        k.circle(k.rand(8, 14)),
+        k.pos(self.pos.x + k.rand(-10, 10), self.pos.y + k.rand(-10, 10)),
+        k.color(140, 60, 200),
+        k.opacity(0.6),
+        k.lifespan(0.4, { fade: 0.25 }),
+        k.z(100)
+      ]);
+    }
+
+    const dir = target.pos.sub(self.pos).unit();
+    const scythe = k.add([
+      k.circle(10),
+      k.pos(self.pos.x, self.pos.y),
+      k.color(200, 50, 255),
+      k.outline(1.5, k.rgb(255, 255, 255)),
+      k.area(),
+      k.z(150),
+      { id: "enemy-bullet", damage: data.damage ?? 40 }
+    ]);
+    scythe.onUpdate(() => {
+      if (!scythe.exists()) return;
+      scythe.move(dir.scale(320));
+      scythe.scale = k.vec2(1.0 + Math.sin(k.time() * 12) * 0.2);
+    });
+    scythe.onCollide("arena-wall", () => {
+      if (scythe.exists()) scythe.destroy();
+    });
+    k.wait(6, () => {
+      if (scythe.exists()) scythe.destroy();
+    });
+  }
+}
+
+export function applyNinjaBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._ninjaTimer === undefined) {
+    data._ninjaTimer = 0;
+    data._ninjaDodgeTimer = 0;
+    data._ninjaDirSign = Math.random() < 0.5 ? 1 : -1;
+  }
+
+  data._ninjaTimer += k.dt();
+  data._ninjaDodgeTimer += k.dt();
+
+  const toPlayer = target.pos.sub(self.pos);
+  const perp = k.vec2(-toPlayer.y, toPlayer.x).unit();
+  
+  const dir = toPlayer.unit().scale(0.3).add(perp.scale(0.7 * data._ninjaDirSign)).unit();
+  const baseSpeed = data.defaultSpeed ?? 210;
+  
+  if (data._ninjaDodgeTimer >= 1.8) {
+    data._ninjaDodgeTimer = 0;
+    const dodgeDir = perp.scale(data._ninjaDirSign);
+    const dodgeSpeed = baseSpeed * 3.0;
+    
+    for (let i = 0; i < 3; i++) {
+      k.add([
+        k.rect(20, 20),
+        k.pos(self.pos.x, self.pos.y),
+        k.color(50, 50, 50),
+        k.opacity(0.4),
+        k.lifespan(0.3, { fade: 0.15 }),
+        k.z(90)
+      ]);
+    }
+    
+    self.move(dodgeDir.scale(dodgeSpeed));
+    if (Math.random() < 0.5) data._ninjaDirSign *= -1;
+  } else {
+    self.move(dir.scale(baseSpeed));
+  }
+
+  if (data._ninjaTimer >= 2.5) {
+    data._ninjaTimer = 0;
+    const baseDir = toPlayer.unit();
+    const angles = [-0.2, 0, 0.2];
+    
+    for (const ang of angles) {
+      const cos = Math.cos(ang);
+      const sin = Math.sin(ang);
+      const shotDir = k.vec2(
+        baseDir.x * cos - baseDir.y * sin,
+        baseDir.x * sin + baseDir.y * cos
+      ).unit();
+      
+      const shuriken = k.add([
+        k.rect(10, 10),
+        k.pos(self.pos.x, self.pos.y),
+        k.color(150, 150, 150),
+        k.outline(1, k.rgb(0, 0, 0)),
+        k.rotate(0),
+        k.anchor("center"),
+        k.area(),
+        k.z(150),
+        { id: "enemy-bullet", damage: Math.round((data.damage ?? 35) * 0.7) }
+      ]);
+      shuriken.onUpdate(() => {
+        if (!shuriken.exists()) return;
+        shuriken.move(shotDir.scale(380));
+        shuriken.angle += 360 * k.dt() * 2;
+      });
+      shuriken.onCollide("arena-wall", () => {
+        if (shuriken.exists()) shuriken.destroy();
+      });
+      k.wait(5, () => {
+        if (shuriken.exists()) shuriken.destroy();
+      });
+    }
+  }
+}
+
+export function applyDetonatorBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._detonatorExploding === undefined) {
+    data._detonatorExploding = false;
+    data._detonatorTimer = 0;
+  }
+
+  if (data._detonatorExploding) {
+    data._detonatorTimer += k.dt();
+    const pct = data._detonatorTimer / 1.2;
+    const isRed = Math.floor(data._detonatorTimer * 15) % 2 === 0;
+    self.color = isRed ? k.rgb(255, 0, 0) : k.rgb(255, 150, 0);
+    self.scale = k.vec2(1.0 + pct * 0.5);
+    
+    if (data._detonatorTimer >= 1.2) {
+      triggerDetonatorExplosion(k, self.pos.clone(), data.damage ?? 60);
+      self.destroy();
+    }
+    return;
+  }
+
+  const toPlayer = target.pos.sub(self.pos);
+  const dist = toPlayer.len();
+  const baseSpeed = data.defaultSpeed ?? 80;
+  self.move(toPlayer.unit().scale(baseSpeed));
+
+  if (dist < 80) {
+    data._detonatorExploding = true;
+    data._detonatorTimer = 0;
+    if (self.setSpeed) self.setSpeed(0);
+    else data.speed = 0;
+  }
+}
+
+export function triggerDetonatorExplosion(k: any, pos: any, dmg: number) {
+  const radius = 115;
+  const expCircle = k.add([
+    k.circle(radius),
+    k.pos(pos.x, pos.y),
+    k.color(255, 100, 20),
+    k.opacity(0.65),
+    k.z(100),
+  ]);
+  
+  k.shake(4.0);
+  
+  for (let i = 0; i < 12; i++) {
+    const angle = k.rand(0, Math.PI * 2);
+    const spd = k.rand(120, 250);
+    const p = k.add([
+      k.circle(k.rand(4, 9)),
+      k.pos(pos.x, pos.y),
+      k.color(255, k.rand(100, 200), 20),
+      k.opacity(0.95),
+      k.lifespan(0.4, { fade: 0.25 }),
+      k.z(110),
+      { vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd }
+    ]);
+    p.onUpdate(() => {
+      p.pos.x += p.vx * k.dt();
+      p.pos.y += p.vy * k.dt();
+    });
+  }
+
+  const players = k.get("player");
+  if (players.length > 0) {
+    const p = players[0] as any;
+    if (gameState.intangibleUntil <= Date.now() && p.pos.dist(pos) <= radius + 20) {
+      if (hasPerk("imunidade-critica") && Math.random() < 0.5 * gameState.luck) {
+        showLuckyBlockFeedback(k, p.pos.clone());
+      } else {
+        p.hp = Math.max(0, (p.hp ?? gameState.maxHealth) - dmg);
+        gameState.playerHealth = p.hp;
+        if ((window as any).ui) {
+          (window as any).ui.updateHearts(p.hp);
+        }
+        checkIntangibilidadeTrigger(k, p);
+        if (p.hp <= 0) k.addKaboom(p.pos.clone());
+      }
+    }
+  }
+
+  const enemies = k.get("enemy") as any[];
+  for (const e of enemies) {
+    if (e.pos.dist(pos) <= radius && e.hp !== undefined) {
+      e._lastDamageType = "explosion";
+      e.hp -= dmg * 2.0;
+      if (e.hp <= 0) e.destroy();
+    }
+  }
+
+  k.wait(0.3, () => {
+    if (expCircle.exists()) expCircle.destroy();
+  });
+}
+
+export function applyVampireBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._vampireTimer === undefined) {
+    data._vampireTimer = 0;
+  }
+  
+  data._vampireTimer += k.dt();
+  const toPlayer = target.pos.sub(self.pos);
+  const dist = toPlayer.len();
+  const baseSpeed = data.defaultSpeed ?? 90;
+  self.move(toPlayer.unit().scale(baseSpeed));
+
+  if (dist < 160) {
+    const centerSelf = self.pos.add(14, 14);
+    const centerPlayer = target.pos.add(30, 30);
+    
+    k.drawLine({
+      p1: centerSelf,
+      p2: centerPlayer,
+      color: k.rgb(220, 20, 60),
+      width: 1.5 + Math.sin(k.time() * 20) * 0.5,
+    });
+    
+    if (Math.random() < 0.25) {
+      const angle = k.rand(0, Math.PI * 2);
+      const startP = centerPlayer.add(k.vec2(Math.cos(angle), Math.sin(angle)).scale(15));
+      const spark = k.add([
+        k.circle(3),
+        k.pos(startP.x, startP.y),
+        k.color(255, 0, 50),
+        k.opacity(0.85),
+        k.z(160),
+        k.lifespan(0.4),
+      ]);
+      spark.onUpdate(() => {
+        if (!spark.exists() || !self.exists()) return;
+        const dirSelf = self.pos.add(14, 14).sub(spark.pos).unit();
+        spark.move(dirSelf.scale(350));
+      });
+    }
+
+    if (data._vampireTimer >= 0.5) {
+      data._vampireTimer = 0;
+      const dmg = 2;
+      
+      if (gameState.intangibleUntil <= Date.now()) {
+        const hasBlocked = hasPerk("imunidade-critica") && Math.random() < 0.5 * gameState.luck;
+        if (hasBlocked) {
+          showLuckyBlockFeedback(k, target.pos.clone());
+        } else {
+          target.hp = Math.max(0, (target.hp ?? gameState.maxHealth) - dmg);
+          gameState.playerHealth = target.hp;
+          if ((window as any).ui) (window as any).ui.updateHearts(target.hp);
+          
+          self.hp = Math.min(self.maxHp ?? 12, (self.hp ?? 12) + 2);
+          
+          checkIntangibilidadeTrigger(k, target);
+          if (target.hp <= 0) k.addKaboom(target.pos.clone());
+        }
+      }
+    }
+  }
+}
+
+export function applyIllusionistBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._illusTimer === undefined) {
+    data._illusTimer = 0;
+    data._illusPrevHp = data.hp ?? 7;
+    data._illusClonesCount = 0;
+    data._illusAngleOffset = k.rand(-1, 1);
+  }
+
+  data._illusTimer += k.dt();
+  const toPlayer = target.pos.sub(self.pos);
+  const perp = k.vec2(-toPlayer.y, toPlayer.x).unit();
+  const dir = toPlayer.unit().add(perp.scale(Math.sin(k.time() * 4) * 0.6 + data._illusAngleOffset)).unit();
+  
+  const baseSpeed = data.defaultSpeed ?? 120;
+  self.move(dir.scale(baseSpeed));
+
+  const currentHp = data.hp ?? 0;
+  if (currentHp < data._illusPrevHp && currentHp > 0) {
+    data._illusPrevHp = currentHp;
+    
+    if (!data.isClone && data._illusClonesCount < 2) {
+      data._illusClonesCount += 1;
+      const cloneOffset = k.vec2(k.rand(-40, 40), k.rand(-40, 40));
+      const clonePos = self.pos.add(cloneOffset);
+      const s = data.width ?? 26;
+      
+      const clone = k.add([
+        k.rect(s, s),
+        k.pos(clonePos.x, clonePos.y),
+        k.color(20, 184, 166),
+        k.opacity(0.75),
+        k.outline(2, k.rgb(255, 255, 255)),
+        k.area(),
+        k.body(),
+        speed({ value: baseSpeed }),
+        movimentable(k, { getDirection: (self) => target.pos.sub(self.pos) }),
+        {
+          id: "enemy",
+          enemyType: "illusionist",
+          name: "Ilusão",
+          hp: 1,
+          maxHp: 1,
+          damage: Math.round(data.damage * 0.4),
+          defaultSpeed: baseSpeed,
+          isClone: true,
+          update(this: GameObj) {
+            const toP = target.pos.sub(this.pos);
+            this.move(toP.unit().scale(baseSpeed));
+          }
+        }
+      ]);
+      
+      clone.onDestroy(() => {
+        if (self.exists()) {
+          data._illusClonesCount = Math.max(0, data._illusClonesCount - 1);
+        }
+      });
+      
+      for (let i = 0; i < 3; i++) {
+        k.add([
+          k.circle(k.rand(6, 10)),
+          k.pos(clonePos.x + 13, clonePos.y + 13),
+          k.color(20, 200, 180),
+          k.opacity(0.5),
+          k.lifespan(0.3, { fade: 0.15 }),
+        ]);
+      }
+    }
+  }
+
+  if (data._illusTimer >= 3.0) {
+    data._illusTimer = 0;
+    const shotDir = toPlayer.unit();
+    const bolt = k.add([
+      k.circle(8),
+      k.pos(self.pos.x + 13, self.pos.y + 13),
+      k.color(100, 255, 220),
+      k.outline(1, k.rgb(0, 0, 0)),
+      k.area(),
+      k.z(150),
+      { id: "enemy-bullet", damage: data.damage ?? 30 }
+    ]);
+    bolt.onUpdate(() => {
+      if (!bolt.exists()) return;
+      bolt.move(shotDir.scale(270));
+    });
+    bolt.onCollide("arena-wall", () => {
+      if (bolt.exists()) bolt.destroy();
+    });
+    k.wait(5, () => {
+      if (bolt.exists()) bolt.destroy();
+    });
+  }
+}
+
+export function applyTrapperBehavior(k: KAPLAYCtx, self: GameObj, target: GameObj) {
+  const data = self as any;
+  if (data._trapperTimer === undefined) {
+    data._trapperTimer = 0;
+  }
+
+  data._trapperTimer += k.dt();
+  const toPlayer = target.pos.sub(self.pos);
+  const dist = toPlayer.len();
+  const baseSpeed = data.defaultSpeed ?? 95;
+
+  if (dist < 200) {
+    self.move(toPlayer.unit().scale(-baseSpeed));
+  } else if (dist > 350) {
+    self.move(toPlayer.unit().scale(baseSpeed));
+  } else {
+    const perp = k.vec2(-toPlayer.y, toPlayer.x).unit();
+    self.move(perp.scale(baseSpeed * 0.5));
+  }
+
+  if (data._trapperTimer >= 3.5) {
+    data._trapperTimer = 0;
+    const trapPos = target.pos.clone().add(k.rand(-40, 40), k.rand(-40, 40));
+    
+    const trap = k.add([
+      k.circle(16),
+      k.pos(trapPos.x + 30, trapPos.y + 30),
+      k.anchor("center"),
+      k.color(80, 80, 80),
+      k.outline(1.5, k.rgb(255, 50, 50)),
+      k.area(),
+      k.z(40),
+      { id: "steel-trap", active: true }
+    ]);
+    
+    trap.onCollide("player", (p: any) => {
+      if (!trap.active) return;
+      trap.active = false;
+      
+      const origSpeed = p.speed ?? 600;
+      p.speed = 0;
+      p.color = k.rgb(255, 100, 100);
+      
+      trap.color = k.rgb(40, 40, 40);
+      trap.outline.color = k.rgb(0, 0, 0);
+      
+      k.wait(1.0, () => {
+        if (p.exists()) {
+          p.speed = origSpeed;
+          p.color = k.rgb(0, 180, 255);
+        }
+        trap.destroy();
+      });
+      
+      k.wait(0.2, () => {
+        if (self.exists() && p.exists()) {
+          const arrowDir = p.pos.sub(self.pos).unit();
+          const arrow = k.add([
+            k.rect(18, 5),
+            k.pos(self.pos.x + 14, self.pos.y + 14),
+            k.anchor("center"),
+            k.rotate(k.rad2deg(Math.atan2(arrowDir.y, arrowDir.x))),
+            k.color(255, 50, 50),
+            k.outline(1, k.rgb(0,0,0)),
+            k.area(),
+            k.z(150),
+            { id: "enemy-bullet", damage: Math.round((data.damage ?? 35) * 1.5) }
+          ]);
+          arrow.onUpdate(() => {
+            if (!arrow.exists()) return;
+            arrow.move(arrowDir.scale(550));
+          });
+          arrow.onCollide("arena-wall", () => {
+            if (arrow.exists()) arrow.destroy();
+          });
+          k.wait(5, () => {
+            if (arrow.exists()) arrow.destroy();
+          });
+        }
+      });
+    });
+
+    k.wait(7.0, () => {
+      if (trap.exists()) trap.destroy();
+    });
+  }
+}
+

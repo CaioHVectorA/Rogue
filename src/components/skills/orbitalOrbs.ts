@@ -1,6 +1,7 @@
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import { registerSkill } from "./registry";
 import { gameState } from "../../state/gameState";
+import { hasPerk } from "../perks";
 
 const ORB_CONFIG = {
   baseOrbCount: 2, // orbes iniciais
@@ -278,7 +279,10 @@ function spawnOrbs(k: KAPLAYCtx, player: GameObj) {
           if (flash.t >= 0.2) flash.destroy();
         });
 
-        const dmg = getOrbDamage(gameState.skills.levels["orbital-orbs"] ?? 1) * gameState.castPower;
+        let dmg = getOrbDamage(gameState.skills.levels["orbital-orbs"] ?? 1) * gameState.castPower;
+        if (hasPerk("luz-divina")) {
+          dmg *= 1.3;
+        }
         enemy.hp -= dmg;
         if (enemy.hp <= 0) enemy.destroy();
       }

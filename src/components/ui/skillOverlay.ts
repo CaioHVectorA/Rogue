@@ -7,6 +7,7 @@ export type SkillOverlayHandles = {
   show: () => void;
   hide: () => void;
   update: () => void;
+  isVisible: () => boolean;
 };
 
 // ─── Elemental skill themes ──────────────────────────────
@@ -30,8 +31,10 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     k.pos(0, 0),
     k.color(10, 10, 15),
     k.opacity(0.85),
+    k.area(),
     k.fixed(),
     k.z(3000),
+    "ui-skill-overlay",
     { id: "ui-skill-overlay" },
   ]);
   overlayBg.hidden = true;
@@ -224,6 +227,8 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
   );
 
   function positionCards() {
+    overlayBg.width = k.width();
+    overlayBg.height = k.height();
     const positions = centerCardsLayout(k, cardW, cardH, gap);
     for (let i = 0; i < cards.length; i++) {
       const C = cards[i];
@@ -314,6 +319,7 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
 
   k.onMousePress("left", () => {
     if (overlayBg.hidden) return;
+    if (k.get("perk-overlay-bg").some((o) => !o.hidden)) return;
     const mp = k.mousePos();
 
     const isHovering = (btn: GameObj, w: number, h: number) => {
@@ -408,6 +414,13 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
   };
 
   const update = () => {
+    const isShopActive = k.get("shop-bg").some((o: any) => !o.hidden);
+    const isPerkActive = k.get("perk-overlay-bg").some((o: any) => !o.hidden);
+    if (isShopActive || isPerkActive) {
+      if (!overlayBg.hidden) hide();
+      return;
+    }
+
     const noWave = (k.get("enemy") as GameObj[]).length === 0;
     const needSkill = !gameState.skills.skill1;
     const shouldOpen = noWave && needSkill && gameState.level >= 2;
@@ -443,5 +456,5 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     }
   });
 
-  return { show, hide, update };
+  return { show, hide, update, isVisible: () => !overlayBg.hidden };
 }

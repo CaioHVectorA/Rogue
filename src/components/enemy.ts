@@ -13,8 +13,18 @@ import {
   applyRegenBehavior,
   applyColossusBehavior,
   applyConeShooterBehavior,
+  applyBerserkerBehavior,
+  applyShieldGuardBehavior,
+  applyChargerBehavior,
+  applyPhantomBehavior,
+  applyNinjaBehavior,
+  applyDetonatorBehavior,
+  applyVampireBehavior,
+  applyIllusionistBehavior,
+  applyTrapperBehavior,
 } from "./behaviors";
 import { gameState } from "../state/gameState";
+import { hasPerk, triggerToxinaExplosivaExplosion } from "./perks";
 import { debug } from "../state/debug";
 import {
   getGoldWeightsByLuck,
@@ -535,6 +545,33 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
           }
           applyConeShooterBehavior(k, this as any, opts.target, dmg);
         }
+        if (this.enemyType === "berserker" || this.enemyType === "berserker_elite") {
+          applyBerserkerBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "shield_guard" || this.enemyType === "shield_guard_elite") {
+          applyShieldGuardBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "charger" || this.enemyType === "charger_elite") {
+          applyChargerBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "phantom" || this.enemyType === "phantom_elite") {
+          applyPhantomBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "ninja" || this.enemyType === "ninja_elite") {
+          applyNinjaBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "detonator" || this.enemyType === "detonator_elite") {
+          applyDetonatorBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "vampire" || this.enemyType === "vampire_elite") {
+          applyVampireBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "illusionist" || this.enemyType === "illusionist_elite") {
+          applyIllusionistBehavior(k, this as any, opts.target);
+        }
+        if (this.enemyType === "trapper" || this.enemyType === "trapper_elite") {
+          applyTrapperBehavior(k, this as any, opts.target);
+        }
       },
     },
   ]) as any;
@@ -618,8 +655,59 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   ]);
   poisonLabel.hidden = true;
 
+  // --- Indicador do escudo (Guarda do Escudo) ---
+  let shieldBar: any = null;
+  if (type === "shield_guard" || type === "shield_guard_elite") {
+    shieldBar = enemy.add([
+      k.rect(s * 0.9, 6, { radius: 2 }),
+      k.pos(s / 2, s / 2),
+      k.anchor("center"),
+      k.color(180, 185, 195),
+      k.outline(1.5, k.rgb(0, 0, 0)),
+      k.z(10),
+      k.rotate(0),
+      { id: "shield-bar" },
+    ]);
+  }
+
   enemy.onUpdate(() => {
     const ratio = Math.max(0, (enemy as any).hp / (enemy as any).maxHp);
+
+    // --- Atualizar escudo do Guarda do Escudo ---
+    const e = enemy as any;
+    if (shieldBar && shieldBar.exists()) {
+      const isStaggered = e.staggeredUntil && e.staggeredUntil > Date.now();
+      
+      // Encontrar direção ao player
+      const playerSize = opts.target.width ?? opts.target.getSize?.().width ?? 28;
+      const enemyCenter = k.vec2(s / 2, s / 2);
+      const toPlayer = opts.target.pos.add(playerSize / 2, playerSize / 2)
+        .sub(e.pos.add(enemyCenter))
+        .unit();
+      
+      // Posicionar escudo à frente perpendicular ao player
+      const dirAngle = k.rad2deg(Math.atan2(toPlayer.y, toPlayer.x));
+      shieldBar.pos = enemyCenter.add(toPlayer.scale(s / 2 + 5));
+      shieldBar.angle = dirAngle + 90;
+      
+      // Controlar opacidade e feedback de stagger
+      shieldBar.opacity = isStaggered ? 0.2 : 1.0;
+      
+      if (isStaggered) {
+        // Reduz velocidade pela metade
+        e.speed = e.defaultSpeed * 0.5;
+        // Piscar em vermelho
+        const blinkPhase = Math.floor(k.time() * 8) % 2 === 0;
+        e.color = blinkPhase ? k.rgb(255, 50, 50) : e._originalColor;
+        e._wasStaggered = true;
+      } else {
+        if (e._wasStaggered) {
+          e._wasStaggered = false;
+          e.color = e._originalColor;
+          e.speed = e.defaultSpeed;
+        }
+      }
+    }
     // Sentido horário de preenchimento:
     //   75-100% → top       (esq→dir)  — última a esvaziar
     //   50-75%  → right     (cima→baixo)
@@ -649,7 +737,6 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     }
 
     // --- Atualizar visual das marcas + expiração ---
-    const e = enemy as any;
     const currentMarks = e.marks ?? 0;
 
     // Timer de expiração: se tem marcas, incrementa timer
@@ -710,6 +797,11 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
   enemy.onDestroy(() => {
     // Visual debris explosion based on enemy type
     explodeEnemyDebris(k, enemy.pos.clone(), type);
+
+    // Toxina Explosiva explosion check
+    if (hasPerk("toxina-explosiva") && (enemy.poisonStacks ?? 0) > 0) {
+      triggerToxinaExplosivaExplosion(k, enemy.pos.clone(), enemy.poisonStacks);
+    }
 
     // Compute gold drop based on luck table
     const luck = gameState.luck;
@@ -777,7 +869,7 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
 
   // --- Geometric sub-shapes for visual differentiation ---
   // Tanks: double border/inner concentric box
-  if (type.includes("stone") || type.includes("colossus") || type.includes("blue")) {
+  if (type.includes("stone") || type.includes("colossus") || type.includes("blue") || type.includes("shield_guard")) {
     enemy.add([
       k.rect(s * 0.6, s * 0.6),
       k.pos(s / 2, s / 2),

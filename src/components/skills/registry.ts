@@ -1,5 +1,6 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { gameState } from "../../state/gameState";
+import { hasPerk, triggerPassoEspiritual } from "../perks";
 
 export type SkillContext = {
   k: KAPLAYCtx;
@@ -47,7 +48,10 @@ export function initCharges(skillId: string) {
   if (!skill?.getMaxCharges) return;
 
   const lvl = gameState.skills.levels[skillId] ?? 1;
-  const maxCharges = skill.getMaxCharges(lvl);
+  let maxCharges = skill.getMaxCharges(lvl);
+  if (hasPerk("arsenal-ampliado")) {
+    maxCharges += 1;
+  }
   gameState.skills.maxCharges[skillId] = maxCharges;
   gameState.skills.charges[skillId] = maxCharges;
   gameState.skills.chargeRegenTimers[skillId] = 0;
@@ -59,7 +63,10 @@ export function updateChargeRegen(skillId: string) {
   if (!skill?.getMaxCharges) return;
 
   const lvl = gameState.skills.levels[skillId] ?? 1;
-  const maxCharges = skill.getMaxCharges(lvl);
+  let maxCharges = skill.getMaxCharges(lvl);
+  if (hasPerk("arsenal-ampliado")) {
+    maxCharges += 1;
+  }
   const currentCharges = gameState.skills.charges[skillId] ?? maxCharges;
   const regenStartTime = gameState.skills.chargeRegenTimers[skillId] ?? 0;
 
@@ -90,7 +97,10 @@ export function getCharges(skillId: string): number {
   if (!skill?.getMaxCharges) return 1; // skill sem cargas sempre tem "1"
 
   const lvl = gameState.skills.levels[skillId] ?? 1;
-  const maxCharges = skill.getMaxCharges(lvl);
+  let maxCharges = skill.getMaxCharges(lvl);
+  if (hasPerk("arsenal-ampliado")) {
+    maxCharges += 1;
+  }
 
   // Inicializa se não existir
   if (gameState.skills.charges[skillId] === undefined) {
@@ -128,10 +138,22 @@ export function useSkill(skillId: string, k: KAPLAYCtx, player: GameObj) {
   // Se é um uso via canAlwaysUse (ex: recall), apenas executa sem atualizar cooldown
   if (skill.canAlwaysUse?.()) {
     skill.use({ k, player });
+    triggerPassoEspiritual();
     return;
   }
 
   skill.use({ k, player });
+  triggerPassoEspiritual();
+
+  // Eco Mágico: 20% chance to cast again consecutively without charge/cooldown cost
+  if (hasPerk("eco-magico") && Math.random() < 0.2) {
+    addImpactFlash(k, player.pos.clone(), [220, 120, 255], { size: 36, duration: 0.5 });
+    k.wait(0.1, () => {
+      if (player.exists()) {
+        skill.use({ k, player });
+      }
+    });
+  }
 
   // Skill com cargas
   if (skill.getMaxCharges) {

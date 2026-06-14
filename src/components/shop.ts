@@ -18,7 +18,7 @@ function nextLevelCost(nextLevel: number): number {
 }
 
 // Helper to count how many attributes are already maxed
-function countMaxedAttributes(): number {
+export function countMaxedAttributes(): number {
   let cnt = 0;
   for (const k of Object.keys(
     gameState.upgrades,
@@ -109,7 +109,7 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       if (!spendAttr("reloadSpeed")) return;
       gameState.reloadSpeed = Math.max(
         0.05,
-        Number((gameState.reloadSpeed * 0.9).toFixed(3)),
+        Number((gameState.reloadSpeed * 0.8).toFixed(3)),
       );
       // +15% bonus at max level (faster reload = lower value)
       if (gameState.upgrades.reloadSpeed >= MAX_ATTR_LEVEL) {
@@ -132,19 +132,6 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
         gameState.abilityHaste = Math.min(
           0.9,
           Number((gameState.abilityHaste * (1 + MAX_LEVEL_BONUS)).toFixed(2)),
-        );
-      }
-      ui.updateGold(gameState.gold);
-      ui.refreshShopStats();
-    },
-    onShotDamage: () => {
-      if (!canUpgradeAttr("shotDamage")) return;
-      if (!spendAttr("shotDamage")) return;
-      gameState.shotDamage += 1;
-      // +15% bonus at max level
-      if (gameState.upgrades.shotDamage >= MAX_ATTR_LEVEL) {
-        gameState.shotDamage = Math.floor(
-          gameState.shotDamage * (1 + MAX_LEVEL_BONUS),
         );
       }
       ui.updateGold(gameState.gold);
