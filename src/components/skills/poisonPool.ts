@@ -109,6 +109,7 @@ function createPool(
       ),
     }),
     k.z(96),
+    "poison-pool",
     { id: "poison-pool", t: 0, tickT: 0, duration },
   ]) as GameObj & { t: number; tickT: number; duration: number };
 

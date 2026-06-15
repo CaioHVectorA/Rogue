@@ -449,6 +449,7 @@ export function showLuckyBlockFeedback(k: any, pos: any): void {
     k.anchor("center"),
     k.color(120, 255, 200),
     k.outline(2, k.rgb(0, 50, 0)),
+    k.opacity(1),
     k.lifespan(0.8, { fade: 0.4 }),
     k.z(1000)
   ]);

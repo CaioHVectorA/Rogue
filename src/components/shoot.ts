@@ -1,6 +1,5 @@
 import type { GameObj, KAPLAYCtx, Vec2 } from "kaplay";
 import { gameState } from "../state/gameState";
-import { addMark } from "./skills/markedShot";
 import { debug } from "../state/debug";
 import {
   shouldTriggerChainExplosion,
@@ -274,10 +273,6 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
           triggerSeismic(k, p.pos.clone());
         }
 
-        // Adicionar marca se buff do markedShot está ativo
-        if (gameState.buffs.markedShot.active && e.exists() && finalDamageFactor > 0) {
-          addMark(k, e);
-        }
 
         p.hitsLeft--;
         if (p.hitsLeft <= 0 || finalDamageFactor === 0) {
@@ -310,6 +305,9 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
     require: ["pos"],
     add(this: GameObj) {
       lastPos = this.pos.clone();
+      (this as any).instantReload = () => {
+        charge = chargeTime;
+      };
 
       // Create persistent line objects once
       const w = this.getSize().width;
@@ -465,7 +463,7 @@ export function shoot(k: KAPLAYCtx, opts: ShootOptions = { outlineSize: 4 }) {
         }
 
         if (charge >= chargeTime) {
-          if (still) {
+          if (still || gameState.shootWhileMoving) {
             channeling = false;
             charge = 0;
             fire(this);

@@ -29,16 +29,26 @@ export {
 } from "./skills/registry";
 
 // Import skill modules after exports to avoid TDZ on skillsRegistry
-import "./skills/coneShot";
 import "./skills/ricochetShot";
 import "./skills/shockwave";
 import "./skills/arcMine";
 import "./skills/attackBuff";
 import "./skills/boomerangBolt";
 import "./skills/chainLightning";
-import "./skills/markedShot";
 import "./skills/orbitalOrbs";
 import "./skills/poisonPool";
 import "./skills/summonedTotem";
+
+// New active skills
+import "./skills/sniperShot";
+import "./skills/tacticalRoll";
+import "./skills/voidRift";
+import "./skills/frostNova";
+import "./skills/phoenixBurst";
+import "./skills/juggernautRush";
+import "./skills/baluarteShield";
+import "./skills/luckyDome";
+import "./skills/lifeTether";
+import "./skills/timeBubble";
 
 export {};

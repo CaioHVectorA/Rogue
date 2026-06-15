@@ -14,15 +14,24 @@ export type SkillOverlayHandles = {
 const SKILL_THEMES: Record<string, { color: [number, number, number]; shape: string }> = {
   "shockwave": { color: [60, 180, 240], shape: "wave" },
   "ricochet-shot": { color: [168, 85, 247], shape: "cross" },
-  "cone-shot": { color: [240, 100, 40], shape: "triangle" },
   "chain-lightning": { color: [250, 204, 21], shape: "lightning" },
   "arc-mine": { color: [220, 38, 38], shape: "circle" },
   "poison-pool": { color: [34, 197, 94], shape: "droplet" },
   "boomerang-bolt": { color: [45, 212, 191], shape: "boomerang" },
   "summoned-totem": { color: [249, 115, 2], shape: "totem" },
-  "marked-shot": { color: [236, 72, 153], shape: "target" },
   "orbital-orbs": { color: [14, 165, 233], shape: "orbs" },
   "attack-buff": { color: [234, 179, 8], shape: "sword" },
+  // Novas habilidades
+  "sniper-shot": { color: [34, 211, 238], shape: "triangle" },
+  "tactical-roll": { color: [14, 116, 144], shape: "orbs" },
+  "void-rift": { color: [139, 92, 246], shape: "circle" },
+  "frost-nova": { color: [56, 189, 248], shape: "wave" },
+  "phoenix-burst": { color: [239, 68, 68], shape: "triangle" },
+  "juggernaut-rush": { color: [220, 38, 38], shape: "sword" },
+  "baluarte-shield": { color: [156, 163, 175], shape: "cross" },
+  "lucky-dome": { color: [250, 204, 21], shape: "circle" },
+  "life-tether": { color: [236, 72, 153], shape: "orbs" },
+  "time-bubble": { color: [129, 140, 248], shape: "wave" },
 };
 
 export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {

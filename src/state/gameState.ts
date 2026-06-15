@@ -51,10 +51,6 @@ export type GameState = {
     damageMul: number; // multiplicador de dano
     reloadSpeedMul: number; // multiplicador de velocidade de recarga
     activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
-    markedShot: {
-      active: boolean;
-      activeUntil: number; // timestamp de quando o buff expira (0 = sem buff)
-    };
   };
   // Perks
   perks: {
@@ -65,6 +61,7 @@ export type GameState = {
   bonusElevationsBought: number;
   // Quick heal usage counter (cost increases per use)
   healUseCount: number;
+  shootWhileMoving: boolean;
 };
 
 let _baseCastPower = 1.0;
@@ -94,7 +91,7 @@ export const gameState: GameState = {
   },
   intangibleUntil: 0,
   intangibleUsedThisWave: false,
-  elevationPoints: debug.INITIAL_ELEVATION ?? 25,
+  elevationPoints: debug.INITIAL_ELEVATION ?? 3,
   mapState:
     debug.INITIAL_MAP_STATE ?? getMapStateForWave(debug.INITIAL_WAVE ?? 1),
   wave: debug.INITIAL_WAVE ?? 1,
@@ -124,10 +121,6 @@ export const gameState: GameState = {
     damageMul: 1.0,
     reloadSpeedMul: 1.0,
     activeUntil: 0,
-    markedShot: {
-      active: false,
-      activeUntil: 0,
-    },
   },
   perks: {
     acquired: debug.INITIAL_PERKS ?? [],
@@ -135,6 +128,7 @@ export const gameState: GameState = {
   },
   bonusElevationsBought: 0,
   healUseCount: 0,
+  shootWhileMoving: false,
 };
 
 // Helper to be called whenever level changes

@@ -19,7 +19,6 @@ import {
   showLuckyBlockFeedback,
 } from "./components/perks";
 // Register skills
-import "./components/skills/coneShot";
 import "./components/skills/ricochetShot";
 // shockwave skill temporarily disabled
 import "./components/skills/chainLightning";
@@ -27,7 +26,6 @@ import "./components/skills/arcMine";
 import "./components/skills/poisonPool";
 // boomerang skill temporarily disabled
 import "./components/skills/summonedTotem";
-import "./components/skills/markedShot";
 import "./components/skills/orbitalOrbs";
 import "./components/skills/attackBuff";
 import { skillsName } from "./state/skillData";
@@ -279,7 +277,7 @@ function spawnWave(waveIndex: number) {
     if (gameState.xp >= gameState.xpToLevel) {
       gameState.xp -= gameState.xpToLevel;
       gameState.level += 1;
-      gameState.elevationPoints += 3;
+      gameState.elevationPoints += 1;
       gameState.xpToLevel = Math.floor(gameState.xpToLevel * 1.3);
     }
     ui.updateXP(gameState.xp, gameState.xpToLevel, gameState.level);
@@ -334,6 +332,7 @@ function spawnWave(waveIndex: number) {
           k.anchor("center"),
           k.color(100, 255, 150),
           k.outline(2, k.rgb(0, 50, 0)),
+          k.opacity(1),
           k.lifespan(1.0, { fade: 0.5 }),
           k.z(1000)
         ]);
@@ -460,6 +459,31 @@ const toggleShop = () => {
 k.onKeyPress("e", toggleShop);
 k.onKeyPress("b", toggleShop);
 k.onKeyPress("i", toggleShop);
+
+// Keybind to toggle shooting while moving (for testing/debug)
+k.onKeyPress("t", () => {
+  gameState.shootWhileMoving = !gameState.shootWhileMoving;
+  
+  // Show visual feedback floating text (ASCII-only to prevent font/glyph crashes)
+  const labelText = gameState.shootWhileMoving
+    ? "ATIRAR EM MOVIMENTO: ATIVADO"
+    : "ATIRAR EM MOVIMENTO: DESATIVADO";
+  
+  const players = k.get("player");
+  if (players.length > 0) {
+    const p = players[0];
+    k.add([
+      k.text(labelText, { size: 14 }),
+      k.pos(p.pos.x + 16, p.pos.y - 40),
+      k.anchor("center"),
+      k.color(gameState.shootWhileMoving ? 100 : 255, gameState.shootWhileMoving ? 255 : 150, gameState.shootWhileMoving ? 150 : 100),
+      k.outline(2, k.rgb(0, 0, 0)),
+      k.opacity(1),
+      k.z(1000),
+      k.lifespan(1.5, { fade: 0.6 }),
+    ]);
+  }
+});
 
 // Player damage on enemy collision with per-enemy cooldown
 k.onCollide("player", "enemy", (p: any, e: any) => {

@@ -1,6 +1,5 @@
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
-import { countMaxedAttributes } from "../shop";
 import {
   canOpenPerkSelection,
   MAX_PERKS,
@@ -445,9 +444,9 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
   let skillUpgradeHandler: (() => void) | null = null;
   let exchangeHandler: (() => void) | null = null;
 
-  /** Cost of next gold→elevation exchange: 3^(bonusElevationsBought+1) */
+  /** Cost of next gold→elevation exchange: 30 + N * 25 */
   function getExchangeCost(): number {
-    return Math.pow(3, gameState.bonusElevationsBought + 1);
+    return 30 + gameState.bonusElevationsBought * 25;
   }
 
   const isHovering = (obj: GameObj, w: number, h: number) => {
@@ -522,10 +521,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
           lv < MAX_ATTR_LEVEL &&
           gameState.elevationPoints >= ATTR_COST &&
           gameState.gold >= goldCost;
-        if (nextLv === MAX_ATTR_LEVEL) {
-          const maxAllowed = 2;
-          if (countMaxedAttributes() >= maxAllowed) continue;
-        }
+
 
         if (canUp) {
           const handlerKey = sq.def.handler;
@@ -715,6 +711,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       tooltipDesc.hidden = true;
       tooltipLv.hidden = true;
       hoveredSquare = null;
+    } else {
+      refreshStats(); // apply specific visibility rules when opening
     }
   };
   setVisible(false);
@@ -763,12 +761,15 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
 
   // ─── Refresh stats ────────────────────────────────────
   const refreshStats = () => {
+    const isVisible = !panel.hidden;
+
     (epLabel as any).text = `★ ${gameState.elevationPoints}`;
     (goldLabel as any).text = `⎔ ${gameState.gold}`;
 
     for (const sq of squares) {
       const lv = (gameState.upgrades as any)[sq.def.key] ?? 0;
       (sq.lvLabel as any).text = `${lv}`;
+      sq.lvLabel.hidden = !isVisible;
 
       const goldCost = nextAttrGoldCost(lv + 1);
       if (lv >= MAX_ATTR_LEVEL) {
@@ -776,8 +777,10 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         sq.costEp.color = k.rgb(255, 215, 0);
         sq.costEp.pos = k.vec2(sq.bg.pos.x + sqSize / 2, sq.bg.pos.y + sqSize + 14);
         sq.costGold.hidden = true;
+        sq.costEp.hidden = !isVisible;
       } else {
-        sq.costGold.hidden = false;
+        sq.costGold.hidden = !isVisible;
+        sq.costEp.hidden = !isVisible;
         sq.costEp.pos = k.vec2(sq.bg.pos.x + sqSize / 2 - 20, sq.bg.pos.y + sqSize + 14);
         (sq.costEp as any).text = "★1";
         (sq.costGold as any).text = `⎔${goldCost}`;
@@ -812,8 +815,8 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       } else {
         (skillUpBtnText as any).text = `⬆ Aprimorar Habilidade Nv${skillLv}→${skillLv + 1} (★3)`;
       }
-      skillUpBtn.hidden = false;
-      skillUpBtnText.hidden = false;
+      skillUpBtn.hidden = !isVisible;
+      skillUpBtnText.hidden = !isVisible;
     } else {
       skillUpBtn.hidden = true;
       skillUpBtnText.hidden = true;

@@ -23,14 +23,6 @@ export const skillInfos = [
       "TIRO ALTERNATIVO: Dano de Tiro no primeiro hit, -15~10% por quique conforme nível. 2→6 quiques.",
   },
   {
-    id: "cone-shot",
-    name: "Tiro em cone",
-    desc: "Dispara um leque de projéteis flamejantes na direção do movimento. +2 projéteis por nível, arco e velocidade aumentam. O dano escala com Dano de Tiro.",
-    cooldownMs: 2400,
-    damage:
-      "TIRO ALTERNATIVO: Dano de Tiro por projétil. +2 projéteis por nível.",
-  },
-  {
     id: "chain-lightning",
     name: "Corrente Elétrica",
     desc: "Lança um disparo elétrico rápido que acerta um inimigo e eletrocuta ele e inimigos próximos, que por sua vez também podem eletrocutar outros.",
@@ -68,13 +60,6 @@ export const skillInfos = [
     damage: "DPS contínuo; O totem atira mais rápido conforme níveis.",
   },
   {
-    id: "marked-shot",
-    name: "Tiro Marcado",
-    desc: "Tiros acertados em inimigos marcam eles. Com 5 marcas, pode utilizar a habilidade para causar uma explosão no inimigo marcado. A explosão dá 2 marcas aos inimigos atingidos.",
-    cooldownMs: 0,
-    damage: "Explosão causa dano moderado em área.",
-  },
-  {
     id: "orbital-orbs",
     name: "Orbitais",
     desc: "Passivamente, orbes orbitam ao redor do jogador, colidindo com inimigos. Ativação acelera a rotação dos orbes por um curto período. Com níveis, mais orbes.",
@@ -87,6 +72,77 @@ export const skillInfos = [
     desc: "Por cinco segundos, Deixa seus tiros mais fortes, Além deles poderem ser disparados AO INICIAR um movimento.",
     cooldownMs: 9000,
     damage: "Aumenta o dano do ataque básico e a velocidade de recarga.",
+  },
+  // Novas habilidades
+  {
+    id: "sniper-shot",
+    name: "Tiro de Precisão",
+    desc: "Dispara um feixe laser perfurante de altíssima velocidade em linha reta. Causa dano alto inicial que decai após cada inimigo atravessado.",
+    cooldownMs: 4500,
+    damage: "Alto dano linear. Dano decai 30% por inimigo atravessado.",
+  },
+  {
+    id: "tactical-roll",
+    name: "Pulo Tático",
+    desc: "Rola na direção oposta ao mouse, ganha invulnerabilidade curta (0.3s) e deixa 3 armadilhas de enraizamento (stun 1s) no chão. Recarrega a arma básica em 100%.",
+    cooldownMs: 6000,
+    damage: "Mobilidade defensiva + recarga instantânea.",
+  },
+  {
+    id: "void-rift",
+    name: "Fissura Abissal",
+    desc: "Cria uma fenda gravitacional que puxa inimigos próximos para o centro e causa dano periódico a cada 0.5s por 3 segundos.",
+    cooldownMs: 8000,
+    damage: "Controle de grupo + dano mágico contínuo.",
+  },
+  {
+    id: "frost-nova",
+    name: "Tempestade de Gelo",
+    desc: "Conjura uma explosão circular congelante que causa dano e reduz a velocidade dos inimigos em 50% por 3s. Inimigos já sob efeito de lentidão ou veneno são congelados (stun) por 1.5s.",
+    cooldownMs: 7000,
+    damage: "Dano mágico leve + Lentidão/Congelamento.",
+  },
+  {
+    id: "phoenix-burst",
+    name: "Fogo da Fênix",
+    desc: "Dispara uma onda de fogo horizontal lenta que causa queima (dano periódico por 4s). Se a onda passar por uma Poça Venenosa no chão, gera uma explosão química massiva.",
+    cooldownMs: 9000,
+    damage: "Dano de fogo + explosão química se combinado com poça de veneno.",
+  },
+  {
+    id: "juggernaut-rush",
+    name: "Investida Imparável",
+    desc: "Investe para a frente empurrando inimigos. Se colidirem contra paredes da arena, sofrem stun por 2s e dano massivo escalado com o HP Máximo do jogador.",
+    cooldownMs: 7500,
+    damage: "Escala com o HP Máximo do jogador. Stun contra paredes.",
+  },
+  {
+    id: "baluarte-shield",
+    name: "Escudo Refletor",
+    desc: "Cria uma barreira semicircular frontal por 4s que bloqueia e reflete projéteis inimigos de volta. Velocidade de movimento é reduzida em 25% enquanto ativo.",
+    cooldownMs: 10000,
+    damage: "Mitigação de projéteis + 50% de reflexão de dano.",
+  },
+  {
+    id: "lucky-dome",
+    name: "Campo de Probabilidade",
+    desc: "Conjura uma cúpula dourada por 6s. Dentro dela, a Sorte do jogador é multiplicada por 3x, e projéteis inimigos têm 40% de chance de desaparecer sem causar dano.",
+    cooldownMs: 14000,
+    damage: "Utilidade de Sorte + Bloqueio de projéteis.",
+  },
+  {
+    id: "life-tether",
+    name: "Drenagem Vital",
+    desc: "Conecta um cabo de energia sombria ao inimigo mais próximo por 5s. Drena HP continuamente curando o jogador e rouba 30% da velocidade de movimento do alvo.",
+    cooldownMs: 11000,
+    damage: "Dano contínuo + Auto-cura + Roubo de velocidade.",
+  },
+  {
+    id: "time-bubble",
+    name: "Domo de Estase",
+    desc: "Invoca uma bolha temporal que desacelera inimigos e projéteis inimigos em 80% (lentidão temporal) por 5 segundos.",
+    cooldownMs: 12000,
+    damage: "Controle de tempo e espaço em área.",
   },
 ] as const satisfies readonly SkillInfo[];
 

@@ -36,11 +36,6 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     const lv = gameState.upgrades[key] as number;
     const nextLv = lv + 1;
     const goldCost = nextLevelCost(nextLv); // new cost scheme
-    // Cannot buy level 10 if maxed attributes limit reached (2)
-    if (nextLv === MAX_ATTR_LEVEL) {
-      const maxAllowed = 2;
-      if (countMaxedAttributes() >= maxAllowed) return false;
-    }
     return (
       lv < MAX_ATTR_LEVEL &&
       gameState.elevationPoints >= ATTR_COST &&
@@ -58,11 +53,6 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
       gameState.gold < goldCost
     )
       return false;
-    // If buying to level 10, enforce maxed count
-    if (nextLv === MAX_ATTR_LEVEL) {
-      const maxAllowed = 2;
-      if (countMaxedAttributes() >= maxAllowed) return false;
-    }
     gameState.elevationPoints -= ATTR_COST;
     gameState.gold -= goldCost;
     (gameState.upgrades as any)[key] = lv + 1;
@@ -189,7 +179,7 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
 
   // Gold -> Elevation exchange
   ui.setExchangeHandler(() => {
-    const cost = Math.pow(3, gameState.bonusElevationsBought + 1);
+    const cost = 30 + gameState.bonusElevationsBought * 25;
     if (gameState.gold < cost) return;
     gameState.gold -= cost;
     gameState.elevationPoints += 1;

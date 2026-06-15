@@ -32,7 +32,6 @@ import {
   getGoldColor,
   getGoldScale,
 } from "../state/luck";
-import { getMarksToExplode } from "./skills/markedShot";
 
 export type EnemyOptions = {
   pos?: Vec2;
@@ -625,26 +624,6 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     { id: "hp-border-left" },
   ]);
 
-  // --- Indicadores visuais de marcas (marked shot) ---
-  const MAX_MARKS = 5;
-  const markSize = 4;
-  const markGap = 2;
-  const totalMarksWidth = MAX_MARKS * markSize + (MAX_MARKS - 1) * markGap;
-  const marksStartX = (s - totalMarksWidth) / 2;
-
-  const markDots: GameObj[] = [];
-  for (let i = 0; i < MAX_MARKS; i++) {
-    const dot = enemy.add([
-      k.rect(markSize, markSize),
-      k.pos(marksStartX + i * (markSize + markGap), -markSize - 10),
-      k.color(60, 60, 60),
-      k.z(11),
-      { id: "mark-dot" },
-    ]);
-    dot.hidden = true;
-    markDots.push(dot);
-  }
-
   // --- Indicador visual de veneno (ícone + contador) ---
   const poisonLabel = enemy.add([
     k.text("", { size: 10 }),
@@ -736,41 +715,6 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
       hpLeft.scale = k.vec2(1, seg * fullLen);
     }
 
-    // --- Atualizar visual das marcas + expiração ---
-    const currentMarks = e.marks ?? 0;
-
-    // Timer de expiração: se tem marcas, incrementa timer
-    if (currentMarks > 0) {
-      e.marksDecayTimer += k.dt();
-      // Após 3s sem receber nova marca, marcas expiram
-      if (e.marksDecayTimer >= 3) {
-        e.marks = 0;
-        e.marksDecayTimer = 0;
-      }
-    }
-
-    const hasMarks = (e.marks ?? 0) > 0;
-    const activeMaxMarks = getMarksToExplode(
-      gameState.skills.levels["marked-shot"] ?? 1,
-    );
-    for (let i = 0; i < MAX_MARKS; i++) {
-      // Esconde dots acima do limite atual
-      if (i >= activeMaxMarks) {
-        markDots[i].hidden = true;
-        continue;
-      }
-      markDots[i].hidden = !hasMarks;
-      if (hasMarks) {
-        if (i < (e.marks ?? 0)) {
-          // Marca ativa: vermelho/rosa
-          markDots[i].color = k.rgb(255, 80, 100);
-        } else {
-          // Marca vazia: cinza escuro
-          markDots[i].color = k.rgb(60, 60, 60);
-        }
-      }
-    }
-
     // --- Atualizar indicador de veneno ---
     const pStacks = e.poisonStacks ?? 0;
     if (pStacks > 0) {
@@ -807,7 +751,20 @@ export function createEnemy(k: KAPLAYCtx, opts: EnemyOptions): GameObj {
     const luck = gameState.luck;
     const weights = getGoldWeightsByLuck(luck);
     const tier = pickGoldTier(weights, k.rand);
-    const amount = tier;
+    let goldMult = 1;
+    if (type.endsWith("_elite")) {
+      if (type === "colossus_elite" || type === "stone_elite" || type === "shield_guard_elite") {
+        goldMult = 8;
+      } else {
+        goldMult = 4;
+      }
+    } else if ([
+      "green", "spinner", "summoner", "regen", "colossus", 
+      "cone_shooter", "shield_guard", "vampire", "illusionist", "trapper"
+    ].includes(type)) {
+      goldMult = 2;
+    }
+    const amount = tier * goldMult;
     const drop = spawnGoldDrop(k, enemy.pos.clone(), amount);
     // Apply color and scale based on tier
     const [r, g, b] = getGoldColor(tier);
