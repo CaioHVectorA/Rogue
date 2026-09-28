@@ -68,6 +68,8 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     iconTriangle: GameObj;
     iconCrossH: GameObj;
     iconCrossV: GameObj;
+    rarityBadge: GameObj;
+    rarityText: GameObj;
     rerolled?: boolean;
   };
 
@@ -75,17 +77,38 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
     const card = k.add([
       k.rect(cardW, cardH, { radius: 16 }),
       k.pos(x, y),
-      k.color(24, 24, 34),
-      k.outline(3, k.rgb(255, 255, 255)),
+      k.color(20, 20, 30),
+      k.outline(3.5, k.rgb(255, 255, 255)),
       k.area(),
       k.fixed(),
       k.z(3001),
       { id: "ui-skill-card", skillId: "" },
     ]);
 
+    // Rarity banner on top
+    const rarityBadge = k.add([
+      k.rect(cardW - 40, 24, { radius: 6 }),
+      k.pos(x + 20, y + 16),
+      k.color(30, 30, 45),
+      k.outline(1.5, k.rgb(120, 120, 160)),
+      k.fixed(),
+      k.z(3002),
+      { id: "ui-skill-rarity" },
+    ]);
+
+    const rarityText = k.add([
+      k.text("★ HABILIDADE ATIVA (Q)", { size: 11 }),
+      k.pos(x + cardW / 2, y + 28),
+      k.anchor("center"),
+      k.color(255, 215, 0),
+      k.fixed(),
+      k.z(3003),
+      { id: "ui-skill-rarity-text" },
+    ]);
+
     const title = k.add([
-      k.text("Skill", { size: 26 }),
-      k.pos(x + 20, y + 24),
+      k.text("Skill", { size: 24 }),
+      k.pos(x + 20, y + 48),
       k.color(255, 255, 255),
       k.fixed(),
       k.z(3002),
@@ -227,6 +250,8 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       iconTriangle,
       iconCrossH,
       iconCrossV,
+      rarityBadge,
+      rarityText,
       rerolled: false,
     };
   }
@@ -243,7 +268,9 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       const C = cards[i];
       const p = positions[i];
       C.card.pos = p;
-      C.title.pos = p.add(k.vec2(20, 24));
+      C.rarityBadge.pos = p.add(k.vec2(20, 16));
+      C.rarityText.pos = p.add(k.vec2(cardW / 2, 28));
+      C.title.pos = p.add(k.vec2(20, 48));
       
       const icx = p.x + cardW / 2;
       const icy = p.y + 120;
@@ -280,6 +307,8 @@ export function createSkillOverlay(k: KAPLAYCtx): SkillOverlayHandles {
       C.reroll.hidden = !visible;
       C.rerollText.hidden = !visible;
       C.iconBg.hidden = !visible;
+      C.rarityBadge.hidden = !visible;
+      C.rarityText.hidden = !visible;
 
       // Hide all shape variables. Correct shape is shown inside updateCardTheme
       C.iconCircle.hidden = true;

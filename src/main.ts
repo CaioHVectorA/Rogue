@@ -72,6 +72,25 @@ let arena: ArenaResult = createArena(k, {
 
 // Interpolated camera scale targets
 let targetCamScale = 1.15;
+
+// Low health red vignette warning border
+const lowHpVignette = k.add([
+  k.rect(k.width(), k.height()),
+  k.pos(0, 0),
+  k.color(220, 20, 20),
+  k.outline(12, k.rgb(255, 0, 0)),
+  k.opacity(0),
+  k.fixed(),
+  k.z(2000),
+  { id: "ui-low-hp-vignette" },
+]);
+lowHpVignette.hidden = true;
+
+k.onResize(() => {
+  lowHpVignette.width = k.width();
+  lowHpVignette.height = k.height();
+});
+
 k.onUpdate(() => {
   const current = k.camScale();
   const diff = targetCamScale - current.x;
@@ -83,6 +102,17 @@ k.onUpdate(() => {
     updateFireAuraPerk(k, player);
     updateRastroNocivo(k, player);
     updateOndaDeChoquePerk(k, player);
+
+    // Pulse red vignette when HP < 30%
+    const hpRatio = ((player as any).hp ?? gameState.maxHealth) / gameState.maxHealth;
+    if (hpRatio <= 0.3 && hpRatio > 0) {
+      lowHpVignette.hidden = false;
+      const pulse = 0.15 + Math.sin(k.time() * 8) * 0.12;
+      lowHpVignette.opacity = pulse;
+    } else {
+      lowHpVignette.hidden = true;
+      lowHpVignette.opacity = 0;
+    }
   }
 });
 
