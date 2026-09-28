@@ -1,5 +1,6 @@
 import type { KAPLAYCtx, GameObj } from "kaplay";
 import { gameState } from "../../state/gameState";
+import { countMaxedAttributes } from "../shop";
 import {
   canOpenPerkSelection,
   MAX_PERKS,
@@ -519,6 +520,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
         const goldCost = nextAttrGoldCost(nextLv);
         const canUp =
           lv < MAX_ATTR_LEVEL &&
+          (nextLv < MAX_ATTR_LEVEL || countMaxedAttributes() < 2) &&
           gameState.elevationPoints >= ATTR_COST &&
           gameState.gold >= goldCost;
 
@@ -571,6 +573,7 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
       const goldCost = nextAttrGoldCost(nextLv);
       const canUp =
         lv < MAX_ATTR_LEVEL &&
+        (nextLv < MAX_ATTR_LEVEL || countMaxedAttributes() < 2) &&
         gameState.elevationPoints >= ATTR_COST &&
         gameState.gold >= goldCost;
 
@@ -665,9 +668,11 @@ export function createShopPanel(k: KAPLAYCtx): ShopPanelHandles {
     if (found) {
       const def = found.def;
       const lv = (gameState.upgrades as any)[def.key] ?? 0;
-      const goldCost = nextAttrGoldCost(lv + 1);
+      const nextLv = lv + 1;
+      const goldCost = nextAttrGoldCost(nextLv);
       const canUp =
         lv < MAX_ATTR_LEVEL &&
+        (nextLv < MAX_ATTR_LEVEL || countMaxedAttributes() < 2) &&
         gameState.elevationPoints >= ATTR_COST &&
         gameState.gold >= goldCost;
 
