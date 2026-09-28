@@ -36,6 +36,9 @@ export function setupShop(k: KAPLAYCtx, ui: UIHandles, player: GameObj) {
     const lv = gameState.upgrades[key] as number;
     const nextLv = lv + 1;
     const goldCost = nextLevelCost(nextLv); // new cost scheme
+    if (nextLv >= MAX_ATTR_LEVEL && countMaxedAttributes() >= 2) {
+      return false;
+    }
     return (
       lv < MAX_ATTR_LEVEL &&
       gameState.elevationPoints >= ATTR_COST &&

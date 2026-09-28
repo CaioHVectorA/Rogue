@@ -587,6 +587,10 @@ k.onKeyPress("q", () => {
   useSkill(id, k, player);
 });
 
+(k as any).setTimeScale = (scale: number) => {
+  k.debug.paused = (scale === 0);
+};
+
 (window as any).gameState = gameState;
 (window as any).player = player;
 (window as any).k = k;
