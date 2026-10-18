@@ -1,51 +1,36 @@
-# Project: Rogue UX, Passives and Pacing Improvements
+# Direção e arquitetura
 
-## Architecture
-This is a Kaplay-based 2D rogue-like game written in TypeScript. 
-- **Game State**: Managed globally in `src/state/gameState.ts`.
-- **UI Subsystem**: Renders overlays, buttons, top bars, and panels (`src/components/ui/`). Overlays must implement strict mutual exclusion so that they block clicks to components underneath and don't overlap.
-- **Combat & Movement**: 
-  - Player movement speed logic in `src/components/movimentable.ts`.
-  - Player shooting logic in `src/components/shoot.ts`.
-  - Buffs and skill implementations in `src/components/skills/`.
-- **Enemy System**:
-  - Spawning logic in `src/main.ts` (`spawnWave`).
-  - Enemy presets in `src/components/enemies/index.ts`.
-  - Creation and update loops in `src/components/enemy.ts` using behaviors from `src/components/behaviors.ts`.
+## Pilares
 
-## Code Layout
-- `src/main.ts`: Game setup, main scenes, wave execution, camera scaling.
-- `src/components/`: Component implementations.
-  - `shoot.ts`: Projectile spawning, shooting speed, projectile speed.
-  - `movimentable.ts`: Movement controls, speed calculations.
-  - `shop.ts`: Shop upgrading system.
-  - `player.ts`: Player entity creation and camera behavior.
-  - `enemy.ts`: Enemy creation and behaviors.
-- `src/components/ui/`: UI overlay components.
-  - `shopPanel.ts`: Renders shop interface.
-  - `skillOverlay.ts`: Skill selection overlay.
-  - `perkSelectionOverlay.ts`: Perk grid overlay (needs 6x2 grid).
-- `src/components/enemies/`: Enemy database.
-  - `index.ts`: Presets definitions.
-- `src/state/`: State definitions.
-  - `gameState.ts`: Active wave, player stats, buffs.
-  - `waves.ts`: Enemy spawn definitions.
+1. **Posicionamento é ataque.** O tiro básico exige ficar parado; mira automática e recarga visível reduzem a carga de comandos. Q e esquiva abrem janelas sem apagar essa tensão.
+2. **Uma decisão por vez.** Menu → combate → recompensa → descanso → combate. Pausa e resultado são estados exclusivos. Sem loja sobreposta a combate nem recursos competindo pela mesma compra.
+3. **Runs completas e finitas.** 12 salas, três atos e chefes nas salas 4, 8 e 12. Cada chefe derrotado recupera 25% da vida e concede uma troca de ofertas. A última sala leva diretamente à vitória.
+4. **Clareza antes de quantidade.** Três caminhos, quatro famílias de inimigos comuns, 12 melhorias e três variantes de guardião. Forma, cor, contorno e movimento distinguem ameaças.
 
-## Milestones
-| # | Name | Scope | Dependencies | Status |
-|---|------|-------|-------------|--------|
-| 1 | Bug Fixes (R1) | Fix shopPanel crash and overlay card bleed conflicts | None | DONE |
-| 2 | Pacing & Camera (R2) | Staggered spawns (Wave 9+), enemy/player speed scaling, camera zoom-out, Sobrecarga projectile speed | M1 | IN_PROGRESS (Conv: 3b0c9c17-123c-47cd-99a7-4e5dc9b02483) |
-| 3 | Passives Revamp (R3) | Remove old passives, implement 12 new passives, arrange in 6x2 grid | M2 | PLANNED |
-| 4 | New Enemies (R4) | Add Berserker and Shield Guard enemies, integrate into wave spawner | M3 | PLANNED |
-| 5 | Dual Track Verification | Pass 100% of E2E test suite (Tiers 1-4) and perform Adversarial Coverage Hardening (Tier 5) | M1, M2, M3, M4 | E2E_READY (c77a4c3a-f596-4c59-a1b0-09c9cc69373d setup complete) |
+## Sistemas
 
-## Interface Contracts
-### UI Overlays ↔ Main Game / Top Bar
-Overlays (`skillOverlay`, `perkOverlay`, `shopPanel`) must export an `isVisible()` predicate and block click-throughs to prevent actions (like opening shop or starting waves) when active.
+- **Combate:** passo fixo de 120 Hz; movimento normalizado; tiros com colisão por segmento; recarga a 65% em movimento; esquiva de 0,18s com proteção de 0,28s e cooldown base de 3s; proteção global de 0,75s após dano.
+- **Chefes:** Sentinela introduz anéis e áreas; Tecelã adiciona leques direcionados e mais áreas; Soberano combina padrões mais densos. Abaixo de 50% da vida, intervalos caem e padrões ganham projéteis/áreas. Avisos de área fixam a posição ao nascer e antecipam o impacto em pelo menos 1,1s.
+- **Progressão:** ofertas sem repetição e sem melhorias já no limite; uma troca inicial e mais uma por chefe; cura e reforços comprados só no descanso. Cura limitada a uma e reforços a dois por descanso. Ouro de chão é recolhido ao concluir.
+- **Sinergias:** dano de habilidade não depende de dano básico adicional; a fila de mortes resolve explosões sem recursão e sem duplicar ouro. Armadura é limitada a 30%.
+- **Seeds:** gerador reproduzível; sorteios de melhoria independem do tempo de combate. Aleatoriedade cosmética não consome a sequência de gameplay. Posições e timers de cada sala usam uma sequência própria.
+- **Persistência:** registros validados em `rogue.records.v2`; só runs concluídas contam. Falha de armazenamento não impede jogar. Sem salvamento de run nem metaprogressão de poder.
 
-### Sobrecarga ↔ Shoot
-`gameState.buffs.activeUntil > Date.now()` scales shoot projectile velocity.
+## Módulos
 
-### Enemy Behavior Update Hook
-`createEnemy` in `src/components/enemy.ts` executes custom behaviors from `src/components/behaviors.ts` depending on enemy type.
+| Arquivo                | Responsabilidade                                      |
+| ---------------------- | ----------------------------------------------------- |
+| `src/game/model.ts`    | Tipos, conteúdo, seeds, recompensas, rota e recordes  |
+| `src/game/engine.ts`   | Máquina de estados, combate, economia, chefes e áudio |
+| `src/game/renderer.ts` | Arena, formas, telegraphs e partículas Canvas         |
+| `src/ui/interface.ts`  | Telas HTML, ações validadas, foco e HUD               |
+| `src/ui/style.css`     | Sistema visual, responsividade e redução de movimento |
+| `src/main.ts`          | Inicialização, input, visibilidade e loop fixo        |
+
+## Interface
+
+Sem fontes ou imagens remotas. Paleta de carvão, verde menta, violeta e cobre. Ícones vetoriais, desenho geométrico e títulos com serifas para contrastar com os dados. Botões HTML preservam teclado e foco visível; diálogos contêm navegação por Tab; nenhuma informação essencial depende de áudio. A arena é visual e não fornece uma experiência completa para leitores de tela.
+
+## Limites atuais
+
+O balanceamento inicial é coberto por simulações e testes de fluxo, mas precisa de sessões humanas com diferentes níveis de habilidade. Os três chefes compartilham uma base geométrica e comportamental, com padrões progressivos. Não há conteúdo narrativo extenso, salvamento de run, multiplayer ou placar remoto.
