@@ -2,6 +2,7 @@ import type { Game } from "../game/engine";
 import { ACTS, CLASSES, REWARDS, TOTAL_ROOMS, formatTime } from "../game/model";
 import type { ClassId } from "../game/model";
 import { icon } from "./icons";
+import type { DeviceLayout } from "./device";
 
 const escape = (value: string) =>
   value.replace(
@@ -28,13 +29,14 @@ export class Interface {
   constructor(
     private root: HTMLElement,
     private game: Game,
+    private layout: DeviceLayout,
   ) {
     root.innerHTML = `
       <header class="masthead"><a class="brand" href="#" aria-label="Rogue — início">${icon("mark")}ROGUE<span>RUN / REPEAT / RISE</span></a>
-      <div class="header-actions"><span class="edition">UM ROGUELITE DE RITMO & ESCOLHAS</span><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button></div></header>
+      <div class="header-actions"><span class="edition">UM ROGUELITE DE RITMO & ESCOLHAS</span><label class="layout-switch"><span class="sr-only">Interface</span><select aria-label="Interface"><option value="auto">Auto</option><option value="mobile">Celular</option><option value="desktop">Desktop</option></select></label><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button></div></header>
       <section class="hud" aria-label="Estado da run" hidden></section>
       <div class="overlay"></div>
-      <div class="touch-controls" hidden><div class="joystick" aria-label="Arraste para mover"><span></span></div><div class="touch-actions"><button data-action="dash" aria-label="Esquivar">${icon("arrow")}<span>Esquiva</span></button><button data-action="skill" aria-label="Usar habilidade">${icon("bolt")}<span>Habilidade</span></button></div></div>
+      <div class="touch-controls" hidden><div class="movement-control"><div class="joystick" aria-label="Arraste para mover"><span></span></div><span class="stick-hint">SOLTE PARA ATIRAR</span></div><div class="touch-actions"><button data-action="dash" aria-label="Esquivar">${icon("arrow")}<span>Esquiva</span><small data-touch-cooldown="dash">Pronta</small></button><button data-action="skill" aria-label="Usar habilidade">${icon("bolt")}<span>Habilidade</span><small data-touch-cooldown="skill">Pronta</small></button></div></div>
       <footer class="page-footer"><span>UM PASSO PARA SOBREVIVER. UMA PAUSA PARA LUTAR.</span><span class="footer-status"><i></i> EXPEDIÇÃO AO NÚCLEO</span></footer>`;
     this.hud = root.querySelector(".hud")!;
     this.overlay = root.querySelector(".overlay")!;
@@ -42,8 +44,13 @@ export class Interface {
       const button = (event.target as HTMLElement).closest<HTMLElement>(
         "[data-action]",
       );
+      // Touch actions run on pointerdown; suppress the synthetic click on release.
+      if (button?.closest(".touch-actions")) return;
       if (button && !(button as HTMLButtonElement).disabled)
         this.action(button.dataset.action!, button.dataset.value);
+    });
+    root.querySelector("select")!.addEventListener("change", (event) => {
+      this.layout.setPreference((event.target as HTMLSelectElement).value);
     });
     root.querySelector(".brand")!.addEventListener("click", (event) => {
       event.preventDefault();
@@ -159,6 +166,9 @@ export class Interface {
   }
   render() {
     const g = this.game;
+    document.documentElement.dataset.phase = g.phase;
+    this.root.querySelector<HTMLSelectElement>("select")!.value =
+      this.layout.preference;
     if (this.previousPhase !== g.phase) this.confirmAbandon = false;
     const sound = this.root.querySelector<HTMLButtonElement>(
       '[data-action="sound"]',
@@ -169,7 +179,7 @@ export class Interface {
     const active = g.phase !== "menu";
     this.hud.hidden = !active;
     this.root.querySelector<HTMLElement>(".touch-controls")!.hidden =
-      g.phase !== "combat";
+      g.phase !== "combat" || this.layout.mode !== "mobile";
     this.root.dataset.phase = g.phase;
     if (active) this.renderHud();
     const previousFocus = (document.activeElement as HTMLElement)?.dataset
@@ -211,6 +221,10 @@ export class Interface {
   }
   private renderHud() {
     const g = this.game;
+    if (this.layout.mode === "mobile") {
+      this.hud.innerHTML = `<div class="mobile-hud"><div class="mobile-progress"><span class="eyebrow">ATO ${g.run.act} · ${g.run.room % 4 === 0 ? "GUARDIÃO" : `ENCONTRO ${g.run.room}/12`}</span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div><div class="mobile-status"><div class="vitals"><div class="vital-label">${icon("heart")}<strong id="hp-value"></strong></div><div class="meter"><i id="hp-meter"></i></div></div><span class="mobile-gold">${icon("coin")}<b id="gold-value"></b></span><span id="reload-state">${icon("target")}<span id="combat-hint"></span></span></div></div><div class="boss-health" id="boss-health" hidden><div><span>${ACTS[g.run.act - 1].boss}</span><small id="boss-phase"></small></div><div class="meter"><i id="boss-meter"></i></div></div>`;
+      return;
+    }
     this.hud.innerHTML = `<div class="hud-top"><div class="vitals"><div class="vital-label">${icon("heart")}<span>INTEGRIDADE</span><strong id="hp-value"></strong></div><div class="meter"><i id="hp-meter"></i></div></div>
       <div class="route-mini">${Array.from({ length: TOTAL_ROOMS }, (_, i) => `<span class="${i + 1 < g.run.room ? "complete" : i + 1 === g.run.room ? "current" : ""} ${(i + 1) % 4 === 0 ? "boss-node" : ""}" title="Encontro ${i + 1}">${(i + 1) % 4 === 0 ? icon("crown") : ""}</span>`).join("")}</div>
       <div class="run-counters"><span>${icon("coin")}<b id="gold-value"></b></span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div></div>
@@ -242,6 +256,16 @@ export class Interface {
         ? `${g.enemies.length + g.spawnQueue.length} ameaças restantes`
         : "O tempo da run está parado",
     );
+    for (const action of ["dash", "skill"] as const) {
+      const cooldown = action === "dash" ? g.player.dashCd : g.player.skillCd;
+      const button = this.root.querySelector<HTMLButtonElement>(
+        `.touch-actions [data-action="${action}"]`,
+      )!;
+      button.disabled = cooldown > 0 || g.intro > 0 || g.phase !== "combat";
+      const label = button.querySelector("small")!;
+      label.textContent = cooldown > 0 ? `${cooldown.toFixed(1)}s` : "Pronta";
+      button.classList.toggle("available", !button.disabled);
+    }
     this.hud.querySelector<HTMLElement>("#hp-meter")!.style.width =
       `${Math.max(0, g.player.hp / g.player.maxHp) * 100}%`;
     this.hud
@@ -264,7 +288,9 @@ export class Interface {
     const g = this.game;
     switch (g.phase) {
       case "menu":
-        return this.menuScreen();
+        return this.layout.mode === "mobile"
+          ? this.mobileMenuScreen()
+          : this.menuScreen();
       case "combat":
         return "";
       case "reward":
@@ -278,6 +304,11 @@ export class Interface {
       case "result":
         return this.resultScreen();
     }
+  }
+  private mobileMenuScreen() {
+    const stats = CLASSES[this.selected],
+      g = this.game;
+    return `<main class="mobile-menu"><section class="mobile-welcome"><span class="eyebrow">UMA VIDA. TRÊS GUARDIÕES.</span><h1>Encontre seu <em>ritmo.</em></h1><p>Mova para escapar. Solte para disparar.</p><div class="mobile-record"><span>${icon("crown")} ${g.records.wins} vitórias</span><span>Melhor ${g.records.bestRoom}/12</span><button class="text-button" data-action="help">Como jogar ${icon("arrow")}</button></div></section><section class="mobile-loadout panel"><div class="panel-heading"><span class="eyebrow">ESCOLHA SEU CAMINHO</span><span class="small-index">01—03</span></div><div class="mobile-class-list" role="group" aria-label="Caminho inicial">${(Object.keys(CLASSES) as ClassId[]).map((id, index) => `<button class="mobile-class ${id === this.selected ? "selected" : ""}" style="--class-color:${CLASSES[id].color}" data-action="class" data-value="${id}" aria-pressed="${id === this.selected}">${icon(["target", "bolt", "shield"][index])}<strong>${CLASSES[id].name}</strong><small>${CLASSES[id].hp} vida</small></button>`).join("")}</div><div class="mobile-skill" style="--class-color:${stats.color}"><span class="eyebrow">${stats.skill.toUpperCase()}</span><p>${stats.desc.replace("Q ", "Toque em Habilidade: ")}</p></div><details class="mobile-seed"><summary>Código da run e desafio diário</summary><div class="seed-row"><label for="seed">CÓDIGO DA RUN<input id="seed" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="seed-help"></label><button class="icon-button" data-action="random" aria-label="Gerar novo código">${icon("repeat")}</button><button class="text-button" data-action="daily">Diária UTC</button></div><p id="seed-help" class="seed-note">Mesmo código e escolhas, mesmas ofertas.</p></details></section><div class="mobile-start"><button class="primary start-button" data-action="start">Iniciar expedição ${icon("arrow")}</button><span>Controle à esquerda · esquiva e habilidade à direita</span></div></main>`;
   }
   private menuScreen() {
     const g = this.game;
@@ -333,6 +364,11 @@ export class Interface {
       : '<span class="muted">Seu caminho ainda está se formando.</span>';
   }
   private helpScreen() {
+    if (this.layout.mode === "mobile")
+      return this.dialog(
+        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Cada caminho tem um poder diferente. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop no seletor do topo.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+        "help-dialog",
+      );
     return this.dialog(
       `<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 3 segundos.</p></div><div><kbd>Q</kbd><p><b>Use sua habilidade.</b> Cada caminho tem uma ação diferente. Ela também funciona em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes mudam de ritmo com metade da vida; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
       "help-dialog",

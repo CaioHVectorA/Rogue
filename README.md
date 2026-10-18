@@ -4,7 +4,7 @@ Roguelite de arena para navegador, em português. Mova-se para escapar; pare par
 
 ## Jogar e desenvolver
 
-Requer Node.js 22.12+ (ou 20.19+) e npm.
+Requer Node.js 22 e npm (`.nvmrc` e Vercel usam a mesma versão).
 
 ```sh
 npm ci
@@ -22,7 +22,9 @@ Abra http://localhost:3001. Para gerar uma versão estática, `npm run build`; p
 - Chefes anunciam ataques e entram em uma segunda fase com metade da vida. Vencer o terceiro encerra a run.
 - A derrota encerra a run. Só recordes ficam no navegador; não há poder permanente nem retomada após recarregar.
 
-WASD/setas: movimento. Espaço: esquiva com invulnerabilidade. Q: habilidade. Esc: pausa. Controles de toque aparecem em dispositivos com ponteiro de toque. Saída da aba pausa automaticamente. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
+No desktop: WASD/setas para movimento, Espaço para esquiva, Q para habilidade e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
+
+A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop no topo e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado e áreas de controle fora do campo de batalha. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
 
 O código da run reproduz posições de spawn e sorteios de recompensa para as mesmas escolhas de build e de troca. Cada encontro usa sua própria sequência, independente do tempo de combate. A diária usa a data UTC. Não há placar online nem promessa de igualdade entre caminhos diferentes.
 
@@ -31,10 +33,22 @@ O código da run reproduz posições de spawn e sorteios de recompensa para as m
 ```sh
 npm test
 npm run typecheck
-npx playwright install chromium
+npx playwright install --with-deps chromium webkit
 npm run test:e2e
 npm run build
 ```
+
+Os testes de navegador cobrem Chromium e WebKit, incluindo contextos móveis. O teste de dois dedos usa entrada de toque nativa via CDP no Chromium. Isso não substitui testes em aparelhos reais.
+
+## Publicar na Vercel
+
+1. Na Vercel, escolha **Add New → Project** e importe `CaioHVectorA/Rogue` do GitHub, usando a branch `main`.
+2. A configuração é automática pelo `vercel.json`: **Vite**, diretório raiz do repositório, instalação `npm ci`, build `npm run build`, saída `dist` e Node.js 22.
+3. Não configure variáveis de ambiente. Clique em **Deploy** e abra o endereço gerado no computador e no celular.
+
+Depois de conectado, novos pushes na `main` geram deploys de produção e pull requests podem gerar previews pela integração Git da Vercel. O site é estático e não precisa de API, banco de dados ou serviço de autenticação. Esta configuração prepara o repositório; conectar a conta e criar o projeto é feito na sua Vercel.
+
+Prévias: [celular em pé](docs/preview/mobile-portrait.png), [celular deitado](docs/preview/mobile-landscape.png) e [menu do celular](docs/preview/mobile-menu.png).
 
 Regras e decisões: [PROJECT.md](PROJECT.md). Próximos passos: [roadmap.md](roadmap.md).
 

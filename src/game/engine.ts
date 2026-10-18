@@ -33,6 +33,8 @@ const clamp = (n: number, min: number, max: number) =>
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const RECORD_KEY = "rogue.records.v2";
 export class Game {
+  width = WIDTH;
+  height = HEIGHT;
   phase: Phase = "menu";
   player: Player = createPlayer("ranger");
   run: Run = createRun("", "ranger");
@@ -98,6 +100,31 @@ export class Game {
     this.stick = { x: 0, y: 0 };
     this.onChange();
   }
+  resizeArena(width: number, height: number) {
+    if (Math.abs(width - this.width) < 1 && Math.abs(height - this.height) < 1)
+      return;
+    // Never alter an active battlefield while the player is making a decision.
+    if (this.phase === "combat") this.pause();
+    const sx = width / this.width,
+      sy = height / this.height;
+    const points = [
+      this.player,
+      ...this.enemies,
+      ...this.bullets,
+      ...this.hazards,
+      ...this.pickups,
+      ...this.particles,
+      ...this.spawnQueue,
+    ];
+    for (const point of points) {
+      point.x *= sx;
+      point.y *= sy;
+    }
+    this.width = width;
+    this.height = height;
+    this.player.x = clamp(this.player.x, 40, width - 40);
+    this.player.y = clamp(this.player.y, 40, height - 40);
+  }
   beginRoom() {
     this.enemies = [];
     this.bullets = [];
@@ -109,8 +136,8 @@ export class Game {
     this.intro = 1.5;
     this.offerRound = 0;
     this.random = randomFromSeed(`${this.run.seed}:encounter:${this.run.room}`);
-    this.player.x = WIDTH / 2;
-    this.player.y = HEIGHT / 2;
+    this.player.x = this.width / 2;
+    this.player.y = this.height / 2;
     this.player.charge = this.player.reload;
     this.player.skillCd = 0;
     this.player.dashCd = 0;
@@ -120,15 +147,15 @@ export class Game {
     this.spawnQueue = roomComposition(this.run.room).map((kind, i) => {
       const side = Math.floor(this.random() * 4);
       const offset =
-        90 + this.random() * (side % 2 ? HEIGHT - 180 : WIDTH - 180);
+        90 + this.random() * (side % 2 ? this.height - 180 : this.width - 180);
       return {
         kind,
         at: 1.5 + i * 0.32,
         x:
           kind === "boss"
-            ? WIDTH / 2
+            ? this.width / 2
             : side === 1
-              ? WIDTH - 65
+              ? this.width - 65
               : side === 3
                 ? 65
                 : offset,
@@ -138,7 +165,7 @@ export class Game {
             : side === 0
               ? 65
               : side === 2
-                ? HEIGHT - 65
+                ? this.height - 65
                 : offset,
       };
     });
@@ -229,8 +256,16 @@ export class Game {
           hits++;
           const angle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
           if (enemy.kind !== "boss") {
-            enemy.x = clamp(enemy.x + Math.cos(angle) * 85, 45, WIDTH - 45);
-            enemy.y = clamp(enemy.y + Math.sin(angle) * 85, 45, HEIGHT - 45);
+            enemy.x = clamp(
+              enemy.x + Math.cos(angle) * 85,
+              45,
+              this.width - 45,
+            );
+            enemy.y = clamp(
+              enemy.y + Math.sin(angle) * 85,
+              45,
+              this.height - 45,
+            );
           }
           this.hitEnemy(
             enemy,
@@ -439,8 +474,8 @@ export class Game {
       });
       for (let i = 0; i < act + (enraged ? 1 : 0); i++) {
         this.hazards.push({
-          x: 110 + this.random() * (WIDTH - 220),
-          y: 110 + this.random() * (HEIGHT - 220),
+          x: 110 + this.random() * (this.width - 220),
+          y: 110 + this.random() * (this.height - 220),
           radius: 65,
           delay: 1.3,
           life: 0.35,
@@ -481,8 +516,8 @@ export class Game {
       p.x += (direction.x / Math.max(1, magnitude)) * p.speed * dt;
       p.y += (direction.y / Math.max(1, magnitude)) * p.speed * dt;
     }
-    p.x = clamp(p.x, 40, WIDTH - 40);
-    p.y = clamp(p.y, 40, HEIGHT - 40);
+    p.x = clamp(p.x, 40, this.width - 40);
+    p.y = clamp(p.y, 40, this.height - 40);
     p.charge = Math.min(p.reload, p.charge + dt * (p.moving ? 0.65 : 1));
     if (
       !p.moving &&
@@ -587,9 +622,9 @@ export class Game {
       (b) =>
         b.life > 0 &&
         b.x > 15 &&
-        b.x < WIDTH - 15 &&
+        b.x < this.width - 15 &&
         b.y > 15 &&
-        b.y < HEIGHT - 15,
+        b.y < this.height - 15,
     );
     for (const hazard of this.hazards) {
       hazard.delay -= dt;

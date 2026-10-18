@@ -1,10 +1,16 @@
-import { WIDTH, HEIGHT, CLASSES, ACTS } from "./model";
+import { CLASSES, ACTS } from "./model";
 import type { Game } from "./engine";
 
 const TAU = Math.PI * 2;
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private time = 0;
+  mobile = false;
+  setMobile(value: boolean) {
+    if (this.mobile === value) return;
+    this.mobile = value;
+    this.resize();
+  }
   constructor(
     private canvas: HTMLCanvasElement,
     private game: Game,
@@ -14,7 +20,7 @@ export class Renderer {
     new ResizeObserver(() => this.resize()).observe(canvas);
   }
   private resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, this.mobile ? 1.5 : 2);
     this.canvas.width = Math.round(this.canvas.clientWidth * dpr);
     this.canvas.height = Math.round(this.canvas.clientHeight * dpr);
   }
@@ -25,6 +31,10 @@ export class Renderer {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.fillStyle = "#0b1114";
     c.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    const WIDTH = g.width,
+      HEIGHT = g.height;
+    const cx = WIDTH / 2,
+      cy = HEIGHT / 2;
     const scale = Math.min(
       this.canvas.width / WIDTH,
       this.canvas.height / HEIGHT,
@@ -42,7 +52,14 @@ export class Renderer {
         (Math.random() - 0.5) * g.shake,
       );
     const accent = ACTS[g.run.act - 1].color;
-    const gradient = c.createRadialGradient(600, 370, 50, 600, 370, 700);
+    const gradient = c.createRadialGradient(
+      cx,
+      cy,
+      50,
+      cx,
+      cy,
+      Math.max(WIDTH, HEIGHT) * 0.65,
+    );
     gradient.addColorStop(0, "#162323");
     gradient.addColorStop(1, "#0b1114");
     c.fillStyle = gradient;
@@ -68,10 +85,10 @@ export class Renderer {
     }
     c.setLineDash([4, 12]);
     c.beginPath();
-    c.moveTo(600, 28);
-    c.lineTo(600, HEIGHT - 28);
-    c.moveTo(28, 380);
-    c.lineTo(WIDTH - 28, 380);
+    c.moveTo(cx, 28);
+    c.lineTo(cx, HEIGHT - 28);
+    c.moveTo(28, cy);
+    c.lineTo(WIDTH - 28, cy);
     c.stroke();
     c.setLineDash([]);
     c.strokeStyle = `${accent}38`;
@@ -80,9 +97,9 @@ export class Renderer {
     c.strokeStyle = `${accent}90`;
     for (const [x, y, dx, dy] of [
       [24, 24, 1, 1],
-      [1176, 24, -1, 1],
-      [24, 736, 1, -1],
-      [1176, 736, -1, -1],
+      [WIDTH - 24, 24, -1, 1],
+      [24, HEIGHT - 24, 1, -1],
+      [WIDTH - 24, HEIGHT - 24, -1, -1],
     ]) {
       c.beginPath();
       c.moveTo(x + dx * 28, y);
@@ -260,13 +277,13 @@ export class Renderer {
     c.globalAlpha = 1;
     if (g.intro > 0) {
       c.fillStyle = "#0b111470";
-      c.fillRect(300, 298, 600, 135);
+      c.fillRect(cx - 300, cy - 82, 600, 135);
       this.text(
         g.run.room % 4 === 0
           ? "ENCONTRO COM GUARDIÃO"
           : `ATO ${g.run.act} · ENCONTRO ${((g.run.room - 1) % 4) + 1}`,
-        600,
-        340,
+        cx,
+        cy - 40,
         12,
         "#a1b0b1",
       );
@@ -274,14 +291,22 @@ export class Renderer {
         g.run.room % 4 === 0
           ? ACTS[g.run.act - 1].boss
           : ACTS[g.run.act - 1].name,
-        600,
-        385,
+        cx,
+        cy + 5,
         35,
         "#edf3e9",
       );
-      this.text("Encontre espaço. Pare. Dispare.", 600, 416, 14, "#a1b0b1");
+      this.text(
+        this.mobile
+          ? "Solte o controle para disparar."
+          : "Encontre espaço. Pare. Dispare.",
+        cx,
+        cy + 36,
+        14,
+        "#a1b0b1",
+      );
     }
-    if (g.noticeTime > 0) this.text(g.notice, 600, 100, 18, "#ffbc8a");
+    if (g.noticeTime > 0) this.text(g.notice, cx, 100, 18, "#ffbc8a");
     if (g.flash > 0 && !g.reducedMotion) {
       c.fillStyle = `rgba(255,100,70,${g.flash * 0.5})`;
       c.fillRect(0, 0, WIDTH, HEIGHT);
@@ -291,7 +316,10 @@ export class Renderer {
   private menuScene() {
     const c = this.ctx;
     c.save();
-    c.translate(650, 380);
+    c.translate(
+      this.game.width / 2 + (this.mobile ? 0 : 50),
+      this.game.height / 2,
+    );
     const color = "#a4f6c1";
     c.rotate(this.time * 0.06);
     for (let i = 0; i < 3; i++) {
@@ -313,7 +341,13 @@ export class Renderer {
     this.polygon(0, 0, 24, 4, 0);
     c.fill();
     c.restore();
-    this.text("O NÚCLEO AGUARDA", 650, 690, 10, "#66817a");
+    this.text(
+      "O NÚCLEO AGUARDA",
+      this.game.width / 2,
+      this.game.height - 70,
+      10,
+      "#66817a",
+    );
   }
   private circle(x: number, y: number, radius: number) {
     this.ctx.beginPath();

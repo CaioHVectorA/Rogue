@@ -31,6 +31,21 @@
 
 Sem fontes ou imagens remotas. Paleta de carvão, verde menta, violeta e cobre. Ícones vetoriais, desenho geométrico e títulos com serifas para contrastar com os dados. Botões HTML preservam teclado e foco visível; diálogos contêm navegação por Tab; nenhuma informação essencial depende de áudio. A arena é visual e não fornece uma experiência completa para leitores de tela.
 
+O modo móvel é selecionado por largura e tipo de ponteiro, sem identificar o navegador por user-agent. Usuários podem escolher manualmente, inclusive em tablets e computadores híbridos. Menu e HUD móveis usam marcação própria. A arena inteira é ajustada à área de jogo, preservando sua área total e reservando espaço para os controles; a distribuição do espaço muda entre orientações e pode alterar a dificuldade de posicionamento.
+
+Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimigos, disparos, avisos, partículas, drops e spawns por posição relativa. Nenhum inimigo fica escondido por recorte de câmera. No celular, o Canvas limita a resolução a 1,5x e as ações respondem a `pointerdown`, com captura independente do dedo que move. A troca de tela limpa entradas; ajustes de som não interrompem o controle de movimento.
+
+| Módulo de adaptação    | Responsabilidade                                              |
+| ---------------------- | ------------------------------------------------------------- |
+| `src/ui/device.ts`     | Detecção por capacidades, troca manual e preferência local    |
+| `src/ui/mobile.css`    | Composição móvel, áreas seguras e layouts por orientação      |
+| `src/ui/touch.ts`      | Captura de ponteiros, ações simultâneas e cancelamento seguro |
+| `src/game/viewport.ts` | Geometria da arena por proporção, preservando a área do mundo |
+
+## Hospedagem
+
+`vercel.json` define Vite, instalação reproduzível e saída estática `dist`. Node.js 22 é usado na CI e na Vercel. Nenhum segredo ou serviço remoto é necessário. A integração com a conta Vercel e a criação do projeto ficam a cargo do proprietário.
+
 ## Limites atuais
 
 O balanceamento inicial é coberto por simulações e testes de fluxo, mas precisa de sessões humanas com diferentes níveis de habilidade. Os três chefes compartilham uma base geométrica e comportamental, com padrões progressivos. Não há conteúdo narrativo extenso, salvamento de run, multiplayer ou placar remoto.
