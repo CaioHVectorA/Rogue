@@ -1,74 +1,20 @@
-# 🗺️ Roadmap de Desenvolvimento — Roguelike (Kaplay.js)
+# Rogue — próximos passos
 
-## 🧱 Setup básico
-- [X] Criar projeto Kaplay.js
-- [X] Loop principal
-- [X] Cena principal
-- [X] Player como quadrado
-- [X] Câmera fixa
+## Implementado
 
-## 🧪 Movimento + Recarga (CORE)
-- [X] Movimento WASD
-- [X] Velocidade configurável
-- [X] Sistema de recarga contínua
-- [X] Recarga acontece enquanto anda
-- [X] Recarga mais lenta enquanto se move
-- [X] SÓ ATIRA PARADO
-- [X] Animação de outline representando recarga
+- [x] Ciclo completo de run com início, escolha, descanso, derrota e vitória.
+- [x] Três caminhos, 12 melhorias limitadas e sinergias.
+- [x] Três atos, 12 encontros e três guardiões com segunda fase.
+- [x] Interface HTML responsiva, HUD, teclado e controles de toque.
+- [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
+- [x] Pausa ao sair da aba, som opcional e redução de movimento.
 
-## 👾 Inimigos básicos (visual + comportamento)
-- [X] Inimigos em quadrados coloridos
-  [X] Movimento direto ao player
-- [X] Colisão tiro → inimigo
-- [X] Colisão inimigo → player
-- [X] Morte e restart
-- [ ] Cada cor = comportamento
-    [ ] Preto -> Neutro
-    [X] Verde -> Inimigo Que atira
-    [X] Azul -> Inimigo tank
-    [X] Vermelho -> Inimigo Veloz, pequeno, agrupa
-    [ ] Roxo -> Inimigo com dash/pulo
+## Depois de playtests
 
-## 💰 Ouro + Drops
-- [X] UI simples de ouro
-- [X] Inimigos dropam ouro
-- [X] Mercado de atributos
-- [X] Sorte afeta drops
+- [ ] Ajustar duração e pressão por ato com observações de jogadores.
+- [ ] Dar silhuetas e movimentos ainda mais distintos aos três chefes.
+- [ ] Expandir caminhos com escolhas que modifiquem padrões, mantendo a regra de parar para atirar.
+- [ ] Explorar encontros de risco/recompensa, variações de arena e eventos.
+- [ ] Considerar retomada de run com versionamento e validação de save.
 
-## 🌊 Sistema de waves (estilo enxame)
-- [ ] Waves temporizadas
-- [ ] Spawner progressivo
-- [ ] Tipos de inimigos misturados
-- [ ] Escala de quantidade, não só vida
-- [ ] Intervalo curto entre waves
-
-## 🗺️ Arena expansiva + Zoom Out
-- [ ] Aumentar tamanho da arena por wave
-- [ ] Zoom out progressivo da câmera
-- [ ] Mais espaço = mais inimigos
-- [ ] Player continua central
-
-
-## ⏸️ Pausa entre waves + UI de atributos
-- [ ] Pausar jogo entre waves
-- [ ] UI de compra de atributos
-- [ ] Custos crescentes
-
-## ⭐ XP + Skills
-- [ ] XP separado do ouro
-- [ ] Skill de movimentação
-- [ ] Skill de dano/controle
-- [ ] Ultimate
-- [ ] Cooldowns visíveis
-
-## 🎲 Perks (interagem com recarga e movimento)
-- [ ] Seleção aleatória entre waves
-- [ ] Tradeoffs claros
-
-## ✨ Polimento mínimo
-- [ ] Feedback visual de dano
-- [ ] Sons básicos
-- [ ] Camera shake
-- [ ] Game Over
-- [ ] Restart rápido
-1
+Adicionar conteúdo depois de confirmar que o ciclo curto sustenta partidas repetidas.
