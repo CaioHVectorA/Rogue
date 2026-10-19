@@ -1744,3 +1744,249 @@ body {
     display: none;
   }
 }
+
+.power-diagram {
+  display: block;
+  width: 180px;
+  height: 80px;
+  margin: 12px auto;
+  overflow: visible;
+}
+.power-diagram .guide-pilot {
+  fill: #9bffba;
+  stroke: #e1ffec;
+  stroke-width: 1.5;
+}
+.power-diagram .guide-foe {
+  fill: #ff7964;
+  stroke: #ffd5ce;
+  stroke-width: 1;
+}
+.power-diagram .guide-far {
+  fill: #ff79641a;
+  stroke: #ff79644a;
+  stroke-width: 1;
+}
+.power-diagram .guide-area {
+  fill: currentColor;
+  fill-opacity: 0.1;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.power-diagram .guide-wave,
+.power-diagram .guide-shot {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.power-diagram .guide-aim {
+  fill: none;
+  stroke: #a5b8d5;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.power-diagram text {
+  fill: #a4f6c1;
+  font: 8px monospace;
+  letter-spacing: 1px;
+}
+.power-target {
+  display: block;
+  color: #ffda8a;
+  font: 10px monospace;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+}
+.power-description {
+  color: #c5d4eb;
+  font:
+    13px/1.6 "Segoe UI",
+    sans-serif;
+  margin: 10px 0;
+  text-align: left;
+}
+.power-trigger {
+  display: block;
+  color: #a4f6c1;
+  font: 9px/1.5 monospace;
+  margin-top: 10px;
+}
+.power-card .loot-stat strong {
+  font-size: 28px;
+}
+.power-card .loot-stat span {
+  font-size: 9px;
+}
+.power-help .power-diagram {
+  width: 100%;
+  height: 150px;
+  max-width: 380px;
+}
+.power-help h1 {
+  font-size: clamp(24px, 4vw, 36px);
+}
+.power-help > small {
+  display: block;
+  color: #a5b8d5;
+  font: 11px monospace;
+  margin: 20px 0;
+}
+.power-help > p {
+  line-height: 1.7;
+}
+.guide-legend {
+  font: 9px/1.6 monospace;
+  color: #a5b8d5;
+}
+.guide-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #a4f6c1;
+}
+.power-help .primary {
+  width: 100%;
+  margin-top: 15px;
+}
+.power-button {
+  pointer-events: auto;
+  color: #d9e6ff;
+  text-align: left;
+  cursor: help;
+}
+.power-button > .icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #ffda8a;
+}
+.weapon-indicator {
+  position: absolute;
+  left: 40px;
+  top: 74px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  background: #0d1527dd;
+  border: 1px solid #7b91bd32;
+  padding: 8px 10px;
+  color: #d6e5fa;
+  font: 10px monospace;
+  cursor: help;
+}
+.weapon-indicator .icon {
+  width: 19px;
+  height: 19px;
+  color: #ffda8a;
+}
+.weapon-indicator small {
+  color: #a4f6c1;
+  font-size: 8px;
+}
+.weapon-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.weapon-rack .secondary {
+  padding: 10px;
+  font-size: 11px;
+}
+.weapon-rack .selected {
+  color: #ffda8a;
+  border-color: #ffda8a;
+  background: #302b21;
+}
+:root[data-ui="mobile"] .weapon-indicator {
+  position: fixed;
+  top: calc(var(--field-top) + var(--safe-top) + 8px);
+  left: calc(var(--field-side) + var(--safe-left) + 8px);
+  font-size: 8px;
+  padding: 5px 7px;
+  gap: 5px;
+}
+:root[data-ui="mobile"] .weapon-indicator .icon {
+  width: 15px;
+  height: 15px;
+}
+:root[data-ui="mobile"] .reward-card.power-card {
+  grid-template-columns: 95px minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto;
+  gap: 6px 12px;
+  min-height: 192px;
+}
+:root[data-ui="mobile"] .power-card .power-diagram {
+  grid-column: 1;
+  grid-row: 1/5;
+  width: 95px;
+  height: 70px;
+  margin: auto;
+  align-self: center;
+}
+:root[data-ui="mobile"] .power-card .loot-category {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 8px;
+}
+:root[data-ui="mobile"] .power-card h2 {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 16px;
+  margin: 0;
+}
+:root[data-ui="mobile"] .power-card .loot-stat {
+  grid-column: 1;
+  grid-row: 5;
+}
+:root[data-ui="mobile"] .power-card .loot-stat strong {
+  font-size: 20px;
+}
+:root[data-ui="mobile"] .power-card .loot-stat span {
+  display: none;
+}
+:root[data-ui="mobile"] .power-card .power-target {
+  grid-column: 2;
+  grid-row: 3;
+  font-size: 8px;
+}
+:root[data-ui="mobile"] .power-card .power-description {
+  grid-column: 2;
+  grid-row: 4;
+  font:
+    12px/1.5 "Segoe UI",
+    sans-serif;
+  margin: 0;
+}
+:root[data-ui="mobile"] .power-card .power-trigger {
+  grid-column: 2;
+  grid-row: 5;
+  font-size: 8px;
+  align-self: center;
+  margin: 0;
+}
+:root[data-ui="mobile"] .power-card .loot-pips {
+  display: none;
+}
+:root[data-ui="mobile"] .power-help h1 {
+  font-size: 26px;
+}
+.build-help-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 25px;
+}
+.build-help-links > small {
+  width: 100%;
+  color: #a5b8d5;
+  font: 9px monospace;
+  margin-bottom: 5px;
+}
+.build-help-links > button {
+  padding: 9px;
+  font-size: 11px;
+}

@@ -87,6 +87,7 @@ test("movement stops basic fire; skill and dodge respect cooldowns", async ({
     g.update(1 / 120);
     if (!g.bullets.some((b) => !b.hostile))
       throw new Error("Did not fire after stopping");
+    g.run.skills[0] = "volley";
     g.skill();
     const cd = g.player.skillCd;
     g.skill();

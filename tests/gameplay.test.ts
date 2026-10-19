@@ -20,6 +20,7 @@ beforeEach(() => {
 function arena() {
   const g = new Game();
   g.start("ranger", "MECHANICS");
+  g.run.skills = ["volley", null];
   g.spawnQueue = [];
   g.roomTime = 0;
   g.intro = 0;
@@ -37,15 +38,17 @@ function simulate(g: Game, seconds: number) {
 }
 
 describe("playstyle mechanics", () => {
-  it("drafts active skills on the first two clears, then behavioral perks", () => {
+  it("drafts a weapon, then two skills, then perks and weapon forms", () => {
     const { g } = arena();
     for (const room of [1, 2, 3, 4, 8, 11]) {
       g.run.room = room;
       const offers = rewardOffers(g.run, randomFromSeed(`draft:${room}`));
       expect(offers).toHaveLength(3);
-      expect(offers.every((id) => id.startsWith("skill:") === room <= 2)).toBe(
-        true,
-      );
+      expect(
+        offers.every(
+          (id) => id.startsWith("skill:") === (room === 2 || room === 3),
+        ),
+      ).toBe(true);
       expect(offers).not.toContain(`skill:${g.run.skills[0]}`);
     }
     expect(applyReward(g.run, g.player, "skill:storm", 1)).toBe(true);

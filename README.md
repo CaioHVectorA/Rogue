@@ -25,9 +25,9 @@ Apresentação visual da run, melhorias por ícones/atributos e arsenal substitu
 
 ## Uma run
 
-- Aperte Jogar: todas as runs normais começam com o mesmo kit básico e Sobrecarga. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
+- Aperte Jogar: todas as runs normais começam com o mesmo kit básico, com pistola rápida e sem habilidades. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
-- As duas primeiras waves garantem ofertas de habilidades. A primeira preenche E; na segunda, escolha substituir Q ou E. Há nove poderes com recargas de 3,2 a 5,5s.
+- Na wave 1, escolha uma forma de disparo automático. Nas waves 2 e 3, receba suas primeiras habilidades Q/E. Há nove poderes com recargas de 3,2 a 5,5s.
 - Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 16 perks; o coração pode repetir, os demais são únicos.
 - No descanso, compre cura ou dano com o ouro coletado. A coleta restante é automática ao limpar a sala.
 - Chefes têm 1800/3600/5400 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
@@ -39,18 +39,24 @@ A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celula
 
 O código da run reproduz posições de spawn e sorteios de recompensa para as mesmas escolhas de build e de troca. Cada encontro usa sua própria sequência, independente do tempo de combate. A diária usa a data UTC. Não há placar online nem promessa de igualdade entre caminhos diferentes.
 
+## Ataques e habilidades
+
+O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, troque por metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia ou disparo pesado perfurante. O arsenal preserva os modelos adquiridos para trocar entre encontros.
+
+Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque equipado pode ser consultado pelo HUD; o livro reúne explicações dos poderes da build. O jogador verde e os alvos vermelhos dos diagramas distinguem ataques ao redor, cones e áreas no inimigo.
+
 ## Laboratório de gameplay
 
 O frasco no cabeçalho, a opção nas configurações ou **F2** abrem o laboratório, inclusive na Vercel. Escolha estado (combate, recompensa, arsenal ou resultado), wave, boss/fase, piloto e preset. Saltar reinicia a run com 250 de ouro e marca **LAB** no campo; a prática nunca grava recordes. Uma run normal reinicia sem cheats ou poderes transferidos.
 
 Durante a prática, reabra o frasco para trocar Q/E, adicionar perks, ativar invencibilidade, mudar o ritmo entre 0,5× e 3× e limpar o encontro. O painel pausa o combate. F1 e os objetos de console continuam exclusivos do servidor de desenvolvimento.
 
-| Estilo   | Habilidades        | Interação                                                    |
-| -------- | ------------------ | ------------------------------------------------------------ |
-| Controle | Poço + tempestade  | Agrupe, desacelere e provoque reações em cadeia              |
-| Atirador | Sobrecarga + torre | Crie cobertura e pare para preparar o arpão                  |
-| Briga    | Impacto + lâminas  | Entre na horda, bloqueie e recupere vida com abates próximos |
-| Truques  | Holograma + mina   | Atraia a horda, deixe armadilhas e ataque ao fugir           |
+| Estilo   | Habilidades               | Interação                                                    |
+| -------- | ------------------------- | ------------------------------------------------------------ |
+| Controle | Poço + tempestade         | Agrupe, desacelere e provoque reações em cadeia              |
+| Atirador | Rajada perfurante + torre | Crie cobertura e pare para preparar o arpão                  |
+| Briga    | Impacto + lâminas         | Entre na horda, bloqueie e recupere vida com abates próximos |
+| Truques  | Holograma + mina          | Atraia a horda, deixe armadilhas e ataque ao fugir           |
 
 Os presets são atalhos de teste. Em runs normais a build surge das ofertas e pode misturar livremente esses estilos. Detalhes de balanceamento: [GAME_DESIGN.md](GAME_DESIGN.md).
 

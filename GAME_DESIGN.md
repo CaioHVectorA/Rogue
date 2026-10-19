@@ -1,27 +1,44 @@
 # Builds que mudam decisões
 
-Toda run normal começa com o mesmo kit básico, sem escolher classe. As escolhas da run definem o estilo. Tiro básico continua exigindo parar. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
+Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habilidade equipada. As escolhas da run definem o estilo. Tiro básico continua exigindo parar. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
 
 ## Ritmo da progressão
 
-- Wave 1: três poderes possíveis; E é o destino sugerido. É permitido trocar Q se o jogador preferir.
-- Wave 2: outro draft de poderes; dois slots limitam a carga de comandos. O jogador escolhe qual ação substituir. Poderes equipados não aparecem nas ofertas.
-- Waves 3–11: três perks de comportamento. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
+- Wave 1: três formas de ataque automático; muda como você atira ao parar, sem adicionar botões.
+- Waves 2 e 3: receba Q e E, com slots vazios sugeridos automaticamente. Poderes equipados não aparecem nas ofertas.
+- Waves 4–11: perks de comportamento e novas formas de disparo. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
 - Descanso: ouro compra cura ou melhoria modesta da arma. Poder de base acompanha os atos, enquanto os perks continuam definindo o comportamento.
+
+## Formas de ataque automático
+
+Pare para atacar. A wave 1 oferece três armas; novos modelos podem aparecer depois. O arsenal permite alternar livremente entre modelos já adquiridos, fora de combate. Armas e habilidades são sistemas separados.
+
+| Ataque           | Intervalo base | Alcance              | Comportamento                                               |
+| ---------------- | -------------- | -------------------- | ----------------------------------------------------------- |
+| Pistola de pulso | 0,20s          | 850                  | Disparo inicial rápido, 22 de dano                          |
+| Metralhadora     | 0,13s          | 700                  | Alta cadência, menor dano por projétil                      |
+| Escopeta         | 0,44s          | 290                  | Sete chumbos curtos; aproximar concentra o dano             |
+| Emissor sísmico  | 0,48s          | 160                  | Atinge só o círculo ao redor, sem projéteis                 |
+| Arco elétrico    | 0,30s          | 400 no primeiro alvo | Choque salta por até três alvos, com saltos menores que 190 |
+| Lança perfurante | 0,50s          | 950                  | Disparo pesado atravessa até cinco inimigos                 |
+
+Armas curtas não desperdiçam recarga se todos estiverem fora do alcance. Escopeta expira os chumbos no alcance e não recebe extensão por ricochete. Ondas sísmicas mostram o círculo de alcance; a escopeta mostra os limites do cone. Perks exclusivos de projéteis não são oferecidos enquanto emissor sísmico ou arco elétrico estão equipados; os já adquiridos continuam disponíveis ao voltar para outra arma. Habilidades e armas usam o dano-base, com fatores próprios de cada padrão.
+
+Os cards mostram um diagrama (piloto verde, inimigos vermelhos, área de atuação), efeito em texto e comando. As habilidades equipadas e o ataque têm explicações acessíveis pelo HUD/livro, com pausa e retorno ao combate. O laboratório também permite trocar o ataque automático.
 
 ## Habilidades
 
-| Poder                | Recarga | Decisão que cria                                           |
-| -------------------- | ------- | ---------------------------------------------------------- |
-| Sobrecarga           | 3,2s    | Alinhar a horda ou acertar vários projéteis perto do alvo  |
-| Nova arcana          | 4s      | Apagar tiros e afastar/desacelerar para abrir uma janela   |
-| Impacto sísmico      | 4,5s    | Entrar em alcance para atingir e curar                     |
-| Poço gravitacional   | 5s      | Agrupar inimigos no local de outro ataque                  |
-| Tempestade iônica    | 4,2s    | Segurar uma passagem com pulsos durante 2,4s               |
-| Sentinela de bolso   | 5,5s    | Plantar uma torre por 4s e reposicionar                    |
-| Presente explosivo   | 3,8s    | Preparar uma mina com fusível de 0,45s e atrair a horda    |
-| Coroa de lâminas     | 5s      | Entrar em contato protegido contra tiros próximos por 3,2s |
-| Fantasma holográfico | 4,8s    | Abandonar uma isca que atrai inimigos e explode após 2,5s  |
+| Poder               | Recarga | Decisão que cria                                           |
+| ------------------- | ------- | ---------------------------------------------------------- |
+| Rajada perfurante   | 3,2s    | Alinhar a horda ou acertar vários projéteis perto do alvo  |
+| Onda de repulsão    | 4s      | Apagar tiros e afastar/desacelerar para abrir uma janela   |
+| Pisada sísmica      | 4,5s    | Entrar em alcance para atingir e curar                     |
+| Ímã gravitacional   | 5s      | Agrupar inimigos no local de outro ataque                  |
+| Chuva de raios      | 4,2s    | Segurar uma passagem com pulsos durante 2,4s               |
+| Torre automática    | 5,5s    | Plantar uma torre por 4s e reposicionar                    |
+| Mina de proximidade | 3,8s    | Preparar uma mina com fusível de 0,45s e atrair a horda    |
+| Lâminas orbitais    | 5s      | Entrar em contato protegido contra tiros próximos por 3,2s |
+| Isca explosiva      | 4,8s    | Abandonar uma isca que atrai inimigos e explode após 2,5s  |
 
 Zonas amigáveis têm cor fria/âmbar e geometria própria, distinta dos círculos vermelhos de dano inimigo. Até seis zonas coexistem. Torre e ataques de habilidades usam o mesmo sistema de projéteis/colisões do Kaplay. Zonas fazem consultas radiais no modelo; o Kaplay desenha o estado e seus efeitos.
 

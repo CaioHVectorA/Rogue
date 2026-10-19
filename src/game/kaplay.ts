@@ -1,7 +1,7 @@
 import kaplay from "kaplay";
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import type { Game, Feedback } from "./engine";
-import { ACTS, CLASSES } from "./model";
+import { ACTS, CLASSES, weaponById } from "./model";
 import type { Enemy, Bullet, Hazard, Pickup, Player, Point } from "./model";
 
 type Entity = Enemy | Bullet | Hazard | Pickup | Player;
@@ -345,7 +345,7 @@ export class KaplayRuntime {
         width: 6,
         color: k.Color.fromHex(color),
       });
-      this.ring(zero, 30, color, 0.7, 3, (p.charge / p.reload) * 359.9);
+      this.ring(zero, 30, color, 0.7, 3, (p.charge / g.fireInterval) * 359.9);
     } else if (tag === "foe") {
       const e = model as Enemy;
       const color =
@@ -441,7 +441,9 @@ export class KaplayRuntime {
       }
     } else if (tag.includes("shot")) {
       const b = model as Bullet;
-      const color = b.hostile ? "#ff6b88" : CLASSES[g.run.classId].color;
+      const color = b.hostile
+        ? "#ff6b88"
+        : (b.color ?? CLASSES[g.run.classId].color);
       k.drawLine({
         p1: k.vec2(-b.vx * 0.035, -b.vy * 0.035),
         p2: k.vec2(0),
@@ -562,6 +564,36 @@ export class KaplayRuntime {
   private drawSignals() {
     const k = this.k,
       g = this.game;
+    if (g.phase === "combat") {
+      const weapon = weaponById(g.run.weapon);
+      if (weapon.pattern === "circle")
+        this.ring(g.player, weapon.range, weapon.color, 0.3, 1);
+      if (weapon.pattern === "cone") {
+        const target = g.enemies.reduce<Enemy | null>(
+          (best, e) =>
+            !best ||
+            Math.hypot(e.x - g.player.x, e.y - g.player.y) <
+              Math.hypot(best.x - g.player.x, best.y - g.player.y)
+              ? e
+              : best,
+          null,
+        );
+        const angle = target
+          ? Math.atan2(target.y - g.player.y, target.x - g.player.x)
+          : Math.atan2(g.aim.y, g.aim.x);
+        for (const offset of [-0.33, 0.33])
+          k.drawLine({
+            p1: k.vec2(g.player.x, g.player.y),
+            p2: k.vec2(
+              g.player.x + Math.cos(angle + offset) * weapon.range,
+              g.player.y + Math.sin(angle + offset) * weapon.range,
+            ),
+            color: k.Color.fromHex(weapon.color),
+            width: 1,
+            opacity: 0.22,
+          });
+      }
+    }
     for (const field of g.fields) {
       const color =
         field.kind === "vortex"
@@ -667,6 +699,35 @@ export class KaplayRuntime {
     if (!this.sceneReady) return;
     const k = this.k,
       g = this.game;
+    if (event.type === "beam") {
+      if (this.fxCount >= (g.reducedMotion ? 45 : this.mobile ? 260 : 680))
+        return;
+      const dx = event.toX! - event.x,
+        dy = event.toY! - event.y;
+      const node = this.fxRoot.add([
+        k.pos(event.x, event.y),
+        k.opacity(1),
+        k.lifespan(0.18, { fade: 0.12 }),
+        {
+          draw(this: GameObj) {
+            for (let i = 0; i < 5; i++) {
+              const t = i / 5,
+                u = (i + 1) / 5;
+              k.drawLine({
+                p1: k.vec2(dx * t + (i % 2 ? 5 : 0), dy * t),
+                p2: k.vec2(dx * u + ((i + 1) % 2 && i < 4 ? 5 : 0), dy * u),
+                width: 3,
+                color: k.Color.fromHex(event.color!),
+                opacity: this.opacity,
+              });
+            }
+          },
+        },
+        "feedback",
+      ]);
+      this.trackFx(node);
+      return;
+    }
     if (event.type === "burst") {
       this.sparks(
         event,

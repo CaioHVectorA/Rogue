@@ -2,6 +2,8 @@ import {
   WIDTH,
   HEIGHT,
   CLASSES,
+  WEAPONS,
+  weaponById,
   SKILLS,
   REWARDS,
   skillById,
@@ -20,6 +22,7 @@ import {
 } from "./model";
 import type {
   Field,
+  WeaponId,
   Phase,
   ClassId,
   Player,
@@ -38,8 +41,18 @@ const clamp = (n: number, min: number, max: number) =>
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const RECORD_KEY = "rogue.records.v2";
 export type Feedback = {
+  toX?: number;
+  toY?: number;
   type:
-    "burst" | "hit" | "kill" | "shot" | "skill" | "dash" | "clear" | "pickup";
+    | "burst"
+    | "hit"
+    | "kill"
+    | "shot"
+    | "skill"
+    | "dash"
+    | "clear"
+    | "pickup"
+    | "beam";
   x: number;
   y: number;
   color?: string;
@@ -60,7 +73,7 @@ export class Game {
   hazards: Hazard[] = [];
   pickups: Pickup[] = [];
   fields: Field[] = [];
-  rewardSlot: 0 | 1 = 1;
+  rewardSlot: 0 | 1 = 0;
   labGod = false;
   labSpeed = 1;
   private lootRandom = randomFromSeed("loot");
@@ -183,7 +196,7 @@ export class Game {
     this.random = randomFromSeed(`${this.run.seed}:encounter:${this.run.room}`);
     this.player.x = this.width / 2;
     this.player.y = this.height / 2;
-    this.player.charge = this.player.reload;
+    this.player.charge = this.fireInterval;
     this.player.skillCd = 0;
     this.player.secondCd = 0;
     this.player.shieldCd = 0;
@@ -332,9 +345,18 @@ export class Game {
     }
     this.onFeedback({
       type: "skill",
-      x: p.x,
-      y: p.y,
-      radius: id === "nova" ? 265 : id === "quake" ? 220 : 100,
+      x: id === "vortex" || id === "storm" ? target.x : p.x,
+      y: id === "vortex" || id === "storm" ? target.y : p.y,
+      radius:
+        id === "nova"
+          ? 265
+          : id === "quake"
+            ? 220
+            : id === "vortex"
+              ? 185
+              : id === "storm"
+                ? 145
+                : 100,
       color: definition.color,
     });
     this.shake = 4;
@@ -456,7 +478,7 @@ export class Game {
     p.dashCd = 2.6;
     if (this.run.rewards.speed) this.addField("mine", p);
     if (this.run.rewards.dashload) {
-      p.charge = p.reload;
+      p.charge = this.fireInterval;
       const angle = Math.atan2(-p.dashY, -p.dashX);
       for (const offset of [-0.2, 0, 0.2])
         this.projectile(p, angle + offset, p.damage, false);
@@ -543,35 +565,110 @@ export class Game {
       hit: new Set(),
     });
   }
-  private fire() {
+  get fireInterval() {
+    return (this.player.reload * weaponById(this.run.weapon).interval) / 0.2;
+  }
+  equipWeapon(id: WeaponId) {
+    if (this.phase !== "camp" || !this.run.weapons.includes(id)) return;
+    this.run.weapon = id;
+    this.player.charge = 0;
+    this.onChange();
+  }
+  private fire(): boolean {
     const target = this.nearest();
-    if (!target) return;
-    const p = this.player;
+    if (!target) return false;
+    const p = this.player,
+      weapon = weaponById(this.run.weapon);
+    if (distance(p, target) > weapon.range + target.radius) return false;
     const angle = Math.atan2(target.y - p.y, target.x - p.x);
     this.shotCount++;
-    const anchored =
-      this.run.rewards.anchor && p.stationary >= 1 && this.shotCount % 3 === 0;
-    const double = this.run.rewards.double;
-    for (const offset of double ? [-0.07, 0.07] : [0]) {
-      this.projectile(
-        p,
-        angle + offset,
-        p.damage * (double ? 0.75 : 1) * (anchored ? 3 : 1),
-        false,
-        anchored ? 6 : this.run.rewards.pierce ? 2 : 0,
-      );
+    if (weapon.pattern === "circle") {
+      for (const enemy of this.enemies)
+        if (distance(enemy, p) <= weapon.range + enemy.radius)
+          this.hitEnemy(
+            enemy,
+            p.damage * weapon.power,
+            !!this.run.rewards.poison,
+          );
+      this.onFeedback({
+        type: "skill",
+        x: p.x,
+        y: p.y,
+        radius: weapon.range,
+        color: weapon.color,
+      });
+      this.shake = Math.max(this.shake, 2);
+    } else if (weapon.pattern === "chain") {
+      const hit = new Set<number>();
+      let from: Point = p,
+        next: Enemy | undefined = target;
+      for (let i = 0; i < 3 && next; i++) {
+        hit.add(next.id);
+        this.onFeedback({
+          type: "beam",
+          x: from.x,
+          y: from.y,
+          toX: next.x,
+          toY: next.y,
+          color: weapon.color,
+        });
+        this.hitEnemy(
+          next,
+          p.damage * weapon.power * (i ? 0.8 : 1),
+          !!this.run.rewards.poison,
+        );
+        from = next;
+        next = this.enemies
+          .filter((e) => e.hp > 0 && !hit.has(e.id) && distance(e, from) < 190)
+          .sort((a, b) => distance(a, from) - distance(b, from))[0];
+      }
+    } else {
+      const anchored =
+        this.run.rewards.anchor &&
+        p.stationary >= 1 &&
+        this.shotCount % 3 === 0;
+      const base =
+        weapon.pattern === "cone"
+          ? [-0.33, -0.22, -0.11, 0, 0.11, 0.22, 0.33]
+          : [0];
+      const double = !!this.run.rewards.double;
+      const offsets = double ? base.flatMap((a) => [a - 0.05, a + 0.05]) : base;
+      for (const offset of offsets) {
+        const speed = this.run.weapon === "rail" ? 1100 : 820;
+        this.projectile(
+          p,
+          angle + offset,
+          p.damage * weapon.power * (double ? 0.75 : 1) * (anchored ? 3 : 1),
+          false,
+          anchored
+            ? 6
+            : (this.run.weapon === "rail" ? 4 : 0) +
+                (this.run.rewards.pierce ? 2 : 0),
+          speed,
+        );
+        const bullet = this.bullets[this.bullets.length - 1];
+        bullet.life = weapon.range / speed;
+        bullet.color = weapon.color;
+        bullet.ricochets = this.run.weapon !== "shotgun";
+      }
+      if (this.run.rewards.crossfire)
+        for (const offset of [Math.PI / 2, Math.PI, -Math.PI / 2]) {
+          this.projectile(p, angle + offset, p.damage, false, 0, 820);
+          const bullet = this.bullets[this.bullets.length - 1];
+          bullet.life = weapon.range / 820;
+          bullet.color = weapon.color;
+          bullet.ricochets = this.run.weapon !== "shotgun";
+        }
+      this.onFeedback({ type: "shot", x: p.x, y: p.y, color: weapon.color });
     }
-    if (this.run.rewards.crossfire)
-      for (const offset of [Math.PI / 2, Math.PI, -Math.PI / 2])
-        this.projectile(p, angle + offset, p.damage, false);
-    this.onFeedback({
-      type: "shot",
-      x: p.x,
-      y: p.y,
-      color: CLASSES[this.run.classId].color,
-    });
-    this.burst(p, CLASSES[this.run.classId].color, 5, 90);
-    this.sound(390, 0.035, "triangle", 0.018);
+    this.burst(p, weapon.color, weapon.pattern === "cone" ? 10 : 3, 100);
+    this.sound(
+      weapon.pattern === "circle" ? 160 : 390,
+      0.035,
+      "triangle",
+      0.018,
+    );
+    return true;
   }
   private hitEnemy(enemy: Enemy, damage: number, poison = false) {
     if (enemy.hp <= 0) return;
@@ -866,15 +963,17 @@ export class Game {
     }
     p.x = clamp(p.x, 40, this.width - 40);
     p.y = clamp(p.y, 40, this.height - 40);
-    p.charge = Math.min(p.reload, p.charge + dt * (p.moving ? 0.65 : 1));
+    p.charge = Math.min(
+      this.fireInterval,
+      p.charge + dt * (p.moving ? 0.65 : 1),
+    );
     if (
       !p.moving &&
-      p.charge >= p.reload &&
+      p.charge >= this.fireInterval &&
       this.enemies.length &&
       this.intro <= 0
     ) {
-      this.fire();
-      p.charge = 0;
+      if (this.fire()) p.charge = 0;
     }
     while (this.spawnQueue[0] && this.spawnQueue[0].at <= this.roomTime) {
       const spawn = this.spawnQueue.shift()!;
@@ -1049,7 +1148,11 @@ export class Game {
       return;
     bullet.hit.add(enemy.id);
     this.hitEnemy(enemy, bullet.damage, !!this.run.rewards.poison);
-    if (this.run.rewards.ricochet && bullet.hit.size < 3) {
+    if (
+      this.run.rewards.ricochet &&
+      bullet.ricochets !== false &&
+      bullet.hit.size < 3
+    ) {
       const next = this.enemies
         .filter(
           (e) => e.hp > 0 && !bullet.hit.has(e.id) && distance(e, enemy) < 240,
@@ -1114,7 +1217,7 @@ export class Game {
       );
       this.run.rerolls++;
     }
-    this.rewardSlot = this.run.skills[1] ? 0 : 1;
+    this.rewardSlot = !this.run.skills[0] ? 0 : !this.run.skills[1] ? 1 : 0;
     this.run.offers = rewardOffers(
       this.run,
       randomFromSeed(`${this.run.seed}:offers:${this.run.room}:0`),
@@ -1184,6 +1287,13 @@ export class Game {
     };
     const preset = builds[build] ?? builds.control;
     this.run.skills = [...preset.skills];
+    this.run.weapon =
+      build === "brawler"
+        ? "seismic"
+        : build === "trickster"
+          ? "shotgun"
+          : "pulse";
+    this.run.weapons = [...new Set<WeaponId>(["pulse", this.run.weapon])];
     for (const id of preset.perks) applyReward(this.run, this.player, id);
     this.beginRoom();
     if (room % 4 === 0) {
@@ -1210,6 +1320,14 @@ export class Game {
     }
     this.onChange();
   }
+  labWeapon(id: string) {
+    if (!this.run.practice || !WEAPONS.some((w) => w.id === id)) return;
+    this.run.weapon = id as WeaponId;
+    if (!this.run.weapons.includes(id as WeaponId))
+      this.run.weapons.push(id as WeaponId);
+    this.player.charge = 0;
+    this.onChange();
+  }
   labEquip(id: string, slot: 0 | 1) {
     if (
       !this.run.practice ||
@@ -1225,7 +1343,10 @@ export class Game {
   labPerk(id: string) {
     if (
       this.run.practice &&
-      REWARDS.some((r) => r.id === id && !id.startsWith("skill:"))
+      REWARDS.some(
+        (r) =>
+          r.id === id && !id.startsWith("skill:") && !id.startsWith("weapon:"),
+      )
     ) {
       applyReward(this.run, this.player, id);
       this.onChange();
