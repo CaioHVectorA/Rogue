@@ -13,7 +13,7 @@ npm run dev
 
 Abra http://localhost:3001. Para gerar uma versão estática, `npm run build`; para verificá-la, `npm run preview`. O diretório `dist/` funciona em hospedagens estáticas, inclusive em subdiretórios. Não há backend ou serviços externos.
 
-No desenvolvimento, o inspetor nativo do Kaplay está habilitado (F1). O runtime pode ser explorado no console em `window.__kaplay`; esses recursos de depuração ficam desativados no build de produção. Para regenerar os sons locais: `python3 scripts/generate-sfx.py`.
+No desenvolvimento, o inspetor nativo do Kaplay está habilitado (clique na arena e pressione F1). O runtime pode ser explorado no console em `window.__kaplay`; esses recursos de depuração ficam desativados no build de produção. Para regenerar os sons locais: `python3 scripts/generate-sfx.py`.
 
 ## Combate arcade
 

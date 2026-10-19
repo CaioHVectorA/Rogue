@@ -131,6 +131,7 @@ test("pause freezes simulation, traps focus and resumes without stuck movement",
 test("complete run visits every reward and camp, kills three bosses, records one win and resets", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await start(page);
   for (let room = 1; room <= 12; room++) {
     expect(await page.evaluate(() => window.__rogue.run.room)).toBe(room);

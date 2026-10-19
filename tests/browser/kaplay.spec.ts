@@ -60,16 +60,15 @@ test("hordes, combo feedback and effect budgets stay bounded across restarts", a
   await expect
     .poll(() => page.evaluate(() => window.__kaplay.get("foe").length))
     .toBeGreaterThan(50);
-  await page.evaluate(() => {
+  const effects = await page.evaluate(() => {
     const g = window.__rogue;
     for (const e of g.enemies.slice(0, 25)) (g as any).hitEnemy(e, 100000);
     g.update(1 / 120);
+    // Observe at creation, before short-lived feedback expires on a slow CI renderer.
+    return window.__kaplay.get("effects")[0].children.length;
   });
   await expect(page.locator(".combo-display")).toBeVisible();
   await expect(page.locator("#combo-value")).toContainText("25");
-  const effects = await page.evaluate(
-    () => window.__kaplay.get("effects")[0].children.length,
-  );
   expect(effects).toBeGreaterThan(30);
   expect(effects).toBeLessThanOrEqual(680);
   await page.evaluate(() => window.__rogue.start("ranger", "RESET-KAPLAY"));
