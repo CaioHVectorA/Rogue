@@ -2,6 +2,18 @@ import type { ClassId } from "../game/model";
 import { CLASSES, SKILLS } from "../game/model";
 import { icon } from "./icons";
 
+const SKILL_HINTS: Record<string, string> = {
+  volley: "Abra uma passagem com sete tiros",
+  nova: "Afaste a horda e apague tiros",
+  quake: "Esmague de perto para se curar",
+  vortex: "Agrupe a horda antes de detonar",
+  storm: "Bloqueie uma passagem com raios",
+  turret: "Plante cobertura; mova-se livremente",
+  mine: "Deixe o presente e atraia a horda",
+  orbit: "Entre na horda; lâminas apagam tiros",
+  decoy: "Sua cópia atrai a horda e explode",
+};
+
 export const ITEM_VISUALS: Record<
   string,
   { glyph: string; value: string; stat: string; hint: string }
@@ -109,7 +121,7 @@ export const ITEM_VISUALS: Record<
         glyph: s.glyph,
         value: `${s.cooldown}s`,
         stat: "HABILIDADE",
-        hint: s.desc,
+        hint: SKILL_HINTS[s.id],
       },
     ]),
   ),

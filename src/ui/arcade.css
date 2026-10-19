@@ -1672,3 +1672,13 @@ body {
   width: 20px;
   height: 20px;
 }
+/* The mechanic stays readable on a phone; the book carries the full explanation. */
+:root[data-ui="mobile"] .loot-hint {
+  display: block;
+  grid-column: 2 / 4;
+  font-size: 10px;
+  line-height: 1.5;
+}
+:root[data-ui="mobile"] .loot-stat {
+  grid-row: 1 / 3;
+}
