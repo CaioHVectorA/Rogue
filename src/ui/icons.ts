@@ -1,4 +1,6 @@
 const paths: Record<string, string> = {
+  flask:
+    '<path d="M8 2h8M10 2v7L3 20v2h18v-2L14 9V2M6 16h12"/><circle cx="12" cy="18" r="1"/>',
   gear: '<path d="m9 3 1-2h4l1 2 3 2h3l2 4-2 2v3l2 2-2 4h-3l-3 2-1 2h-4l-1-2-3-2H3l-2-4 2-2v-3L1 9l2-4h3Z"/><circle cx="12" cy="12" r="4"/>',
   pierce: '<path d="M2 12h19m-6-5 6 5-6 5M7 3v6m0 6v6m5-18v6m0 6v6"/>',
   double: '<path d="m4 4 5 5v12H2V9Zm14 0 5 5v12h-7V9Z"/>',

@@ -22,6 +22,9 @@ export interface Enemy extends Point {
   bossAct: number;
   cycle: number;
   enraged: boolean;
+  phase: number;
+  transition: number;
+  slowed: number;
 }
 export interface Bullet extends Point {
   vx: number;
@@ -32,6 +35,13 @@ export interface Bullet extends Point {
   hostile: boolean;
   pierce: number;
   hit: Set<number>;
+}
+export interface Field extends Point {
+  kind: "vortex" | "storm" | "turret" | "mine" | "orbit" | "decoy";
+  radius: number;
+  life: number;
+  timer: number;
+  power: number;
 }
 export interface Hazard extends Point {
   radius: number;
@@ -52,6 +62,9 @@ export interface Player extends Point {
   reload: number;
   charge: number;
   skillCd: number;
+  secondCd: number;
+  shieldCd: number;
+  stationary: number;
   dashCd: number;
   invulnerable: number;
   dashTime: number;
@@ -61,6 +74,8 @@ export interface Player extends Point {
 }
 export interface Run {
   seed: string;
+  skills: [string, string | null];
+  practice: boolean;
   classId: ClassId;
   room: number;
   act: number;
@@ -94,7 +109,7 @@ export const CLASSES = {
     damage: 18,
     reload: 0.36,
     speed: 235,
-    cooldown: 8,
+    cooldown: 3.2,
   },
   arcanist: {
     name: "Conjurador",
@@ -106,7 +121,7 @@ export const CLASSES = {
     damage: 16,
     reload: 0.4,
     speed: 235,
-    cooldown: 9,
+    cooldown: 4,
   },
   colossus: {
     name: "Colosso",
@@ -118,7 +133,7 @@ export const CLASSES = {
     damage: 21,
     reload: 0.46,
     speed: 215,
-    cooldown: 11,
+    cooldown: 4.5,
   },
 } as const;
 export const ACTS = [
@@ -149,104 +164,237 @@ export interface Reward {
   max: number;
   color: string;
 }
+export const SKILLS = [
+  {
+    id: "volley",
+    name: "Sobrecarga",
+    tag: "RAJADA",
+    desc: "Sete projéteis perfurantes em leque. Abra uma passagem na horda.",
+    cooldown: 3.2,
+    color: "#a4f6c1",
+    glyph: "double",
+  },
+  {
+    id: "nova",
+    name: "Nova arcana",
+    tag: "CONTROLE",
+    desc: "Uma onda afasta e congela a horda por um instante. Apaga tiros próximos.",
+    cooldown: 4,
+    color: "#c5afff",
+    glyph: "explosion",
+  },
+  {
+    id: "quake",
+    name: "Impacto sísmico",
+    tag: "BRIGA",
+    desc: "Esmague inimigos próximos e recupere vida por alvo atingido.",
+    cooldown: 4.5,
+    color: "#ffbc8a",
+    glyph: "shield",
+  },
+  {
+    id: "vortex",
+    name: "Poço gravitacional",
+    tag: "AGRUPAR",
+    desc: "Um poço no alvo puxa a horda. Agrupe antes de explodir ou perfurar.",
+    cooldown: 5,
+    color: "#c5afff",
+    glyph: "mark",
+  },
+  {
+    id: "storm",
+    name: "Tempestade iônica",
+    tag: "ZONA",
+    desc: "Marque o alvo: relâmpagos atingem a área várias vezes. Controle uma passagem.",
+    cooldown: 4.2,
+    color: "#85d8ef",
+    glyph: "bolt",
+  },
+  {
+    id: "turret",
+    name: "Sentinela de bolso",
+    tag: "POSICIONAR",
+    desc: "Plante uma torre que atira enquanto você se reposiciona. Dura quatro segundos.",
+    cooldown: 5.5,
+    color: "#a4f6c1",
+    glyph: "target",
+  },
+  {
+    id: "mine",
+    name: "Presente explosivo",
+    tag: "ARMADILHA",
+    desc: "Deixe uma mina gigante aos seus pés. Aproxime a horda e fuja antes da explosão.",
+    cooldown: 3.8,
+    color: "#ffbc8a",
+    glyph: "explosion",
+  },
+  {
+    id: "orbit",
+    name: "Coroa de lâminas",
+    tag: "CORPO A CORPO",
+    desc: "Três lâminas orbitam você e destroem projéteis próximos. Entre na horda.",
+    cooldown: 5,
+    color: "#ffda8a",
+    glyph: "crown",
+  },
+  {
+    id: "decoy",
+    name: "Fantasma holográfico",
+    tag: "ISCA",
+    desc: "Deixe uma cópia que atrai os inimigos e explode ao desaparecer. Sua fuga vira armadilha.",
+    cooldown: 4.8,
+    color: "#85d8ef",
+    glyph: "dash",
+  },
+] as const;
+export const skillById = (id: string) => SKILLS.find((s) => s.id === id)!;
+export const starterSkill: Record<ClassId, string> = {
+  ranger: "volley",
+  arcanist: "nova",
+  colossus: "quake",
+};
 export const REWARDS: Reward[] = [
   {
-    id: "power",
-    name: "Calibre elevado",
-    tag: "ATIRADOR",
-    desc: "+22% de dano nos disparos básicos.",
-    max: 4,
-    color: "#a4f6c1",
-  },
-  {
-    id: "reload",
-    name: "Ritmo preciso",
-    tag: "ATIRADOR",
-    desc: "Recarga 14% mais rápida, parado ou em movimento.",
-    max: 4,
-    color: "#a4f6c1",
-  },
-  {
-    id: "pierce",
-    name: "Além do alvo",
-    tag: "ATIRADOR",
-    desc: "Seus disparos atravessam mais um inimigo.",
-    max: 2,
-    color: "#a4f6c1",
-  },
-  {
-    id: "double",
-    name: "Disparo duplo",
-    tag: "ATIRADOR",
-    desc: "Dois projéteis por disparo, cada um com 75% do dano.",
+    id: "anchor",
+    name: "Ninho de atirador",
+    tag: "FICAR E LUTAR",
+    desc: "Fique parado um segundo: cada terceiro tiro vira um arpão pesado que atravessa a fila. Mover reinicia a preparação.",
     max: 1,
     color: "#a4f6c1",
   },
   {
-    id: "cast",
-    name: "Ressonância",
-    tag: "CONJURADOR",
-    desc: "+30% de dano na habilidade Q.",
-    max: 3,
+    id: "dashload",
+    name: "Gatilho de fuga",
+    tag: "HIT & RUN",
+    desc: "Esquivar recarrega o tiro e dispara uma rajada para trás. Seu recuo também ataca.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "pierce",
+    name: "Além do alvo",
+    tag: "ALINHAR",
+    desc: "Os tiros atravessam a fila de inimigos. Alinhe a horda antes de parar.",
+    max: 1,
+    color: "#a4f6c1",
+  },
+  {
+    id: "double",
+    name: "Disparo gêmeo",
+    tag: "LEQUE",
+    desc: "Atire dois projéteis divergentes. Encurte a distância para acertar ambos no mesmo alvo.",
+    max: 1,
+    color: "#a4f6c1",
+  },
+  {
+    id: "echo",
+    name: "Eco instável",
+    tag: "COMBINAR",
+    desc: "Usar Q adianta a recarga de E; usar E adianta Q. Alterne as habilidades para manter o fluxo.",
+    max: 1,
     color: "#c5afff",
   },
   {
-    id: "haste",
-    name: "Eco arcano",
-    tag: "CONJURADOR",
-    desc: "Habilidade Q recarrega 18% mais rápido.",
-    max: 3,
+    id: "battery",
+    name: "Bateria de abates",
+    tag: "CONJURAR",
+    desc: "Cada abate devolve um instante das duas recargas. Hordas alimentam suas habilidades.",
+    max: 1,
     color: "#c5afff",
   },
   {
     id: "poison",
-    name: "Toxina residual",
-    tag: "SINERGIA",
-    desc: "Disparos aplicam veneno por 3 segundos. Acumule para aumentar o dano.",
-    max: 3,
-    color: "#c5afff",
+    name: "Toxina glacial",
+    tag: "CONTROLAR",
+    desc: "Tiros envenenam e desaceleram. Envenene a linha de frente para criar espaço.",
+    max: 1,
+    color: "#b8ff62",
   },
   {
     id: "explosion",
     name: "Reação em cadeia",
-    tag: "SINERGIA",
-    desc: "Inimigos envenenados explodem ao morrer e envenenam os próximos.",
+    tag: "DETONAR",
+    desc: "Abates explodem; com toxina, a explosão também transmite veneno. Combine com um poço gravitacional.",
     max: 1,
     color: "#c5afff",
   },
   {
     id: "health",
-    name: "Força vital",
-    tag: "COLOSSO",
-    desc: "+25 de vida máxima, cura 25 e adiciona +5% de dano básico.",
+    name: "Coração de titã",
+    tag: "SUSTENTAR",
+    desc: "Ganhe um coração extra e cure ferimentos. Uma escolha de sobrevivência para builds de contato.",
     max: 4,
     color: "#ffbc8a",
   },
   {
     id: "armor",
-    name: "Casca grossa",
-    tag: "COLOSSO",
-    desc: "Reduz todo dano recebido em 10%. Limite de 30%.",
-    max: 3,
+    name: "Casulo reativo",
+    tag: "BLOQUEAR",
+    desc: "Um escudo bloqueia um impacto e lança uma onda de repulsão. Reconstrói sozinho após seis segundos.",
+    max: 1,
     color: "#ffbc8a",
   },
   {
     id: "vampire",
-    name: "Segundo fôlego",
-    tag: "COLOSSO",
-    desc: "Derrotar um inimigo recupera 1 de vida. Chefes recuperam 10.",
-    max: 3,
+    name: "Fome de combate",
+    tag: "APROXIMAR",
+    desc: "Abates próximos recuperam vida. Matar de longe não alimenta: entre e saia da horda.",
+    max: 1,
     color: "#ffbc8a",
   },
   {
     id: "speed",
-    name: "Passo leve",
+    name: "Rastro de plasma",
     tag: "MOBILIDADE",
-    desc: "+10% de movimento e esquiva recarrega 15% mais rápido.",
-    max: 3,
+    desc: "Esquivar deixa uma mina de plasma na posição inicial. Use seu caminho como armadilha.",
+    max: 1,
     color: "#85d8ef",
   },
+  {
+    id: "ricochet",
+    name: "Sinuca de plasma",
+    tag: "REBATER",
+    desc: "Ao acertar, o tiro procura outro inimigo próximo. Não repete o mesmo alvo.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "crossfire",
+    name: "Bússola quebrada",
+    tag: "CERCADO",
+    desc: "Cada tiro também dispara para os lados e para trás. Ser cercado vira oportunidade.",
+    max: 1,
+    color: "#ffda8a",
+  },
+  {
+    id: "thorns",
+    name: "Retaliação",
+    tag: "CONTRA-ATAQUE",
+    desc: "Ao sofrer dano, apague tiros próximos e devolva uma explosão. Proteção vira abertura.",
+    max: 1,
+    color: "#ffbc8a",
+  },
+  {
+    id: "gambit",
+    name: "Febre do ouro",
+    tag: "ARRISCAR",
+    desc: "O combo dá mais ouro extra, mas receber dano derruba a sequência. Uma aposta na sua precisão.",
+    max: 1,
+    color: "#ffda8a",
+  },
+  ...SKILLS.map((s) => ({
+    id: `skill:${s.id}`,
+    name: s.name,
+    tag: s.tag,
+    desc: s.desc,
+    max: 1,
+    color: s.color,
+  })),
 ];
+export const comboDrain = (combo: number, moving: boolean) =>
+  (1 + Math.min(3, combo / 16)) * (moving ? 1.7 : 1);
+export const comboLootChance = (combo: number) =>
+  Math.min(0.65, Math.max(0, combo - 2) * 0.018);
 // FNV-1a + Mulberry32: the same seed produces the same encounter and reward stream.
 export function randomFromSeed(seed: string): () => number {
   let state = 2166136261;
@@ -262,6 +410,8 @@ export function randomFromSeed(seed: string): () => number {
 export function createRun(seed: string, classId: ClassId): Run {
   return {
     seed,
+    skills: [starterSkill[classId], null],
+    practice: false,
     classId,
     room: 1,
     act: 1,
@@ -291,6 +441,9 @@ export function createPlayer(classId: ClassId): Player {
     reload: stats.reload,
     charge: 0,
     skillCd: 0,
+    secondCd: 0,
+    shieldCd: 0,
+    stationary: 0,
     dashCd: 0,
     invulnerable: 0,
     dashTime: 0,
@@ -304,7 +457,14 @@ export function rewardOffers(
   random: () => number,
   exclude: string[] = [],
 ): string[] {
-  const eligible = REWARDS.filter((r) => (run.rewards[r.id] ?? 0) < r.max);
+  // The first two clears guarantee a new active; later choices reshape the build.
+  const draft = run.room <= 2;
+  const eligible = REWARDS.filter(
+    (r) =>
+      (run.rewards[r.id] ?? 0) < r.max &&
+      r.id.startsWith("skill:") === draft &&
+      (!draft || !run.skills.includes(r.id.slice(6))),
+  );
   const fresh = eligible.filter((r) => !exclude.includes(r.id));
   const pool = [...fresh, ...eligible.filter((r) => exclude.includes(r.id))];
   // Draw without replacement, preferring unseen offers during a reroll.
@@ -316,18 +476,25 @@ export function rewardOffers(
   }
   return result;
 }
-export function applyReward(run: Run, player: Player, id: string): boolean {
+export function applyReward(
+  run: Run,
+  player: Player,
+  id: string,
+  slot: 0 | 1 = run.skills[1] ? 0 : 1,
+): boolean {
   const reward = REWARDS.find((r) => r.id === id);
   if (!reward || (run.rewards[id] ?? 0) >= reward.max) return false;
+  if (id.startsWith("skill:")) {
+    const skill = id.slice(6);
+    if (run.skills.includes(skill)) return false;
+    run.skills[slot] = skill;
+    player.skillCd = player.secondCd = 0;
+  }
   run.rewards[id] = (run.rewards[id] ?? 0) + 1;
-  if (id === "power") player.damage *= 1.22;
-  if (id === "reload") player.reload *= 0.86;
   if (id === "health") {
     player.maxHp += 25;
     player.hp = Math.min(player.maxHp, player.hp + 25);
-    player.damage *= 1.05;
   }
-  if (id === "speed") player.speed *= 1.1;
   return true;
 }
 export function roomComposition(room: number): EnemyKind[] {

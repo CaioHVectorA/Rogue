@@ -1471,3 +1471,204 @@ body {
     transition: none !important;
   }
 }
+
+/* Active build choices and the opt-in practice workbench. */
+.skill-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 22px;
+  align-items: center;
+}
+.skill-slots .selected {
+  border-color: #ffda8a;
+  color: #ffda8a;
+  background: #312b20;
+}
+.skill-slots small {
+  color: #a1b3cc;
+  font: 11px monospace;
+}
+.skill-slots kbd {
+  margin-right: 7px;
+}
+.locked-slot {
+  opacity: 0.4;
+  font-size: 10px;
+}
+.lab-launch {
+  color: #85d8ef;
+}
+.lab-dialog {
+  width: min(760px, 100%);
+  text-align: left;
+}
+.lab-dialog .loot-banner h1 {
+  font-size: clamp(20px, 4vw, 32px);
+  letter-spacing: 1px;
+}
+.lab-dialog > button,
+.lab-current > button {
+  width: 100%;
+  margin-top: 14px;
+}
+.lab-note {
+  color: #a1b3cc;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.lab-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.lab-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #a6bbd8;
+  font: 10px monospace;
+  min-width: 0;
+}
+.lab-grid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  color: #e5edff;
+  border: 1px solid #657c9e66;
+  background: #101a2d;
+  border-radius: 7px;
+  font: 12px monospace;
+}
+.lab-current {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #657c9e44;
+}
+.lab-current summary {
+  cursor: pointer;
+  font: 12px monospace;
+  padding: 16px 0;
+  color: #ffda8a;
+}
+.lab-perks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.lab-perks button {
+  padding: 10px;
+  font-size: 10px;
+  justify-content: flex-start;
+}
+.lab-perks .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.combo-loot {
+  display: block;
+  color: #ffda8a;
+  font: 10px monospace;
+  margin-top: 3px;
+}
+:root[data-ui="desktop"] .ability strong {
+  max-width: 150px;
+  font-size: 11px;
+}
+:root[data-ui="mobile"] .header-actions {
+  gap: 4px;
+}
+:root[data-ui="mobile"] .header-actions .icon-button {
+  width: 32px;
+  height: 36px;
+}
+:root[data-ui="mobile"] .skill-slots {
+  gap: 8px;
+}
+:root[data-ui="mobile"] .skill-slots button {
+  flex: 1;
+  padding: 9px;
+  font-size: 10px;
+}
+:root[data-ui="mobile"] .skill-slots small {
+  width: 100%;
+  font-size: 10px;
+}
+:root[data-ui="mobile"] .touch-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 64px);
+  gap: 8px;
+}
+:root[data-ui="mobile"] .touch-actions > button,
+:root[data-ui="mobile"] .touch-actions > button:last-child {
+  width: 64px;
+  height: 62px;
+  min-height: 62px;
+  border-radius: 16px;
+  padding: 5px;
+  gap: 3px;
+}
+:root[data-ui="mobile"] .touch-actions > button[data-action="dash"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+:root[data-ui="mobile"] .touch-actions > button[data-action="skill"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+:root[data-ui="mobile"] .touch-actions > button[data-action="skill2"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+:root[data-ui="mobile"] .touch-actions > button span {
+  font-size: 7px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  max-width: 62px;
+}
+:root[data-ui="mobile"] .touch-actions > button .icon {
+  width: 18px;
+  height: 18px;
+}
+:root[data-ui="mobile"] .lab-dialog {
+  padding: 22px 14px;
+}
+:root[data-ui="mobile"] .lab-grid {
+  gap: 10px;
+}
+:root[data-ui="mobile"] .combo-loot {
+  font-size: 8px;
+}
+@media (orientation: landscape) {
+  :root[data-ui="mobile"] .touch-actions {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 7px;
+  }
+  :root[data-ui="mobile"] .touch-actions > button,
+  :root[data-ui="mobile"] .touch-actions > button:last-child {
+    width: 76px;
+    height: 58px;
+    min-height: 58px;
+  }
+}
+.equipped-skills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+.equipped-skills > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 10px monospace;
+  color: #c5afff;
+}
+.equipped-skills .icon {
+  width: 20px;
+  height: 20px;
+}

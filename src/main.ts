@@ -10,7 +10,7 @@ import "./ui/arcade.css";
 
 const app = document.querySelector<HTMLElement>("#app")!;
 app.innerHTML =
-  '<div id="arena-frame"><canvas id="arena" aria-label="Arena do Rogue. Mova com WASD ou setas, espaço para esquivar, Q para habilidade. As estatísticas aparecem na interface ao redor."></canvas></div><div id="interface"></div>';
+  '<div id="arena-frame"><canvas id="arena" aria-label="Arena do Rogue. Mova com WASD ou setas, espaço para esquivar, Q e E para habilidades. As estatísticas aparecem na interface ao redor."></canvas></div><div id="interface"></div>';
 const layout = new DeviceLayout();
 const game = new Game();
 const ui = new Interface(document.querySelector("#interface")!, game, layout);
@@ -60,12 +60,14 @@ const gameKeys = new Set([
   "arrowright",
   " ",
   "q",
+  "e",
 ]);
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   if (
     event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLSelectElement
   )
     return;
   if (game.phase !== "combat" || !gameKeys.has(key)) return;
@@ -74,6 +76,7 @@ document.addEventListener("keydown", (event) => {
   game.keys.add(key);
   if (event.repeat) return;
   if (key === "q") game.skill();
+  if (key === "e") game.skill(1);
   if (key === " ") game.dash();
 });
 document.addEventListener("keyup", (event) =>

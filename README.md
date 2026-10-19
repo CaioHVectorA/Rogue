@@ -17,7 +17,7 @@ No desenvolvimento, o inspetor nativo do Kaplay está habilitado (clique na aren
 
 ## Combate arcade
 
-Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas frequentes e patrulhas misturadas. Chefes têm escala visual maior e a sua queda elimina a horda restante. Sequências de eliminações geram um contador visual; não alteram secretamente dano ou recompensas.
+Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas frequentes e patrulhas misturadas. Chefes têm escala visual maior e a sua queda elimina a horda restante. Acertos e abates alimentam o combo. A barra base de 3,5s consome mais rápido conforme o combo sobe (até 4×) e ainda mais durante movimento (1,7×). O combo aumenta a chance de uma moeda extra por abate até 65%; Febre do ouro transforma esse bônus em três moedas e zera a sequência ao sofrer dano. O bônus aparece no HUD e não aumenta dano.
 
 Impactos incluem fragmentos, rastros, números de dano, ondas de choque, pausas curtas de impacto e sons locais reproduzidos pelo Kaplay. A quantidade de efeitos é limitada a 240 partículas no celular e 650 no desktop, com pequena reserva para anéis e indicadores. O modo reduzido remove tremor, pausas e números flutuantes e limita partículas a 45. Está no botão de configurações e respeita a preferência inicial do sistema.
 
@@ -27,16 +27,32 @@ Seleção de pilotos, melhorias por ícones/atributos e arsenal substituem os pa
 
 - Escolha Atirador (rajada), Conjurador (nova) ou Colosso (impacto e cura).
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
-- Escolha uma entre três melhorias ao vencer um encontro. As sinergias incluem veneno e explosões, perfuração e tiro duplo, defesa e sustentação.
+- As duas primeiras waves garantem ofertas de habilidades. A primeira preenche E; na segunda, escolha substituir Q ou E. Há nove poderes com recargas de 3,2 a 5,5s.
+- Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 16 perks; o coração pode repetir, os demais são únicos.
 - No descanso, compre cura ou dano com o ouro coletado. A coleta restante é automática ao limpar a sala.
-- Chefes anunciam ataques e entram em uma segunda fase com metade da vida. Vencer o terceiro encerra a run.
+- Chefes têm 1800/3600/5400 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
 - A derrota encerra a run. Só recordes ficam no navegador; não há poder permanente nem retomada após recarregar.
 
-No desktop: WASD/setas para movimento, Espaço para esquiva, Q para habilidade e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
+No desktop: WASD/setas para movimento, Espaço para esquiva, Q e E para habilidades e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
 
 A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop nas configurações e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado e áreas de controle fora do campo de batalha. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
 
 O código da run reproduz posições de spawn e sorteios de recompensa para as mesmas escolhas de build e de troca. Cada encontro usa sua própria sequência, independente do tempo de combate. A diária usa a data UTC. Não há placar online nem promessa de igualdade entre caminhos diferentes.
+
+## Laboratório de gameplay
+
+O frasco no cabeçalho, a opção nas configurações ou **F2** abrem o laboratório, inclusive na Vercel. Escolha estado (combate, recompensa, arsenal ou resultado), wave, boss/fase, piloto e preset. Saltar reinicia a run com 250 de ouro e marca **LAB** no campo; a prática nunca grava recordes. Uma run normal reinicia sem cheats ou poderes transferidos.
+
+Durante a prática, reabra o frasco para trocar Q/E, adicionar perks, ativar invencibilidade, mudar o ritmo entre 0,5× e 3× e limpar o encontro. O painel pausa o combate. F1 e os objetos de console continuam exclusivos do servidor de desenvolvimento.
+
+| Estilo   | Habilidades        | Interação                                                    |
+| -------- | ------------------ | ------------------------------------------------------------ |
+| Controle | Poço + tempestade  | Agrupe, desacelere e provoque reações em cadeia              |
+| Atirador | Sobrecarga + torre | Crie cobertura e pare para preparar o arpão                  |
+| Briga    | Impacto + lâminas  | Entre na horda, bloqueie e recupere vida com abates próximos |
+| Truques  | Holograma + mina   | Atraia a horda, deixe armadilhas e ataque ao fugir           |
+
+Os presets são atalhos de teste. Em runs normais a build surge das ofertas e pode misturar livremente esses estilos. Detalhes de balanceamento: [GAME_DESIGN.md](GAME_DESIGN.md).
 
 ## Validação
 
