@@ -2,6 +2,8 @@ import type { Game } from "../game/engine";
 import {
   ACTS,
   CLASSES,
+  WEAPONS,
+  weaponById,
   REWARDS,
   SKILLS,
   skillById,
@@ -9,7 +11,8 @@ import {
   TOTAL_ROOMS,
   formatTime,
 } from "../game/model";
-import type { ClassId } from "../game/model";
+import type { ClassId, WeaponId } from "../game/model";
+import { powerDiagram, powerInfo } from "./power-guide";
 import { icon } from "./icons";
 import { ITEM_VISUALS, pilotPortrait, statChip } from "./arsenal";
 import type { DeviceLayout } from "./device";
@@ -33,6 +36,8 @@ export class Interface {
   help = false;
   settings = false;
   laboratory = false;
+  inspectedPower: string | null = null;
+  private resumePower = false;
   itemDetails = false;
   confirmAbandon = false;
   private previousPhase = "";
@@ -67,6 +72,7 @@ export class Interface {
           select.value,
           Number(select.dataset.labSlot) as 0 | 1,
         );
+      if (select.id === "lab-weapon") this.game.labWeapon(select.value);
       if (select.id === "lab-speed" && this.game.run.practice)
         this.game.labSpeed = Number(select.value);
       if ((event.target as HTMLElement).matches('[aria-label="Interface"]'))
@@ -88,7 +94,9 @@ export class Interface {
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        if (this.laboratory) {
+        if (this.inspectedPower) {
+          this.action("close-power");
+        } else if (this.laboratory) {
           this.laboratory = false;
           this.render();
         } else if (this.settings) {
@@ -125,7 +133,23 @@ export class Interface {
   private action(action: string, value?: string) {
     const g = this.game;
     switch (action) {
+      case "inspect-power":
+        this.resumePower = g.phase === "combat";
+        if (g.phase === "combat") g.pause();
+        this.inspectedPower = value!;
+        this.render();
+        break;
+      case "close-power":
+        this.inspectedPower = null;
+        if (this.resumePower && g.phase === "paused") g.pause();
+        else this.render();
+        this.resumePower = false;
+        break;
+      case "weapon":
+        g.equipWeapon(value as WeaponId);
+        break;
       case "lab":
+        this.inspectedPower = null;
         if (g.phase === "combat") g.pause();
         this.settings = this.help = false;
         this.laboratory = true;
@@ -272,6 +296,11 @@ export class Interface {
     this.root.dataset.phase = g.phase;
     if (active) {
       this.renderHud();
+      const weapon = weaponById(g.run.weapon);
+      this.hud.insertAdjacentHTML(
+        "beforeend",
+        `<button class="weapon-indicator" data-action="inspect-power" data-value="weapon:${weapon.id}" aria-label="Entender ataque: ${weapon.name}">${icon(weapon.glyph)}<span>${weapon.name}</span><small>AUTO</small></button>`,
+      );
       this.hud.insertAdjacentHTML(
         "beforeend",
         '<div class="combo-display" aria-label="Sequência de acertos e abates" hidden><span id="combo-rank"></span><strong id="combo-value"></strong><div class="combo-fuse"><i></i></div><small class="combo-loot" id="combo-loot"></small></div>',
@@ -283,15 +312,21 @@ export class Interface {
       .value;
     this.overlay.classList.toggle(
       "is-gameplay",
-      g.phase === "combat" && !this.help && !this.settings && !this.laboratory,
+      g.phase === "combat" &&
+        !this.help &&
+        !this.settings &&
+        !this.laboratory &&
+        !this.inspectedPower,
     );
-    this.overlay.innerHTML = this.laboratory
-      ? this.labScreen()
-      : this.settings
-        ? this.settingsScreen()
-        : this.help
-          ? this.helpScreen()
-          : this.screen();
+    this.overlay.innerHTML = this.inspectedPower
+      ? this.powerScreen(this.inspectedPower)
+      : this.laboratory
+        ? this.labScreen()
+        : this.settings
+          ? this.settingsScreen()
+          : this.help
+            ? this.helpScreen()
+            : this.screen();
     const modeSelect = this.root.querySelector<HTMLSelectElement>(
       '[aria-label="Interface"]',
     );
@@ -306,7 +341,8 @@ export class Interface {
       this.previousPhase !== g.phase ||
       this.help ||
       this.settings ||
-      this.laboratory
+      this.laboratory ||
+      this.inspectedPower
     ) {
       this.overlay.scrollTop = 0;
       if (g.phase !== "menu")
@@ -341,7 +377,7 @@ export class Interface {
       <div class="run-counters"><span>${icon("coin")}<b id="gold-value"></b></span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div></div>
       <div class="boss-health" id="boss-health" hidden><div><span>${ACTS[g.run.act - 1].boss}</span><small id="boss-phase">GUARDIÃO DO ATO ${g.run.act}</small></div><div class="meter"><i id="boss-meter"></i></div></div>
       <div class="hud-bottom"><div class="encounter-label"><span class="eyebrow">ATO ${String(g.run.act).padStart(2, "0")} / ${ACTS[g.run.act - 1].name.toUpperCase()}</span><strong>WAVE ${String(g.run.room).padStart(2, "0")}<small> / 12</small></strong><span id="combat-hint"></span></div>
-      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div><div class="ability"><kbd>Q</kbd><div><strong>${skillById(g.run.skills[0]).name}</strong><span id="skill-value"></span></div></div>${g.run.skills[1] ? `<div class="ability"><kbd>E</kbd><div><strong>${skillById(g.run.skills[1]).name}</strong><span id="second-value"></span></div></div>` : `<div class="ability locked-slot"><kbd>E</kbd><span>WAVE 1</span></div>`}<div class="reload-ring" id="reload-state">${icon("target")}</div></div></div>`;
+      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div>${g.run.skills.map((id, slot) => (id ? `<button class="ability power-button" data-action="inspect-power" data-value="skill:${id}" title="Entender ${skillById(id).name}">${icon(skillById(id).glyph)}<kbd>${slot === 0 ? "Q" : "E"}</kbd><div><strong>${skillById(id).name}</strong><span id="${slot === 0 ? "skill-value" : "second-value"}"></span></div></button>` : `<div class="ability locked-slot"><kbd>${slot === 0 ? "Q" : "E"}</kbd><span>WAVE ${slot === 0 ? "2" : "3"}</span></div>`)).join("")}<div class="reload-ring" id="reload-state">${icon("target")}</div></div></div>`;
   }
   tick() {
     const g = this.game;
@@ -406,7 +442,11 @@ export class Interface {
         button.querySelector("span")!.textContent = id
           ? skillById(id).name
           : "WAVE 1";
-        button.title = id ? skillById(id).desc : "Desbloqueie na primeira wave";
+        button.title = id ? skillById(id).desc : "Desbloqueie durante a run";
+        if (id && button.dataset.skillId !== id) {
+          button.dataset.skillId = id;
+          button.querySelector(".icon")!.outerHTML = icon(skillById(id).glyph);
+        }
       }
       button.disabled = cooldown > 0 || g.intro > 0 || g.phase !== "combat";
       const label = button.querySelector("small")!;
@@ -417,7 +457,7 @@ export class Interface {
       `${Math.max(0, g.player.hp / g.player.maxHp) * 100}%`;
     this.hud
       .querySelector<HTMLElement>("#reload-state")!
-      .classList.toggle("ready", g.player.charge >= g.player.reload);
+      .classList.toggle("ready", g.player.charge >= g.fireInterval);
     const boss = g.enemies.find((e) => e.kind === "boss");
     this.hud.querySelector<HTMLElement>("#boss-health")!.hidden = !boss;
     if (boss) {
@@ -465,11 +505,14 @@ export class Interface {
     const g = this.game,
       boss = g.run.room % 4 === 0;
     const draft = g.run.offers.some((id) => id.startsWith("skill:"));
-    return `<section class="wide-dialog loot-screen ${draft ? "skill-draft" : ""}" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon(boss ? "crown" : "skull")}</span><div><small>WAVE ${g.run.room.toString().padStart(2, "0")} CLEAR</small><h1 id="screen-title">${draft ? "NOVO PODER" : boss ? "GUARDIÃO ABATIDO" : "MUTAÇÃO!"}</h1></div><button class="icon-button" data-action="item-info" aria-label="Mostrar descrições das melhorias" aria-pressed="${this.itemDetails}">${icon("book")}</button></div>${draft ? `<div class="skill-slots" role="group" aria-label="Slot para a nova habilidade">${([0, 1] as const).map((slot) => `<button class="secondary ${g.rewardSlot === slot ? "selected" : ""}" data-action="reward-slot" data-value="${slot}" aria-pressed="${g.rewardSlot === slot}"><kbd>${slot === 0 ? "Q" : "E"}</kbd> ${g.run.skills[slot] ? skillById(g.run.skills[slot]!).name : "VAZIO"}</button>`).join("")}<small>Escolha o slot que receberá a habilidade.</small></div>` : ""}<div class="reward-grid">${g.run.offers
+    const weaponDraft = g.run.room === 1;
+    return `<section class="wide-dialog loot-screen ${draft ? "skill-draft" : ""}" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon(boss ? "crown" : "skull")}</span><div><small>WAVE ${g.run.room.toString().padStart(2, "0")} CLEAR</small><h1 id="screen-title">${weaponDraft ? "SEU DISPARO" : draft ? "NOVA HABILIDADE" : boss ? "GUARDIÃO ABATIDO" : "MUTAÇÃO!"}</h1></div><button class="icon-button" data-action="item-info" aria-label="Mostrar descrições das melhorias" aria-pressed="${this.itemDetails}">${icon("book")}</button></div>${draft ? `<div class="skill-slots" role="group" aria-label="Slot para a nova habilidade">${([0, 1] as const).map((slot) => `<button class="secondary ${g.rewardSlot === slot ? "selected" : ""}" data-action="reward-slot" data-value="${slot}" aria-pressed="${g.rewardSlot === slot}"><kbd>${slot === 0 ? "Q" : "E"}</kbd> ${g.run.skills[slot] ? skillById(g.run.skills[slot]!).name : "VAZIO"}</button>`).join("")}<small>Escolha o slot que receberá a habilidade.</small></div>` : ""}<div class="reward-grid">${g.run.offers
       .map((id) => {
         const reward = REWARDS.find((r) => r.id === id)!,
           item = ITEM_VISUALS[id];
-        return `<button class="reward-card loot-card" style="--class-color:${reward.color}" data-action="reward" data-value="${id}" aria-label="${escape(reward.name)}. ${escape(reward.desc)}"><div class="loot-category">${reward.tag}</div><div class="loot-object">${icon(item.glyph)}</div><div class="loot-stat"><strong>${item.value}</strong><span>${item.stat}</span></div><h2>${reward.name}</h2><span class="loot-hint">${item.hint}</span><p class="item-description">${reward.desc}</p><div class="loot-pips">${Array.from({ length: reward.max }, (_, i) => `<i class="${i <= (g.run.rewards[id] ?? 0) ? "lit" : ""}"></i>`).join("")}</div><span class="loot-select">EQUIPAR ${icon("arrow")}</span></button>`;
+        const power = id.startsWith("skill:") || id.startsWith("weapon:");
+        const info = power ? powerInfo(id) : null;
+        return `<button class="reward-card loot-card ${power ? "power-card" : ""}" style="--class-color:${reward.color}" data-action="reward" data-value="${id}" aria-label="${escape(reward.name)}. ${escape(reward.desc)}"><div class="loot-category">${reward.tag}</div>${power ? powerDiagram(id) : `<div class="loot-object">${icon(item.glyph)}</div>`}<div class="loot-stat"><strong>${item.value}</strong><span>${item.stat}</span></div><h2>${reward.name}</h2>${info ? `<span class="power-target">${info.where}</span><p class="power-description">${info.desc}</p><span class="power-trigger">${info.trigger}</span>` : `<span class="loot-hint">${item.hint}</span>`}<p class="item-description">${reward.desc}</p><div class="loot-pips">${Array.from({ length: reward.max }, (_, i) => `<i class="${i <= (g.run.rewards[id] ?? 0) ? "lit" : ""}"></i>`).join("")}</div><span class="loot-select">EQUIPAR ${icon("arrow")}</span></button>`;
       })
       .join(
         "",
@@ -478,10 +521,10 @@ export class Interface {
   private campScreen() {
     const g = this.game,
       boss = (g.run.room + 1) % 4 === 0;
-    return `<section class="wide-dialog armory-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon("shield")}</span><div><small>CHECKPOINT ${g.run.room.toString().padStart(2, "0")}</small><h1 id="screen-title">ARSENAL</h1></div><span class="armory-gold">${icon("coin")} ${g.run.gold}</span></div><div class="armory-body"><div class="armory-items"><button class="shop-crate" data-action="heal" aria-label="Recuperar o fôlego. Cura 40% da vida máxima" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}><span class="crate-symbol">${icon("heart")}</span><strong>+40%</strong><small>VIDA</small><span class="crate-price">${g.run.healed ? "USADO" : g.player.hp >= g.player.maxHp ? "MAX" : `${icon("coin")} ${g.healCost}`}</span></button><button class="shop-crate" data-action="forge" aria-label="Afiar a precisão. Mais 8% de dano" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}><span class="crate-symbol">${icon("target")}</span><strong>+8%</strong><small>DANO</small><span class="crate-price">${g.run.purchases >= 2 ? "MAX" : `${icon("coin")} ${g.forgeCost}`}</span></button></div><aside class="loadout-snapshot"><div class="equipped-stats">${statChip("heart", `${Math.ceil(g.player.hp)}/${g.player.maxHp}`, "VIDA")}${statChip("target", g.player.damage.toFixed(0), "DANO")}${statChip("repeat", `${g.player.reload.toFixed(2)}s`, "RECARGA")}</div><div class="equipped-skills">${g.run.skills.map((id, slot) => (id ? `<span title="${skillById(id).desc}"><kbd>${slot === 0 ? "Q" : "E"}</kbd>${icon(skillById(id).glyph)}${skillById(id).name}</span>` : "")).join("")}</div><div class="equipped-inventory">${Object.entries(
+    return `<section class="wide-dialog armory-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon("shield")}</span><div><small>CHECKPOINT ${g.run.room.toString().padStart(2, "0")}</small><h1 id="screen-title">ARSENAL</h1></div><span class="armory-gold">${icon("coin")} ${g.run.gold}</span></div><div class="weapon-rack" aria-label="Armas desbloqueadas">${g.run.weapons.map((id) => `<button class="secondary ${g.run.weapon === id ? "selected" : ""}" data-action="weapon" data-value="${id}" aria-pressed="${g.run.weapon === id}">${icon(weaponById(id).glyph)} ${weaponById(id).name}</button>`).join("")}</div><div class="armory-body"><div class="armory-items"><button class="shop-crate" data-action="heal" aria-label="Recuperar o fôlego. Cura 40% da vida máxima" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}><span class="crate-symbol">${icon("heart")}</span><strong>+40%</strong><small>VIDA</small><span class="crate-price">${g.run.healed ? "USADO" : g.player.hp >= g.player.maxHp ? "MAX" : `${icon("coin")} ${g.healCost}`}</span></button><button class="shop-crate" data-action="forge" aria-label="Afiar a precisão. Mais 8% de dano" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}><span class="crate-symbol">${icon("target")}</span><strong>+8%</strong><small>DANO</small><span class="crate-price">${g.run.purchases >= 2 ? "MAX" : `${icon("coin")} ${g.forgeCost}`}</span></button></div><aside class="loadout-snapshot"><div class="equipped-stats">${statChip("heart", `${Math.ceil(g.player.hp)}/${g.player.maxHp}`, "VIDA")}${statChip("target", g.player.damage.toFixed(0), "DANO")}${statChip("repeat", `${g.fireInterval.toFixed(2)}s`, "RECARGA")}</div><div class="equipped-skills">${g.run.skills.map((id, slot) => (id ? `<span title="${skillById(id).desc}"><kbd>${slot === 0 ? "Q" : "E"}</kbd>${icon(skillById(id).glyph)}${skillById(id).name}</span>` : "")).join("")}</div><div class="equipped-inventory">${Object.entries(
       g.run.rewards,
     )
-      .filter(([id]) => !id.startsWith("skill:"))
+      .filter(([id]) => !id.startsWith("skill:") && !id.startsWith("weapon:"))
       .map(
         ([id, count]) =>
           `<span title="${REWARDS.find((r) => r.id === id)!.name}">${icon(ITEM_VISUALS[id].glyph)}<b>${count}</b></span>`,
@@ -505,6 +548,10 @@ export class Interface {
         )}</div><div class="stack-actions"><button class="primary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} REPETIR</button><button class="secondary" data-action="menu" aria-label="Nova expedição">NOVA RUN ${icon("arrow")}</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
       "result-dialog",
     );
+  }
+  private powerScreen(id: string) {
+    const info = powerInfo(id);
+    return `<section class="dialog power-help" role="dialog" aria-modal="true" aria-label="Entender poder"><span class="game-kicker">${info.trigger}</span><h1>${info.name}</h1>${powerDiagram(id)}<strong class="power-target">${info.where}</strong><p>${info.desc}</p><small>${info.timing}</small><p class="guide-legend"><i></i> VOCÊ · QUADRADOS VERMELHOS SÃO INIMIGOS</p><button class="primary" data-action="close-power">ENTENDI ${icon("arrow")}</button></section>`;
   }
   private labScreen() {
     const g = this.game;
@@ -544,8 +591,8 @@ export class Interface {
         .join(""),
     )}</div><button class="primary" data-action="lab-jump">${icon("arrow")} SALTAR PARA O ESTADO</button>${
       g.run.practice
-        ? `<div class="lab-current"><span class="game-kicker">RUN DE PRÁTICA · WAVE ${g.run.room}</span><div class="lab-grid">${([0, 1] as const).map((slot) => `<label>${slot === 0 ? "Q" : "E"}<select data-lab-slot="${slot}" aria-label="Habilidade ${slot === 0 ? "Q" : "E"}">${SKILLS.map((s) => `<option value="${s.id}" ${g.run.skills[slot] === s.id ? "selected" : ""} ${g.run.skills[1 - slot] === s.id ? "disabled" : ""}>${s.name}</option>`).join("")}</select></label>`).join("")}</div><div class="lab-grid"><button class="secondary" data-action="lab-god" aria-pressed="${g.labGod}">${icon("shield")} INVENCÍVEL ${g.labGod ? "ON" : "OFF"}</button>${select("lab-speed", "RITMO", [0.5, 1, 2, 3].map((n) => `<option value="${n}" ${g.labSpeed === n ? "selected" : ""}>${n}×</option>`).join(""))}</div><details><summary>ADICIONAR PERKS</summary><div class="lab-perks">${REWARDS.filter(
-            (r) => !r.id.startsWith("skill:"),
+        ? `<div class="lab-current"><span class="game-kicker">RUN DE PRÁTICA · WAVE ${g.run.room}</span><div class="lab-grid">${([0, 1] as const).map((slot) => `<label>${slot === 0 ? "Q" : "E"}<select data-lab-slot="${slot}" aria-label="Habilidade ${slot === 0 ? "Q" : "E"}"><option value="" ${!g.run.skills[slot] ? "selected" : ""}>SEM HABILIDADE</option>${SKILLS.map((s) => `<option value="${s.id}" ${g.run.skills[slot] === s.id ? "selected" : ""} ${g.run.skills[1 - slot] === s.id ? "disabled" : ""}>${s.name}</option>`).join("")}</select></label>`).join("")}</div><div class="lab-grid"><button class="secondary" data-action="lab-god" aria-pressed="${g.labGod}">${icon("shield")} INVENCÍVEL ${g.labGod ? "ON" : "OFF"}</button>${select("lab-weapon", "ATAQUE AUTOMÁTICO", WEAPONS.map((w) => `<option value="${w.id}" ${g.run.weapon === w.id ? "selected" : ""}>${w.name}</option>`).join(""))}${select("lab-speed", "RITMO", [0.5, 1, 2, 3].map((n) => `<option value="${n}" ${g.labSpeed === n ? "selected" : ""}>${n}×</option>`).join(""))}</div><details><summary>ADICIONAR PERKS</summary><div class="lab-perks">${REWARDS.filter(
+            (r) => !r.id.startsWith("skill:") && !r.id.startsWith("weapon:"),
           )
             .map(
               (r) =>
@@ -564,13 +611,14 @@ export class Interface {
     );
   }
   private helpScreen() {
+    const powers = `<div class="build-help-links"><small>ENTENDA SEUS ATAQUES</small>${[`weapon:${this.game.run.weapon}`, ...this.game.run.skills.filter((id): id is string => !!id).map((id) => `skill:${id}`)].map((id) => `<button class="secondary" data-action="inspect-power" data-value="${id}">${icon(powerInfo(id).glyph)} ${powerInfo(id).name}</button>`).join("")}</div>`;
     if (this.layout.mode === "mobile")
       return this.dialog(
-        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Q e E recebem novos poderes nas duas primeiras waves. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop nas configurações da engrenagem.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+        `${powers}<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Você começa sem habilidades: escolha seu ataque na wave 1 e receba Q/E nas waves 2 e 3. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop nas configurações da engrenagem.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
         "help-dialog",
       );
     return this.dialog(
-      `<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 2,6 segundos.</p></div><div><kbd>Q / E</kbd><p><b>Combine suas habilidades.</b> As duas primeiras waves oferecem novos poderes. Escolha o slot para equipar. Elas também funcionam em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes têm quatro fases; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Combo alto consome a barra mais rápido; mover acelera a queda. Acertos e abates renovam a barra. Mais combo aumenta a chance de ouro extra, até 65%. A oficina converte ouro em força. F2 ou o frasco abre o laboratório, com runs de prática sem recordes.</p><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+      `${powers}<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 2,6 segundos.</p></div><div><kbd>Q / E</kbd><p><b>Combine suas habilidades.</b> Você começa sem habilidades. Na wave 1, escolha o ataque; nas waves 2 e 3, equipe Q e E. Escolha o slot para equipar. Elas também funcionam em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes têm quatro fases; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Combo alto consome a barra mais rápido; mover acelera a queda. Acertos e abates renovam a barra. Mais combo aumenta a chance de ouro extra, até 65%. A oficina converte ouro em força. F2 ou o frasco abre o laboratório, com runs de prática sem recordes.</p><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
       "help-dialog",
     );
   }

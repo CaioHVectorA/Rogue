@@ -1,5 +1,5 @@
 import type { ClassId } from "../game/model";
-import { CLASSES, SKILLS } from "../game/model";
+import { CLASSES, SKILLS, WEAPONS } from "../game/model";
 import { icon } from "./icons";
 
 const SKILL_HINTS: Record<string, string> = {
@@ -114,6 +114,12 @@ export const ITEM_VISUALS: Record<
     stat: "APOSTAR",
     hint: "Combo dá mais ouro; dano zera tudo",
   },
+  ...Object.fromEntries(
+    WEAPONS.map((w) => [
+      `weapon:${w.id}`,
+      { glyph: w.glyph, value: "AUTO", stat: w.tag, hint: w.hint },
+    ]),
+  ),
   ...Object.fromEntries(
     SKILLS.map((s) => [
       `skill:${s.id}`,

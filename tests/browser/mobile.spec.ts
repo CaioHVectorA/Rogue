@@ -155,6 +155,7 @@ test("touch skill activates on press and exposes cooldown feedback", async ({
   const { page, context } = await phone(browser);
   await enter(page);
   await page.evaluate(() => {
+    window.__rogue.run.skills[0] = "volley";
     window.__rogue.intro = 0;
     window.__rogue.player.invulnerable = 1000;
   });
@@ -188,9 +189,13 @@ test("two simultaneous fingers move and cast; cancellation never leaves movement
   const { page, context } = await phone(browser);
   await enter(page);
   await page.evaluate(() => {
+    window.__rogue.run.skills[0] = "volley";
     window.__rogue.intro = 0;
     window.__rogue.player.invulnerable = 1000;
   });
+  await expect(
+    page.locator('.touch-actions [data-action="skill"]'),
+  ).toBeVisible();
   const stick = (await page.locator(".joystick").boundingBox())!;
   const skill = (await page
     .locator('.touch-actions [data-action="skill"]')

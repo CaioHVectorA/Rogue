@@ -40,7 +40,7 @@ describe("run rules", () => {
   });
   it("rerolls prefer new offers and handles exhausted pools", () => {
     const run = createRun("TEST", "ranger");
-    run.room = 3;
+    run.room = 4;
     const random = randomFromSeed("TEST");
     const offers = rewardOffers(run, random);
     expect(

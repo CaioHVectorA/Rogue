@@ -1,4 +1,8 @@
 const paths: Record<string, string> = {
+  shotgun:
+    '<path d="m3 5 17 3v4H8l-3 8H1l3-10ZM7 5v7m4-5v5m4-5v5M20 5l3-2m-2 6h3m-4 4 3 2"/>',
+  seismic:
+    '<circle cx="12" cy="12" r="3"/><path d="M6 6a8 8 0 0 0 0 12m12-12a8 8 0 0 1 0 12M3 3a13 13 0 0 0 0 18M21 3a13 13 0 0 1 0 18"/>',
   flask:
     '<path d="M8 2h8M10 2v7L3 20v2h18v-2L14 9V2M6 16h12"/><circle cx="12" cy="18" r="1"/>',
   gear: '<path d="m9 3 1-2h4l1 2 3 2h3l2 4-2 2v3l2 2-2 4h-3l-3 2-1 2h-4l-1-2-3-2H3l-2-4 2-2v-3L1 9l2-4h3Z"/><circle cx="12" cy="12" r="4"/>',

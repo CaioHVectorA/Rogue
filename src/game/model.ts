@@ -35,6 +35,8 @@ export interface Bullet extends Point {
   hostile: boolean;
   pierce: number;
   hit: Set<number>;
+  color?: string;
+  ricochets?: boolean;
 }
 export interface Field extends Point {
   kind: "vortex" | "storm" | "turret" | "mine" | "orbit" | "decoy";
@@ -74,7 +76,9 @@ export interface Player extends Point {
 }
 export interface Run {
   seed: string;
-  skills: [string, string | null];
+  skills: [string | null, string | null];
+  weapon: WeaponId;
+  weapons: WeaponId[];
   practice: boolean;
   classId: ClassId;
   room: number;
@@ -102,36 +106,36 @@ export const CLASSES = {
   ranger: {
     name: "Atirador",
     title: "Precisão em movimento.",
-    skill: "Sobrecarga",
+    skill: "Rajada perfurante",
     desc: "Q dispara uma rajada em leque. Ideal para abrir espaço.",
     color: "#a4f6c1",
     hp: 100,
-    damage: 18,
-    reload: 0.36,
+    damage: 22,
+    reload: 0.2,
     speed: 235,
     cooldown: 3.2,
   },
   arcanist: {
     name: "Conjurador",
     title: "Controle o impossível.",
-    skill: "Nova arcana",
+    skill: "Onda de repulsão",
     desc: "Q causa dano e afasta inimigos próximos. Controle de área.",
     color: "#c5afff",
     hp: 90,
-    damage: 16,
-    reload: 0.4,
+    damage: 20,
+    reload: 0.23,
     speed: 235,
     cooldown: 4,
   },
   colossus: {
     name: "Colosso",
     title: "Transforme risco em força.",
-    skill: "Impacto sísmico",
+    skill: "Pisada sísmica",
     desc: "Q atinge uma grande área e recupera vida ao acertar.",
     color: "#ffbc8a",
     hp: 140,
-    damage: 21,
-    reload: 0.46,
+    damage: 25,
+    reload: 0.26,
     speed: 215,
     cooldown: 4.5,
   },
@@ -164,10 +168,93 @@ export interface Reward {
   max: number;
   color: string;
 }
+export const WEAPONS = [
+  {
+    id: "pulse",
+    name: "Pistola de pulso",
+    tag: "PRECISÃO",
+    desc: "Pare para disparar tiros rápidos no alvo mais próximo. Boa distância e impacto imediato.",
+    hint: "Tiro rápido e preciso",
+    glyph: "target",
+    color: "#a4f6c1",
+    interval: 0.2,
+    range: 850,
+    power: 1,
+    pattern: "line",
+  },
+  {
+    id: "minigun",
+    name: "Metralhadora",
+    tag: "CADÊNCIA",
+    desc: "Uma sequência muito rápida de projéteis. Pare e mantenha a pressão sobre o alvo mais próximo.",
+    hint: "Uma corrente de tiros",
+    glyph: "charge",
+    color: "#a4f6c1",
+    interval: 0.13,
+    range: 700,
+    power: 0.8,
+    pattern: "line",
+  },
+  {
+    id: "shotgun",
+    name: "Escopeta",
+    tag: "CONE CURTO",
+    desc: "Sete chumbos em leque. Atinge apenas a curta distância; aproxime-se para concentrar os chumbos num alvo.",
+    hint: "Perto: concentre sete chumbos",
+    glyph: "shotgun",
+    color: "#ffbc8a",
+    interval: 0.44,
+    range: 290,
+    power: 0.48,
+    pattern: "cone",
+  },
+  {
+    id: "seismic",
+    name: "Emissor sísmico",
+    tag: "AO SEU REDOR",
+    desc: "Pare para emitir ondas em todas as direções. Só atinge inimigos dentro do círculo próximo. Não dispara projéteis.",
+    hint: "Só atinge quem entra no círculo",
+    glyph: "seismic",
+    color: "#ffda8a",
+    interval: 0.48,
+    range: 160,
+    power: 1.4,
+    pattern: "circle",
+  },
+  {
+    id: "arc",
+    name: "Arco elétrico",
+    tag: "EM CADEIA",
+    desc: "Um choque instantâneo salta por até três inimigos próximos entre si. Alcance médio; não atravessa a arena.",
+    hint: "O choque salta entre três alvos",
+    glyph: "bolt",
+    color: "#85d8ef",
+    interval: 0.3,
+    range: 400,
+    power: 0.9,
+    pattern: "chain",
+  },
+  {
+    id: "rail",
+    name: "Lança perfurante",
+    tag: "LINHA LONGA",
+    desc: "Um disparo pesado atravessa até cinco inimigos alinhados. Mais lento: alinhe a fila antes de parar.",
+    hint: "Alinhe a horda e atravesse a fila",
+    glyph: "pierce",
+    color: "#c5afff",
+    interval: 0.5,
+    range: 950,
+    power: 2.4,
+    pattern: "line",
+  },
+] as const;
+export type WeaponId = (typeof WEAPONS)[number]["id"];
+export const weaponById = (id: WeaponId) => WEAPONS.find((w) => w.id === id)!;
+
 export const SKILLS = [
   {
     id: "volley",
-    name: "Sobrecarga",
+    name: "Rajada perfurante",
     tag: "RAJADA",
     desc: "Sete projéteis perfurantes em leque. Abra uma passagem na horda.",
     cooldown: 3.2,
@@ -176,43 +263,43 @@ export const SKILLS = [
   },
   {
     id: "nova",
-    name: "Nova arcana",
+    name: "Onda de repulsão",
     tag: "CONTROLE",
-    desc: "Uma onda afasta e congela a horda por um instante. Apaga tiros próximos.",
+    desc: "Uma onda ao seu redor empurra e desacelera inimigos por 2s. Também apaga tiros inimigos próximos.",
     cooldown: 4,
     color: "#c5afff",
     glyph: "explosion",
   },
   {
     id: "quake",
-    name: "Impacto sísmico",
+    name: "Pisada sísmica",
     tag: "BRIGA",
-    desc: "Esmague inimigos próximos e recupere vida por alvo atingido.",
+    desc: "Uma pisada atinge só inimigos perto de você e cura ao acertar. Aproxime-se antes de ativar.",
     cooldown: 4.5,
     color: "#ffbc8a",
-    glyph: "shield",
+    glyph: "seismic",
   },
   {
     id: "vortex",
-    name: "Poço gravitacional",
+    name: "Ímã gravitacional",
     tag: "AGRUPAR",
-    desc: "Um poço no alvo puxa a horda. Agrupe antes de explodir ou perfurar.",
+    desc: "Durante 3s, um poço no inimigo mais próximo puxa a horda. Combine com ataques de área.",
     cooldown: 5,
     color: "#c5afff",
     glyph: "mark",
   },
   {
     id: "storm",
-    name: "Tempestade iônica",
+    name: "Chuva de raios",
     tag: "ZONA",
-    desc: "Marque o alvo: relâmpagos atingem a área várias vezes. Controle uma passagem.",
+    desc: "Cria uma tempestade no inimigo mais próximo. A área recebe vários raios durante 2,4s.",
     cooldown: 4.2,
     color: "#85d8ef",
     glyph: "bolt",
   },
   {
     id: "turret",
-    name: "Sentinela de bolso",
+    name: "Torre automática",
     tag: "POSICIONAR",
     desc: "Plante uma torre que atira enquanto você se reposiciona. Dura quatro segundos.",
     cooldown: 5.5,
@@ -221,39 +308,42 @@ export const SKILLS = [
   },
   {
     id: "mine",
-    name: "Presente explosivo",
+    name: "Mina de proximidade",
     tag: "ARMADILHA",
-    desc: "Deixe uma mina gigante aos seus pés. Aproxime a horda e fuja antes da explosão.",
+    desc: "Planta uma mina aos seus pés. Arma em 0,45s e explode quando um inimigo se aproxima, ou após 5s.",
     cooldown: 3.8,
     color: "#ffbc8a",
     glyph: "explosion",
   },
   {
     id: "orbit",
-    name: "Coroa de lâminas",
+    name: "Lâminas orbitais",
     tag: "CORPO A CORPO",
-    desc: "Três lâminas orbitam você e destroem projéteis próximos. Entre na horda.",
+    desc: "Por 3,2s, lâminas acompanham você, ferem inimigos próximos e destroem tiros que entram no círculo.",
     cooldown: 5,
     color: "#ffda8a",
     glyph: "crown",
   },
   {
     id: "decoy",
-    name: "Fantasma holográfico",
+    name: "Isca explosiva",
     tag: "ISCA",
-    desc: "Deixe uma cópia que atrai os inimigos e explode ao desaparecer. Sua fuga vira armadilha.",
+    desc: "Deixa uma cópia na sua posição. Inimigos comuns seguem a isca; ela explode após 2,5s.",
     cooldown: 4.8,
     color: "#85d8ef",
     glyph: "dash",
   },
 ] as const;
 export const skillById = (id: string) => SKILLS.find((s) => s.id === id)!;
-export const starterSkill: Record<ClassId, string> = {
-  ranger: "volley",
-  arcanist: "nova",
-  colossus: "quake",
-};
 export const REWARDS: Reward[] = [
+  ...WEAPONS.filter((w) => w.id !== "pulse").map((w) => ({
+    id: `weapon:${w.id}`,
+    name: w.name,
+    tag: w.tag,
+    desc: w.desc,
+    max: 1,
+    color: w.color,
+  })),
   {
     id: "anchor",
     name: "Ninho de atirador",
@@ -354,7 +444,7 @@ export const REWARDS: Reward[] = [
     id: "ricochet",
     name: "Sinuca de plasma",
     tag: "REBATER",
-    desc: "Ao acertar, o tiro procura outro inimigo próximo. Não repete o mesmo alvo.",
+    desc: "Tiros retos procuram outro inimigo próximo após acertar. Não repete alvos nem muda o alcance dos chumbos.",
     max: 1,
     color: "#85d8ef",
   },
@@ -410,7 +500,9 @@ export function randomFromSeed(seed: string): () => number {
 export function createRun(seed: string, classId: ClassId): Run {
   return {
     seed,
-    skills: [starterSkill[classId], null],
+    skills: [null, null],
+    weapon: "pulse",
+    weapons: ["pulse"],
     practice: false,
     classId,
     room: 1,
@@ -457,14 +549,26 @@ export function rewardOffers(
   random: () => number,
   exclude: string[] = [],
 ): string[] {
-  // The first two clears guarantee a new active; later choices reshape the build.
-  const draft = run.room <= 2;
-  const eligible = REWARDS.filter(
-    (r) =>
-      (run.rewards[r.id] ?? 0) < r.max &&
-      r.id.startsWith("skill:") === draft &&
-      (!draft || !run.skills.includes(r.id.slice(6))),
+  // Learn one system at a time: weapon, Q, E, then perks and new weapon forms.
+  const kind = run.room === 1 ? "weapon:" : run.room <= 3 ? "skill:" : "perk";
+  const projectile = !["circle", "chain"].includes(
+    weaponById(run.weapon).pattern,
   );
+  const eligible = REWARDS.filter((r) => {
+    if ((run.rewards[r.id] ?? 0) >= r.max) return false;
+    if (r.id === "ricochet" && run.weapon === "shotgun") return false;
+    if (r.id.startsWith("skill:"))
+      return kind === "skill:" && !run.skills.includes(r.id.slice(6));
+    if (r.id.startsWith("weapon:"))
+      return (
+        kind !== "skill:" && !run.weapons.includes(r.id.slice(7) as WeaponId)
+      );
+    return (
+      kind === "perk" &&
+      (projectile ||
+        !["anchor", "double", "pierce", "crossfire", "ricochet"].includes(r.id))
+    );
+  });
   const fresh = eligible.filter((r) => !exclude.includes(r.id));
   const pool = [...fresh, ...eligible.filter((r) => exclude.includes(r.id))];
   // Draw without replacement, preferring unseen offers during a reroll.
@@ -480,10 +584,17 @@ export function applyReward(
   run: Run,
   player: Player,
   id: string,
-  slot: 0 | 1 = run.skills[1] ? 0 : 1,
+  slot: 0 | 1 = !run.skills[0] ? 0 : !run.skills[1] ? 1 : 0,
 ): boolean {
   const reward = REWARDS.find((r) => r.id === id);
   if (!reward || (run.rewards[id] ?? 0) >= reward.max) return false;
+  if (id.startsWith("weapon:")) {
+    const weapon = id.slice(7) as WeaponId;
+    if (run.weapons.includes(weapon)) return false;
+    run.weapons.push(weapon);
+    run.weapon = weapon;
+    player.charge = 0;
+  }
   if (id.startsWith("skill:")) {
     const skill = id.slice(6);
     if (run.skills.includes(skill)) return false;

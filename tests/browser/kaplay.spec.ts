@@ -97,10 +97,12 @@ test("equipment descriptions and reduced effects remain available without fillin
     const g = window.__rogue;
     g.spawnQueue = [];
     g.enemies = [];
+    g.run.room = 4;
+    g.run.act = 1;
     g.roomTime = 3;
     g.update(1 / 120);
   });
-  await expect(page.locator(".loot-object")).toHaveCount(3);
+  await expect(page.locator(".reward-card")).toHaveCount(3);
   await expect(page.locator(".item-description").first()).toBeHidden();
   await page
     .getByRole("button", { name: "Mostrar descrições das melhorias" })
