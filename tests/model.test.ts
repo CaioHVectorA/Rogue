@@ -40,6 +40,7 @@ describe("run rules", () => {
   });
   it("rerolls prefer new offers and handles exhausted pools", () => {
     const run = createRun("TEST", "ranger");
+    run.room = 3;
     const random = randomFromSeed("TEST");
     const offers = rewardOffers(run, random);
     expect(
@@ -47,8 +48,8 @@ describe("run rules", () => {
     ).toBe(false);
     for (const reward of REWARDS) run.rewards[reward.id] = reward.max;
     expect(rewardOffers(run, random)).toEqual([]);
-    run.rewards.power--;
-    expect(rewardOffers(run, random)).toEqual(["power"]);
+    run.rewards.anchor--;
+    expect(rewardOffers(run, random)).toEqual(["anchor"]);
   });
   it("enforces upgrade caps and heals without exceeding maximum health", () => {
     const run = createRun("TEST", "colossus"),

@@ -2,17 +2,17 @@
 
 ## Pilares
 
-1. **Posicionamento é ataque.** O tiro básico exige ficar parado; mira automática e recarga visível reduzem a carga de comandos. Q e esquiva abrem janelas sem apagar essa tensão.
+1. **Posicionamento é ataque.** O tiro básico exige ficar parado; mira automática e recarga visível reduzem a carga de comandos. Q, E e esquiva abrem janelas sem apagar essa tensão.
 2. **Uma decisão por vez.** Menu → combate → recompensa → descanso → combate. Pausa e resultado são estados exclusivos. Sem loja sobreposta a combate nem recursos competindo pela mesma compra.
 3. **Runs completas e finitas.** 12 salas, três atos e chefes nas salas 4, 8 e 12. Cada chefe derrotado recupera 25% da vida e concede uma troca de ofertas. A última sala leva diretamente à vitória.
-4. **Clareza antes de quantidade.** Três caminhos, quatro famílias de inimigos comuns, 12 melhorias e três variantes de guardião. Forma, cor, contorno e movimento distinguem ameaças.
+4. **Clareza antes de quantidade.** Três caminhos, quatro famílias de inimigos comuns, nove habilidades, 16 perks e três variantes de guardião. Forma, cor, contorno e movimento distinguem ameaças.
 
 ## Sistemas
 
-- **Combate:** passo fixo de 120 Hz; movimento normalizado; colisões por áreas do Kaplay, com áreas varridas para projéteis; recarga a 65% em movimento; esquiva de 0,18s com proteção de 0,28s e cooldown base de 3s; proteção global de 0,75s após dano.
-- **Chefes:** Sentinela introduz anéis e áreas; Tecelã adiciona leques direcionados e mais áreas; Soberano combina padrões mais densos. Abaixo de 50% da vida, intervalos caem e padrões ganham projéteis/áreas. Avisos de área fixam a posição ao nascer e antecipam o impacto em pelo menos 1,1s.
+- **Combate:** passo fixo de 120 Hz; movimento normalizado; colisões por áreas do Kaplay, com áreas varridas para projéteis; recarga a 65% em movimento; esquiva de 0,18s com proteção de 0,28s e cooldown base de 2,6s; proteção global de 0,75s após dano.
+- **Chefes:** Sentinela introduz anéis e áreas; Tecelã adiciona leques direcionados e mais áreas; Soberano combina padrões mais densos. Quatro fases em 75/50/25% da vida. Intervalos caem de 2,7s a 1,6s, entram anéis adicionais, reforços e perigos em cruz. Cada transição protege o boss por 1,2s e limpa tiros hostis. Avisos de área fixam a posição ao nascer e antecipam o impacto em pelo menos 1,1s.
 - **Progressão:** ofertas sem repetição e sem melhorias já no limite; uma troca inicial e mais uma por chefe; cura e reforços comprados só no descanso. Cura limitada a uma e reforços a dois por descanso. Ouro de chão é recolhido ao concluir.
-- **Sinergias:** dano de habilidade não depende de dano básico adicional; a fila de mortes resolve explosões sem recursão e sem duplicar ouro. Armadura é limitada a 30%.
+- **Sinergias:** habilidades usam o dano da arma e interações próprias; zonas persistentes são limitadas a seis; a fila de mortes resolve explosões sem recursão e sem duplicar ouro. Casulo reativo bloqueia um impacto e recarrega em seis segundos.
 - **Seeds:** gerador reproduzível; sorteios de melhoria independem do tempo de combate. Aleatoriedade cosmética não consome a sequência de gameplay. Posições e timers de cada sala usam uma sequência própria.
 - **Persistência:** registros validados em `rogue.records.v2`; só runs concluídas contam. Falha de armazenamento não impede jogar. Sem salvamento de run nem metaprogressão de poder.
 
@@ -33,7 +33,7 @@
 
 A lógica de regras continua independente das telas. O movimento intencional é calculado pelo modelo e sincronizado com as entidades; a detecção espacial e os callbacks de colisão pertencem ao Kaplay. Um caminho de colisões sem cena permanece apenas para simulações headless. Partículas usam componentes `move`, `lifespan`, `opacity` e `rotate`, com orçamento de 240 no celular e 650 no desktop, mais até 30 anéis; o modo reduzido usa até 45 partículas e desliga câmera, hit stop e números de dano. Sons WAV locais são sintetizados no repositório e carregados/reproduzidos pelo Kaplay.
 
-Hordas crescem de 18 inimigos básicos a mais de 70 ameaças mistas. A separação usa células espaciais em vez de comparar todos os pares. As unidades comuns são frágeis e as rajadas têm recargas entre 0,36s e 0,46s antes de upgrades. Chefes usam 900/2000/3100 HP e sua morte colapsa os reforços. Combo é uma sequência cosmética de eliminações com janela de 3,5s, não um multiplicador oculto.
+Hordas crescem de 18 inimigos básicos a mais de 70 ameaças mistas. A separação usa células espaciais em vez de comparar todos os pares. As unidades comuns são frágeis e as rajadas têm recargas entre 0,36s e 0,46s antes de upgrades. Chefes usam 1800/3600/5400 HP e sua morte colapsa os reforços. Combo conta acertos/abates, tem janela base de 3,5s com consumo crescente por combo e movimento e gera ouro extra com chance limitada a 65%. O RNG de saque é separado dos spawns e das ofertas. O laboratório público cria apenas runs de prática sem gravar recordes.
 
 ## Interface
 
@@ -41,7 +41,7 @@ Sem fontes ou imagens remotas. Paleta de azul noturno, amarelo, verde menta e vi
 
 O modo móvel é selecionado por largura e tipo de ponteiro, sem identificar o navegador por user-agent. Usuários podem escolher manualmente, inclusive em tablets e computadores híbridos. Menu e HUD móveis usam marcação própria. A arena inteira é ajustada à área de jogo, preservando sua área total e reservando espaço para os controles; a distribuição do espaço muda entre orientações e pode alterar a dificuldade de posicionamento.
 
-Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimigos, disparos, avisos, drops e spawns por posição relativa. Nenhum inimigo fica escondido por recorte de câmera. O renderizador WebGL limita a resolução a 1,5x e as ações respondem a `pointerdown`, com captura independente do dedo que move. A troca de tela limpa entradas; ajustes de som não interrompem o controle de movimento.
+Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimigos, disparos, avisos, drops, zonas amigáveis e spawns por posição relativa. Nenhum inimigo fica escondido por recorte de câmera. O renderizador WebGL limita a resolução a 1,5x e as ações respondem a `pointerdown`, com captura independente do dedo que move. A troca de tela limpa entradas; ajustes de som não interrompem o controle de movimento.
 
 | Módulo de adaptação    | Responsabilidade                                              |
 | ---------------------- | ------------------------------------------------------------- |

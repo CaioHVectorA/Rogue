@@ -23,8 +23,11 @@ async function clearRoom(page: Page) {
     // Fast-forward spawn timers, then deliver lethal damage through the real death queue.
     for (let i = 0; i < 2400 && game.spawnQueue.length; i++)
       game.update(1 / 120);
-    for (const enemy of [...game.enemies])
-      (game as any).hitEnemy(enemy, 100000);
+    for (let phase = 0; phase < 4; phase++)
+      for (const enemy of [...game.enemies]) {
+        enemy.transition = 0;
+        (game as any).hitEnemy(enemy, 100000);
+      }
     game.update(1 / 120);
   });
 }
@@ -221,7 +224,7 @@ test("boss telegraphs are fixed and delayed; phase two accelerates", async ({
     const warning = { ...g.hazards[0] };
     g.player.x += 100;
     const fixed = g.hazards[0].x === warning.x;
-    boss.hp = boss.maxHp * 0.4;
+    (g as any).hitEnemy(boss, boss.maxHp);
     (g as any).bossAttack(boss);
     return {
       delay: warning.delay,
@@ -234,7 +237,7 @@ test("boss telegraphs are fixed and delayed; phase two accelerates", async ({
     delay: 1.1,
     fixed: true,
     phaseTwo: true,
-    interval: 1.8,
+    interval: 2.2,
   });
 });
 

@@ -1,83 +1,130 @@
 import type { ClassId } from "../game/model";
-import { CLASSES } from "../game/model";
+import { CLASSES, SKILLS } from "../game/model";
 import { icon } from "./icons";
+
+const SKILL_HINTS: Record<string, string> = {
+  volley: "Abra uma passagem com sete tiros",
+  nova: "Afaste a horda e apague tiros",
+  quake: "Esmague de perto para se curar",
+  vortex: "Agrupe a horda antes de detonar",
+  storm: "Bloqueie uma passagem com raios",
+  turret: "Plante cobertura; mova-se livremente",
+  mine: "Deixe o presente e atraia a horda",
+  orbit: "Entre na horda; lâminas apagam tiros",
+  decoy: "Sua cópia atrai a horda e explode",
+};
 
 export const ITEM_VISUALS: Record<
   string,
   { glyph: string; value: string; stat: string; hint: string }
 > = {
-  power: {
+  anchor: {
     glyph: "target",
-    value: "+22%",
-    stat: "DANO",
-    hint: "Tiros mais fortes",
+    value: "⚓",
+    stat: "ARPÃO",
+    hint: "Parado: carregue tiros perfurantes",
   },
-  reload: {
-    glyph: "repeat",
-    value: "−14%",
-    stat: "RECARGA",
-    hint: "Mais tiros por segundo",
+  dashload: {
+    glyph: "dash",
+    value: "↶",
+    stat: "CONTRAFOGO",
+    hint: "Esquiva dispara para trás",
   },
   pierce: {
     glyph: "pierce",
-    value: "+1",
-    stat: "ALVO",
-    hint: "Atravessa inimigos",
+    value: "→",
+    stat: "PERFURAR",
+    hint: "Alinhe a horda",
   },
   double: {
     glyph: "double",
     value: "×2",
-    stat: "PROJÉTEIS",
-    hint: "75% de dano por tiro",
+    stat: "LEQUE",
+    hint: "Dois tiros; aproxime para concentrar",
   },
-  cast: {
-    glyph: "bolt",
-    value: "+30%",
-    stat: "HABILIDADE",
-    hint: "Poder de conjuração",
+  echo: {
+    glyph: "repeat",
+    value: "Q⇄E",
+    stat: "ECO",
+    hint: "Uma habilidade adianta a outra",
   },
-  haste: {
+  battery: {
     glyph: "charge",
-    value: "−18%",
-    stat: "ESPERA",
-    hint: "Habilidade mais frequente",
+    value: "↻",
+    stat: "BATERIA",
+    hint: "Abates alimentam as recargas",
   },
   poison: {
     glyph: "toxin",
-    value: "3s",
-    stat: "VENENO",
-    hint: "Dano contínuo nos tiros",
+    value: "❄",
+    stat: "TOXINA",
+    hint: "Envenene e freie a linha de frente",
   },
   explosion: {
     glyph: "explosion",
     value: "∞",
     stat: "CADEIA",
-    hint: "Veneno explode ao eliminar",
+    hint: "Abates explodem e espalham toxina",
   },
   health: {
     glyph: "heart",
-    value: "+25",
-    stat: "VIDA",
-    hint: "Cura + dano de tiro",
+    value: "♥",
+    stat: "CORAÇÃO",
+    hint: "Mais fôlego para entrar na horda",
   },
   armor: {
     glyph: "shield",
-    value: "−10%",
-    stat: "DANO RECEBIDO",
-    hint: "Armadura · máximo 30%",
+    value: "◇",
+    stat: "CASULO",
+    hint: "Bloqueie um impacto e afaste a horda",
   },
   vampire: {
     glyph: "vampire",
-    value: "+1",
-    stat: "VIDA / ABATE",
-    hint: "Chefes curam ×10",
+    value: "♥",
+    stat: "FOME",
+    hint: "Abates próximos recuperam vida",
   },
   speed: {
     glyph: "dash",
-    value: "+10%",
-    stat: "VELOCIDADE",
-    hint: "Esquiva recarrega mais rápido",
+    value: "✦",
+    stat: "RASTRO",
+    hint: "Esquiva deixa uma mina",
   },
+  ricochet: {
+    glyph: "repeat",
+    value: "↗",
+    stat: "RICOCHETE",
+    hint: "Tiros saltam entre alvos",
+  },
+  crossfire: {
+    glyph: "target",
+    value: "✛",
+    stat: "CROSSFIRE",
+    hint: "Dispare em quatro direções",
+  },
+  thorns: {
+    glyph: "explosion",
+    value: "↯",
+    stat: "RETALIAR",
+    hint: "Receber dano abre uma passagem",
+  },
+  gambit: {
+    glyph: "coin",
+    value: "♦",
+    stat: "APOSTAR",
+    hint: "Combo dá mais ouro; dano zera tudo",
+  },
+  ...Object.fromEntries(
+    SKILLS.map((s) => [
+      `skill:${s.id}`,
+      {
+        glyph: s.glyph,
+        value: `${s.cooldown}s`,
+        stat: "HABILIDADE",
+        hint: SKILL_HINTS[s.id],
+      },
+    ]),
+  ),
 };
 
 /** Local SVG equipment portraits, no image/font requests or generated-image dependency. */

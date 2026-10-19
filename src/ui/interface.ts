@@ -1,5 +1,14 @@
 import type { Game } from "../game/engine";
-import { ACTS, CLASSES, REWARDS, TOTAL_ROOMS, formatTime } from "../game/model";
+import {
+  ACTS,
+  CLASSES,
+  REWARDS,
+  SKILLS,
+  skillById,
+  comboLootChance,
+  TOTAL_ROOMS,
+  formatTime,
+} from "../game/model";
 import type { ClassId } from "../game/model";
 import { icon } from "./icons";
 import { ITEM_VISUALS, pilotPortrait, statChip } from "./arsenal";
@@ -24,6 +33,7 @@ export class Interface {
   seed = freshSeed();
   help = false;
   settings = false;
+  laboratory = false;
   itemDetails = false;
   confirmAbandon = false;
   private previousPhase = "";
@@ -35,10 +45,10 @@ export class Interface {
     private layout: DeviceLayout,
   ) {
     root.innerHTML = `
-      <header class="masthead"><a class="brand" href="#" aria-label="Rogue — início">${icon("mark")}ROGUE</a><div class="header-actions"><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button><button class="icon-button" data-action="settings" aria-label="Configurações">${icon("gear")}</button></div></header>
+      <header class="masthead"><a class="brand" href="#" aria-label="Rogue — início">${icon("mark")}ROGUE</a><div class="header-actions"><button class="icon-button lab-launch" data-action="lab" aria-label="Laboratório de gameplay" title="Laboratório · F2">${icon("flask")}</button><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button><button class="icon-button" data-action="settings" aria-label="Configurações">${icon("gear")}</button></div></header>
       <section class="hud" aria-label="Estado da run" hidden></section>
       <div class="overlay"></div>
-      <div class="touch-controls" hidden><div class="movement-control"><div class="joystick" aria-label="Arraste para mover"><span></span></div><span class="stick-hint">SOLTE PARA ATIRAR</span></div><div class="touch-actions"><button data-action="dash" aria-label="Esquivar">${icon("arrow")}<span>Esquiva</span><small data-touch-cooldown="dash">Pronta</small></button><button data-action="skill" aria-label="Usar habilidade">${icon("bolt")}<span>Habilidade</span><small data-touch-cooldown="skill">Pronta</small></button></div></div>
+      <div class="touch-controls" hidden><div class="movement-control"><div class="joystick" aria-label="Arraste para mover"><span></span></div><span class="stick-hint">SOLTE PARA ATIRAR</span></div><div class="touch-actions"><button data-action="dash" aria-label="Esquivar">${icon("arrow")}<span>Esquiva</span><small data-touch-cooldown="dash">Pronta</small></button><button data-action="skill" aria-label="Usar habilidade">${icon("bolt")}<span data-skill-name="0">Habilidade</span><small data-touch-cooldown="skill">Pronta</small></button><button data-action="skill2" aria-label="Usar segunda habilidade" hidden>${icon("bolt")}<span data-skill-name="1">Habilidade E</span><small>Pronta</small></button></div></div>
       <footer class="page-footer"><span>UM PASSO PARA SOBREVIVER. UMA PAUSA PARA LUTAR.</span><span class="footer-status"><i></i> EXPEDIÇÃO AO NÚCLEO</span></footer>`;
     this.hud = root.querySelector(".hud")!;
     this.overlay = root.querySelector(".overlay")!;
@@ -52,6 +62,14 @@ export class Interface {
         this.action(button.dataset.action!, button.dataset.value);
     });
     root.addEventListener("change", (event) => {
+      const select = event.target as HTMLSelectElement;
+      if (select.dataset.labSlot !== undefined)
+        this.game.labEquip(
+          select.value,
+          Number(select.dataset.labSlot) as 0 | 1,
+        );
+      if (select.id === "lab-speed" && this.game.run.practice)
+        this.game.labSpeed = Number(select.value);
       if ((event.target as HTMLElement).matches('[aria-label="Interface"]'))
         this.layout.setPreference((event.target as HTMLSelectElement).value);
     });
@@ -65,9 +83,16 @@ export class Interface {
         this.seed = (event.target as HTMLInputElement).value;
     });
     document.addEventListener("keydown", (event) => {
+      if (event.key === "F2") {
+        event.preventDefault();
+        this.action("lab");
+      }
       if (event.key === "Escape") {
         event.preventDefault();
-        if (this.settings) {
+        if (this.laboratory) {
+          this.laboratory = false;
+          this.render();
+        } else if (this.settings) {
           this.settings = false;
           this.render();
         } else if (this.help) {
@@ -101,6 +126,54 @@ export class Interface {
   private action(action: string, value?: string) {
     const g = this.game;
     switch (action) {
+      case "lab":
+        if (g.phase === "combat") g.pause();
+        this.settings = this.help = false;
+        this.laboratory = true;
+        this.render();
+        break;
+      case "lab-close":
+        this.laboratory = false;
+        this.render();
+        break;
+      case "lab-jump": {
+        const valueOf = (id: string) =>
+          this.root.querySelector<HTMLSelectElement>(`#${id}`)!.value;
+        const room = Number(valueOf("lab-room")),
+          phase = Number(valueOf("lab-phase")),
+          build = valueOf("lab-build"),
+          pilot = valueOf("lab-pilot") as ClassId;
+        this.laboratory = false;
+        g.practice(
+          room,
+          phase,
+          build,
+          pilot,
+          valueOf("lab-state") as "combat" | "reward" | "camp" | "result",
+        );
+        break;
+      }
+      case "lab-god":
+        if (g.run.practice) {
+          g.labGod = !g.labGod;
+          this.render();
+        }
+        break;
+      case "lab-perk":
+        g.labPerk(value!);
+        break;
+      case "lab-clear":
+        this.laboratory = false;
+        if (g.phase === "paused") g.pause();
+        g.labClear();
+        break;
+      case "reward-slot":
+        g.rewardSlot = Number(value) as 0 | 1;
+        this.render();
+        break;
+      case "skill2":
+        g.skill(1);
+        break;
       case "settings":
         if (g.phase === "combat") g.pause();
         this.settings = true;
@@ -206,7 +279,7 @@ export class Interface {
       this.renderHud();
       this.hud.insertAdjacentHTML(
         "beforeend",
-        '<div class="combo-display" aria-label="Sequência de eliminações" hidden><span id="combo-rank"></span><strong id="combo-value"></strong><div class="combo-fuse"><i></i></div></div>',
+        '<div class="combo-display" aria-label="Sequência de acertos e abates" hidden><span id="combo-rank"></span><strong id="combo-value"></strong><div class="combo-fuse"><i></i></div><small class="combo-loot" id="combo-loot"></small></div>',
       );
     }
     const previousFocus = (document.activeElement as HTMLElement)?.dataset
@@ -215,13 +288,15 @@ export class Interface {
       .value;
     this.overlay.classList.toggle(
       "is-gameplay",
-      g.phase === "combat" && !this.help && !this.settings,
+      g.phase === "combat" && !this.help && !this.settings && !this.laboratory,
     );
-    this.overlay.innerHTML = this.settings
-      ? this.settingsScreen()
-      : this.help
-        ? this.helpScreen()
-        : this.screen();
+    this.overlay.innerHTML = this.laboratory
+      ? this.labScreen()
+      : this.settings
+        ? this.settingsScreen()
+        : this.help
+          ? this.helpScreen()
+          : this.screen();
     const modeSelect = this.root.querySelector<HTMLSelectElement>(
       '[aria-label="Interface"]',
     );
@@ -232,7 +307,12 @@ export class Interface {
     this.hud.inert = modal;
     const seedInput = this.overlay.querySelector<HTMLInputElement>("#seed");
     if (seedInput) seedInput.value = this.seed;
-    if (this.previousPhase !== g.phase || this.help || this.settings) {
+    if (
+      this.previousPhase !== g.phase ||
+      this.help ||
+      this.settings ||
+      this.laboratory
+    ) {
       this.overlay.scrollTop = 0;
       if (g.phase !== "menu")
         requestAnimationFrame(() => {
@@ -266,7 +346,7 @@ export class Interface {
       <div class="run-counters"><span>${icon("coin")}<b id="gold-value"></b></span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div></div>
       <div class="boss-health" id="boss-health" hidden><div><span>${ACTS[g.run.act - 1].boss}</span><small id="boss-phase">GUARDIÃO DO ATO ${g.run.act}</small></div><div class="meter"><i id="boss-meter"></i></div></div>
       <div class="hud-bottom"><div class="encounter-label"><span class="eyebrow">ATO ${String(g.run.act).padStart(2, "0")} / ${ACTS[g.run.act - 1].name.toUpperCase()}</span><strong>WAVE ${String(g.run.room).padStart(2, "0")}<small> / 12</small></strong><span id="combat-hint"></span></div>
-      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div><div class="ability"><kbd>Q</kbd><div><strong>${CLASSES[g.run.classId].skill}</strong><span id="skill-value"></span></div></div><div class="reload-ring" id="reload-state">${icon("target")}</div></div></div>`;
+      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div><div class="ability"><kbd>Q</kbd><div><strong>${skillById(g.run.skills[0]).name}</strong><span id="skill-value"></span></div></div>${g.run.skills[1] ? `<div class="ability"><kbd>E</kbd><div><strong>${skillById(g.run.skills[1]).name}</strong><span id="second-value"></span></div></div>` : `<div class="ability locked-slot"><kbd>E</kbd><span>WAVE 1</span></div>`}<div class="reload-ring" id="reload-state">${icon("target")}</div></div></div>`;
   }
   tick() {
     const g = this.game;
@@ -278,6 +358,10 @@ export class Interface {
     const combo = this.hud.querySelector<HTMLElement>(".combo-display")!;
     combo.hidden = g.combo < 3 || g.phase !== "combat";
     text("combo-value", `${g.combo} HIT`);
+    text(
+      "combo-loot",
+      `♦ +${Math.round(comboLootChance(g.combo) * 100)}% EXTRA`,
+    );
     text(
       "combo-rank",
       g.combo >= 40
@@ -306,11 +390,29 @@ export class Interface {
       "combat-hint",
       g.phase === "combat" ? `${g.enemies.length + g.spawnQueue.length}` : "—",
     );
-    for (const action of ["dash", "skill"] as const) {
-      const cooldown = action === "dash" ? g.player.dashCd : g.player.skillCd;
+    text(
+      "second-value",
+      g.player.secondCd > 0 ? `${g.player.secondCd.toFixed(1)}s` : "Pronta",
+    );
+    for (const action of ["dash", "skill", "skill2"] as const) {
+      const cooldown =
+        action === "dash"
+          ? g.player.dashCd
+          : action === "skill"
+            ? g.player.skillCd
+            : g.player.secondCd;
       const button = this.root.querySelector<HTMLButtonElement>(
         `.touch-actions [data-action="${action}"]`,
       )!;
+      if (action !== "dash") {
+        const slot = action === "skill" ? 0 : 1;
+        const id = g.run.skills[slot];
+        button.hidden = !id;
+        button.querySelector("span")!.textContent = id
+          ? skillById(id).name
+          : "WAVE 1";
+        button.title = id ? skillById(id).desc : "Desbloqueie na primeira wave";
+      }
       button.disabled = cooldown > 0 || g.intro > 0 || g.phase !== "combat";
       const label = button.querySelector("small")!;
       label.textContent = cooldown > 0 ? `${cooldown.toFixed(1)}s` : "Pronta";
@@ -326,7 +428,10 @@ export class Interface {
     if (boss) {
       this.hud.querySelector<HTMLElement>("#boss-meter")!.style.width =
         `${Math.max(0, boss.hp / boss.maxHp) * 100}%`;
-      text("boss-phase", boss.enraged ? "II" : `I / ${g.run.act}`);
+      text(
+        "boss-phase",
+        `${["", "I", "II", "III", "IV"][boss.phase]} / IV${boss.transition > 0 ? " · TRANSIÇÃO" : ""}`,
+      );
     }
   }
   private screen(): string {
@@ -371,7 +476,8 @@ export class Interface {
   private rewardScreen() {
     const g = this.game,
       boss = g.run.room % 4 === 0;
-    return `<section class="wide-dialog loot-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon(boss ? "crown" : "skull")}</span><div><small>WAVE ${g.run.room.toString().padStart(2, "0")} CLEAR</small><h1 id="screen-title">${boss ? "GUARDIÃO ABATIDO" : "UPGRADE!"}</h1></div><button class="icon-button" data-action="item-info" aria-label="Mostrar descrições das melhorias" aria-pressed="${this.itemDetails}">${icon("book")}</button></div><div class="reward-grid">${g.run.offers
+    const draft = g.run.offers.some((id) => id.startsWith("skill:"));
+    return `<section class="wide-dialog loot-screen ${draft ? "skill-draft" : ""}" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon(boss ? "crown" : "skull")}</span><div><small>WAVE ${g.run.room.toString().padStart(2, "0")} CLEAR</small><h1 id="screen-title">${draft ? "NOVO PODER" : boss ? "GUARDIÃO ABATIDO" : "MUTAÇÃO!"}</h1></div><button class="icon-button" data-action="item-info" aria-label="Mostrar descrições das melhorias" aria-pressed="${this.itemDetails}">${icon("book")}</button></div>${draft ? `<div class="skill-slots" role="group" aria-label="Slot para a nova habilidade">${([0, 1] as const).map((slot) => `<button class="secondary ${g.rewardSlot === slot ? "selected" : ""}" data-action="reward-slot" data-value="${slot}" aria-pressed="${g.rewardSlot === slot}"><kbd>${slot === 0 ? "Q" : "E"}</kbd> ${g.run.skills[slot] ? skillById(g.run.skills[slot]!).name : "VAZIO"}</button>`).join("")}<small>Escolha o slot que receberá a habilidade.</small></div>` : ""}<div class="reward-grid">${g.run.offers
       .map((id) => {
         const reward = REWARDS.find((r) => r.id === id)!,
           item = ITEM_VISUALS[id];
@@ -384,9 +490,10 @@ export class Interface {
   private campScreen() {
     const g = this.game,
       boss = (g.run.room + 1) % 4 === 0;
-    return `<section class="wide-dialog armory-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon("shield")}</span><div><small>CHECKPOINT ${g.run.room.toString().padStart(2, "0")}</small><h1 id="screen-title">ARSENAL</h1></div><span class="armory-gold">${icon("coin")} ${g.run.gold}</span></div><div class="armory-body"><div class="armory-items"><button class="shop-crate" data-action="heal" aria-label="Recuperar o fôlego. Cura 40% da vida máxima" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}><span class="crate-symbol">${icon("heart")}</span><strong>+40%</strong><small>VIDA</small><span class="crate-price">${g.run.healed ? "USADO" : g.player.hp >= g.player.maxHp ? "MAX" : `${icon("coin")} ${g.healCost}`}</span></button><button class="shop-crate" data-action="forge" aria-label="Afiar a precisão. Mais 8% de dano" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}><span class="crate-symbol">${icon("target")}</span><strong>+8%</strong><small>DANO</small><span class="crate-price">${g.run.purchases >= 2 ? "MAX" : `${icon("coin")} ${g.forgeCost}`}</span></button></div><aside class="loadout-snapshot"><div class="equipped-stats">${statChip("heart", `${Math.ceil(g.player.hp)}/${g.player.maxHp}`, "VIDA")}${statChip("target", g.player.damage.toFixed(0), "DANO")}${statChip("repeat", `${g.player.reload.toFixed(2)}s`, "RECARGA")}</div><div class="equipped-inventory">${Object.entries(
+    return `<section class="wide-dialog armory-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon("shield")}</span><div><small>CHECKPOINT ${g.run.room.toString().padStart(2, "0")}</small><h1 id="screen-title">ARSENAL</h1></div><span class="armory-gold">${icon("coin")} ${g.run.gold}</span></div><div class="armory-body"><div class="armory-items"><button class="shop-crate" data-action="heal" aria-label="Recuperar o fôlego. Cura 40% da vida máxima" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}><span class="crate-symbol">${icon("heart")}</span><strong>+40%</strong><small>VIDA</small><span class="crate-price">${g.run.healed ? "USADO" : g.player.hp >= g.player.maxHp ? "MAX" : `${icon("coin")} ${g.healCost}`}</span></button><button class="shop-crate" data-action="forge" aria-label="Afiar a precisão. Mais 8% de dano" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}><span class="crate-symbol">${icon("target")}</span><strong>+8%</strong><small>DANO</small><span class="crate-price">${g.run.purchases >= 2 ? "MAX" : `${icon("coin")} ${g.forgeCost}`}</span></button></div><aside class="loadout-snapshot"><div class="equipped-stats">${statChip("heart", `${Math.ceil(g.player.hp)}/${g.player.maxHp}`, "VIDA")}${statChip("target", g.player.damage.toFixed(0), "DANO")}${statChip("repeat", `${g.player.reload.toFixed(2)}s`, "RECARGA")}</div><div class="equipped-skills">${g.run.skills.map((id, slot) => (id ? `<span title="${skillById(id).desc}"><kbd>${slot === 0 ? "Q" : "E"}</kbd>${icon(skillById(id).glyph)}${skillById(id).name}</span>` : "")).join("")}</div><div class="equipped-inventory">${Object.entries(
       g.run.rewards,
     )
+      .filter(([id]) => !id.startsWith("skill:"))
       .map(
         ([id, count]) =>
           `<span title="${REWARDS.find((r) => r.id === id)!.name}">${icon(ITEM_VISUALS[id].glyph)}<b>${count}</b></span>`,
@@ -398,7 +505,7 @@ export class Interface {
   private resultScreen() {
     const g = this.game;
     return this.dialog(
-      `<div class="result-medal">${icon(g.run.won ? "crown" : "skull")}</div><span class="game-kicker">${g.run.won ? "CORE DESTROYED" : "RUN OVER"}</span><h1 id="screen-title">${g.run.won ? "VITÓRIA" : "DERROTA"}</h1><div class="result-stats"><div><strong>${g.run.kills}</strong><span>ABATES</span></div><div><strong>${g.peakCombo}</strong><span>SEQUÊNCIA</span></div><div><strong>${g.run.room}<small>/12</small></strong><span>WAVE</span></div><div><strong>${formatTime(g.run.elapsed)}</strong><span>TEMPO</span></div></div><div class="equipped-inventory result-inventory">${Object.entries(
+      `<div class="result-medal">${icon(g.run.won ? "crown" : "skull")}</div><span class="game-kicker">${g.run.practice ? "LAB · SEM RECORDES" : g.run.won ? "CORE DESTROYED" : "RUN OVER"}</span><h1 id="screen-title">${g.run.won ? "VITÓRIA" : "DERROTA"}</h1><div class="result-stats"><div><strong>${g.run.kills}</strong><span>ABATES</span></div><div><strong>${g.peakCombo}</strong><span>SEQUÊNCIA</span></div><div><strong>${g.run.room}<small>/12</small></strong><span>WAVE</span></div><div><strong>${formatTime(g.run.elapsed)}</strong><span>TEMPO</span></div></div><div class="equipped-inventory result-inventory">${Object.entries(
         g.run.rewards,
       )
         .map(
@@ -411,20 +518,71 @@ export class Interface {
       "result-dialog",
     );
   }
+  private labScreen() {
+    const g = this.game;
+    const select = (id: string, label: string, options: string) =>
+      `<label>${label}<select id="${id}">${options}</select></label>`;
+    return `<section class="dialog lab-dialog" role="dialog" aria-modal="true" aria-label="Laboratório de gameplay"><div class="loot-banner"><span>${icon("flask")}</span><div><small>PLAYGROUND</small><h1>LABORATÓRIO</h1></div></div><p class="lab-note">Teste livre · não altera recordes · saltar inicia uma nova run.</p><div class="lab-grid">${select(
+      "lab-state",
+      "ESTADO",
+      [
+        ["combat", "Combate"],
+        ["reward", "Escolha de build"],
+        ["camp", "Arsenal"],
+        ["result", "Resultado"],
+      ]
+        .map(([id, name]) => `<option value="${id}">${name}</option>`)
+        .join(""),
+    )}${select("lab-room", "ENCONTRO", Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === g.run.room ? "selected" : ""}>${(i + 1) % 4 === 0 ? `BOSS ${Math.ceil((i + 1) / 4)}` : `WAVE ${i + 1}`}</option>`).join(""))}${select("lab-phase", "FASE DO BOSS", [1, 2, 3, 4].map((n) => `<option value="${n}">${["", "I", "II", "III", "IV"][n]}</option>`).join(""))}${select(
+      "lab-build",
+      "ESTILO",
+      [
+        ["control", "Controle · poço + tempestade"],
+        ["gunner", "Atirador · rajada + torre"],
+        ["brawler", "Briga · impacto + lâminas"],
+        ["trickster", "Truques · isca + mina"],
+        ["fresh", "Sem perks · kit básico"],
+      ]
+        .map(([id, name]) => `<option value="${id}">${name}</option>`)
+        .join(""),
+    )}${select(
+      "lab-pilot",
+      "PILOTO",
+      Object.entries(CLASSES)
+        .map(
+          ([id, c]) =>
+            `<option value="${id}" ${id === g.run.classId ? "selected" : ""}>${c.name}</option>`,
+        )
+        .join(""),
+    )}</div><button class="primary" data-action="lab-jump">${icon("arrow")} SALTAR PARA O ESTADO</button>${
+      g.run.practice
+        ? `<div class="lab-current"><span class="game-kicker">RUN DE PRÁTICA · WAVE ${g.run.room}</span><div class="lab-grid">${([0, 1] as const).map((slot) => `<label>${slot === 0 ? "Q" : "E"}<select data-lab-slot="${slot}" aria-label="Habilidade ${slot === 0 ? "Q" : "E"}">${SKILLS.map((s) => `<option value="${s.id}" ${g.run.skills[slot] === s.id ? "selected" : ""} ${g.run.skills[1 - slot] === s.id ? "disabled" : ""}>${s.name}</option>`).join("")}</select></label>`).join("")}</div><div class="lab-grid"><button class="secondary" data-action="lab-god" aria-pressed="${g.labGod}">${icon("shield")} INVENCÍVEL ${g.labGod ? "ON" : "OFF"}</button>${select("lab-speed", "RITMO", [0.5, 1, 2, 3].map((n) => `<option value="${n}" ${g.labSpeed === n ? "selected" : ""}>${n}×</option>`).join(""))}</div><details><summary>ADICIONAR PERKS</summary><div class="lab-perks">${REWARDS.filter(
+            (r) => !r.id.startsWith("skill:"),
+          )
+            .map(
+              (r) =>
+                `<button class="secondary" data-action="lab-perk" data-value="${r.id}" title="${r.desc}" ${(g.run.rewards[r.id] ?? 0) >= r.max ? "disabled" : ""}>${icon(ITEM_VISUALS[r.id].glyph)} ${r.name}</button>`,
+            )
+            .join(
+              "",
+            )}</div></details><button class="secondary" data-action="lab-clear">${icon("skull")} LIMPAR WAVE</button></div>`
+        : ""
+    }<button class="secondary" data-action="lab-close">VOLTAR</button></section>`;
+  }
   private settingsScreen() {
     return this.dialog(
-      `<span class="emblem">${icon("gear")}</span><h1>CONFIGURAÇÕES</h1><div class="settings-row"><label for="interface-mode">INTERFACE</label><select id="interface-mode" aria-label="Interface"><option value="auto">Auto</option><option value="mobile">Celular</option><option value="desktop">Desktop</option></select></div><button class="secondary effects-choice" data-action="effects">${icon("explosion")} EFEITOS <strong>${this.game.reducedMotion ? "REDUZIDOS" : "COMPLETOS"}</strong></button><button class="primary" data-action="close-settings" aria-label="Fechar configurações">VOLTAR ${icon("arrow")}</button>`,
+      `<span class="emblem">${icon("gear")}</span><h1>CONFIGURAÇÕES</h1><div class="settings-row"><label for="interface-mode">INTERFACE</label><select id="interface-mode" aria-label="Interface"><option value="auto">Auto</option><option value="mobile">Celular</option><option value="desktop">Desktop</option></select></div><button class="secondary effects-choice" data-action="effects">${icon("explosion")} EFEITOS <strong>${this.game.reducedMotion ? "REDUZIDOS" : "COMPLETOS"}</strong></button><button class="secondary" data-action="lab">${icon("flask")} LABORATÓRIO</button><button class="primary" data-action="close-settings" aria-label="Fechar configurações">VOLTAR ${icon("arrow")}</button>`,
       "settings-dialog",
     );
   }
   private helpScreen() {
     if (this.layout.mode === "mobile")
       return this.dialog(
-        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Cada caminho tem um poder diferente. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop nas configurações da engrenagem.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Q e E recebem novos poderes nas duas primeiras waves. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop nas configurações da engrenagem.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
         "help-dialog",
       );
     return this.dialog(
-      `<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 3 segundos.</p></div><div><kbd>Q</kbd><p><b>Use sua habilidade.</b> Cada caminho tem uma ação diferente. Ela também funciona em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes mudam de ritmo com metade da vida; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+      `<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 2,6 segundos.</p></div><div><kbd>Q / E</kbd><p><b>Combine suas habilidades.</b> As duas primeiras waves oferecem novos poderes. Escolha o slot para equipar. Elas também funcionam em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes têm quatro fases; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Combo alto consome a barra mais rápido; mover acelera a queda. Acertos e abates renovam a barra. Mais combo aumenta a chance de ouro extra, até 65%. A oficina converte ouro em força. F2 ou o frasco abre o laboratório, com runs de prática sem recordes.</p><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
       "help-dialog",
     );
   }

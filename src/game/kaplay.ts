@@ -121,7 +121,7 @@ export class KaplayRuntime {
         if (g.hitStop > 0 && !g.reducedMotion)
           g.hitStop = Math.max(0, g.hitStop - dt);
         else {
-          this.accumulator += dt;
+          this.accumulator += dt * (g.run.practice ? g.labSpeed : 1);
           while (this.accumulator >= 1 / 120 && g.phase === "combat") {
             g.update(1 / 120);
             this.accumulator -= 1 / 120;
@@ -403,7 +403,16 @@ export class KaplayRuntime {
             a,
           );
         }
-        if (e.enraged) this.ring(zero, 98, "#ff5676", 0.65, 3);
+        if (e.enraged)
+          this.ring(
+            zero,
+            88 + e.phase * 4,
+            "#ff5676",
+            0.45 + e.phase * 0.1,
+            e.phase,
+          );
+        if (e.transition > 0)
+          this.ring(zero, 110 + e.transition * 40, "#ffda8a", 0.9, 4);
       } else {
         this.poly(
           { x: Math.cos(angle) * 3, y: Math.sin(angle) * 3 },
@@ -553,6 +562,83 @@ export class KaplayRuntime {
   private drawSignals() {
     const k = this.k,
       g = this.game;
+    for (const field of g.fields) {
+      const color =
+        field.kind === "vortex"
+          ? "#c5afff"
+          : field.kind === "mine"
+            ? "#ffbc8a"
+            : "#85d8ef";
+      this.ring(field, field.radius, color, 0.22, 2);
+      this.ring(
+        field,
+        field.kind === "vortex" ? 15 + ((this.time * 85) % field.radius) : 18,
+        color,
+        0.7,
+        2,
+      );
+      if (field.kind === "orbit")
+        for (let i = 0; i < 3; i++) {
+          const angle = this.time * 4 + (i * TAU) / 3;
+          this.poly(
+            {
+              x: field.x + Math.cos(angle) * 85,
+              y: field.y + Math.sin(angle) * 85,
+            },
+            13,
+            3,
+            "#ffda8a",
+            1,
+            angle,
+          );
+        }
+      if (field.kind === "storm")
+        for (let i = 0; i < 3; i++) {
+          const a = this.time * 3 + (i * TAU) / 3;
+          k.drawLine({
+            p1: k.vec2(field.x, field.y),
+            p2: k.vec2(
+              field.x + Math.cos(a) * field.radius,
+              field.y + Math.sin(a) * field.radius,
+            ),
+            color: k.Color.fromHex(color),
+            width: 2,
+            opacity: g.reducedMotion ? 0.3 : 0.7,
+          });
+        }
+      if (field.kind === "turret") this.poly(field, 22, 6, color, 1, this.time);
+      if (field.kind === "mine")
+        this.poly(field, 16, 4, color, 0.8, Math.PI / 4);
+      if (field.kind === "decoy") {
+        this.poly(field, 20, 6, color, 0.45, this.time * 0.3);
+        this.ring(field, 45, color, 0.3, 1);
+      }
+    }
+    if (g.run.rewards.armor && g.player.shieldCd <= 0 && g.phase === "combat")
+      this.ring(g.player, 29, "#85d8ef", 0.6, 2);
+    if (
+      g.run.rewards.anchor &&
+      g.player.stationary >= 1 &&
+      g.phase === "combat"
+    )
+      this.ring(g.player, 34, "#ffda8a", 0.8, 3);
+    if (g.run.practice && g.phase === "combat")
+      k.drawText({
+        text: `LAB · ${g.labGod ? "GOD · " : ""}${g.labSpeed}x`,
+        pos: k.vec2(35, g.height - 35),
+        size: 14,
+        color: k.Color.fromHex("#85d8ef"),
+        opacity: 0.7,
+      });
+    if (g.noticeTime > 0 && g.phase === "combat")
+      k.drawText({
+        text: g.notice,
+        pos: k.vec2(g.width / 2, 80),
+        size: 25,
+        anchor: "center",
+        color: k.Color.fromHex("#ffbc8a"),
+        opacity: Math.min(1, g.noticeTime),
+      });
     for (const spawn of g.spawnQueue)
       if (spawn.at - g.roomTime < 0.9 && g.phase === "combat") {
         this.ring(

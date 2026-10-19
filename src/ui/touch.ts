@@ -39,14 +39,14 @@ export class TouchControls {
         if (event.pointerId === this.pointer) this.reset();
       });
     }
-    for (const action of ["dash", "skill"] as const) {
+    for (const action of ["dash", "skill", "skill2"] as const) {
       const button = root.querySelector<HTMLButtonElement>(
         `.touch-actions [data-action="${action}"]`,
       )!;
       const trigger = () => {
         if (button.disabled || game.phase !== "combat") return;
         if (action === "dash") game.dash();
-        else game.skill();
+        else game.skill(action === "skill2" ? 1 : 0);
         onAction();
       };
       button.addEventListener("pointerdown", (event) => {
