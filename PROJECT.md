@@ -9,7 +9,7 @@
 
 ## Sistemas
 
-- **Combate:** passo fixo de 120 Hz; movimento normalizado; tiros com colisão por segmento; recarga a 65% em movimento; esquiva de 0,18s com proteção de 0,28s e cooldown base de 3s; proteção global de 0,75s após dano.
+- **Combate:** passo fixo de 120 Hz; movimento normalizado; colisões por áreas do Kaplay, com áreas varridas para projéteis; recarga a 65% em movimento; esquiva de 0,18s com proteção de 0,28s e cooldown base de 3s; proteção global de 0,75s após dano.
 - **Chefes:** Sentinela introduz anéis e áreas; Tecelã adiciona leques direcionados e mais áreas; Soberano combina padrões mais densos. Abaixo de 50% da vida, intervalos caem e padrões ganham projéteis/áreas. Avisos de área fixam a posição ao nascer e antecipam o impacto em pelo menos 1,1s.
 - **Progressão:** ofertas sem repetição e sem melhorias já no limite; uma troca inicial e mais uma por chefe; cura e reforços comprados só no descanso. Cura limitada a uma e reforços a dois por descanso. Ouro de chão é recolhido ao concluir.
 - **Sinergias:** dano de habilidade não depende de dano básico adicional; a fila de mortes resolve explosões sem recursão e sem duplicar ouro. Armadura é limitada a 30%.
@@ -18,22 +18,30 @@
 
 ## Módulos
 
-| Arquivo                | Responsabilidade                                      |
-| ---------------------- | ----------------------------------------------------- |
-| `src/game/model.ts`    | Tipos, conteúdo, seeds, recompensas, rota e recordes  |
-| `src/game/engine.ts`   | Máquina de estados, combate, economia, chefes e áudio |
-| `src/game/renderer.ts` | Arena, formas, telegraphs e partículas Canvas         |
-| `src/ui/interface.ts`  | Telas HTML, ações validadas, foco e HUD               |
-| `src/ui/style.css`     | Sistema visual, responsividade e redução de movimento |
-| `src/main.ts`          | Inicialização, input, visibilidade e loop fixo        |
+| Arquivo               | Responsabilidade                                                    |
+| --------------------- | ------------------------------------------------------------------- |
+| `src/game/model.ts`   | Tipos, conteúdo, seeds, recompensas, rota e recordes                |
+| `src/game/engine.ts`  | Máquina de estados, combate, economia, chefes e eventos de feedback |
+| `src/game/kaplay.ts`  | Runtime Kaplay: cenas, entidades, colisões, câmera, efeitos e áudio |
+| `src/ui/interface.ts` | Telas HTML, ações validadas, foco e HUD                             |
+| `src/ui/style.css`    | Sistema visual, responsividade e redução de movimento               |
+| `src/main.ts`         | Inicialização, input, visibilidade e adaptação do campo             |
+
+## Runtime e feedback
+
+`KaplayRuntime` cria a cena `arena`, mantém os modelos de jogador, inimigos, tiros, perigos e drops como entidades Kaplay e recebe os eventos `onCollideUpdate` da engine. Renderização usa as primitivas WebGL da engine; não há mais renderizador Canvas 2D próprio. O callback `onUpdate` do Kaplay executa as regras em passos de 120 Hz. Um novo início de run recria a cena, removendo entidades, timers e efeitos anteriores.
+
+A lógica de regras continua independente das telas. O movimento intencional é calculado pelo modelo e sincronizado com as entidades; a detecção espacial e os callbacks de colisão pertencem ao Kaplay. Um caminho de colisões sem cena permanece apenas para simulações headless. Partículas usam componentes `move`, `lifespan`, `opacity` e `rotate`, com orçamento de 240 no celular e 650 no desktop, mais até 30 anéis; o modo reduzido usa até 45 partículas e desliga câmera, hit stop e números de dano. Sons WAV locais são sintetizados no repositório e carregados/reproduzidos pelo Kaplay.
+
+Hordas crescem de 18 inimigos básicos a mais de 70 ameaças mistas. A separação usa células espaciais em vez de comparar todos os pares. As unidades comuns são frágeis e as rajadas têm recargas entre 0,36s e 0,46s antes de upgrades. Chefes usam 900/2000/3100 HP e sua morte colapsa os reforços. Combo é uma sequência cosmética de eliminações com janela de 3,5s, não um multiplicador oculto.
 
 ## Interface
 
-Sem fontes ou imagens remotas. Paleta de carvão, verde menta, violeta e cobre. Ícones vetoriais, desenho geométrico e títulos com serifas para contrastar com os dados. Botões HTML preservam teclado e foco visível; diálogos contêm navegação por Tab; nenhuma informação essencial depende de áudio. A arena é visual e não fornece uma experiência completa para leitores de tela.
+Sem fontes ou imagens remotas. Paleta de azul noturno, amarelo, verde menta e violeta. Ícones vetoriais, desenho geométrico e pilotos vetoriais, silhuetas de equipamento e números curtos no lugar de parágrafos. Botões HTML preservam teclado e foco visível; diálogos contêm navegação por Tab; nenhuma informação essencial depende de áudio. A arena é visual e não fornece uma experiência completa para leitores de tela.
 
 O modo móvel é selecionado por largura e tipo de ponteiro, sem identificar o navegador por user-agent. Usuários podem escolher manualmente, inclusive em tablets e computadores híbridos. Menu e HUD móveis usam marcação própria. A arena inteira é ajustada à área de jogo, preservando sua área total e reservando espaço para os controles; a distribuição do espaço muda entre orientações e pode alterar a dificuldade de posicionamento.
 
-Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimigos, disparos, avisos, partículas, drops e spawns por posição relativa. Nenhum inimigo fica escondido por recorte de câmera. No celular, o Canvas limita a resolução a 1,5x e as ações respondem a `pointerdown`, com captura independente do dedo que move. A troca de tela limpa entradas; ajustes de som não interrompem o controle de movimento.
+Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimigos, disparos, avisos, drops e spawns por posição relativa. Nenhum inimigo fica escondido por recorte de câmera. O renderizador WebGL limita a resolução a 1,5x e as ações respondem a `pointerdown`, com captura independente do dedo que move. A troca de tela limpa entradas; ajustes de som não interrompem o controle de movimento.
 
 | Módulo de adaptação    | Responsabilidade                                              |
 | ---------------------- | ------------------------------------------------------------- |

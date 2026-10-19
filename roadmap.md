@@ -9,6 +9,10 @@
 - [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
 - [x] Pausa ao sair da aba, som opcional e redução de movimento.
 
+- [x] Kaplay restaurado para loop, cenas, entidades, WebGL, colisões, efeitos e áudio.
+- [x] Hordas maiores, inimigos básicos frágeis e sequências de eliminações.
+- [x] Pilotos visuais, melhorias simbólicas, arsenal e efeitos com orçamento móvel.
+
 ## Depois de playtests
 
 - [ ] Ajustar duração e pressão por ato com observações de jogadores.

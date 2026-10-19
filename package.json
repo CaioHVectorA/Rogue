@@ -22,5 +22,8 @@
   },
   "engines": {
     "node": "22.x"
+  },
+  "dependencies": {
+    "kaplay": "^3001.0.19"
   }
 }

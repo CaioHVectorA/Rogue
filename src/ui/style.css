@@ -61,7 +61,7 @@ button .icon {
 #app {
   min-height: 100dvh;
 }
-#arena {
+#arena-frame {
   position: fixed;
   inset: 86px 26px 46px;
   width: calc(100% - 52px);
@@ -1340,7 +1340,7 @@ kbd {
   .footer-status {
     display: none;
   }
-  #arena {
+  #arena-frame {
     inset: 65px 0 38px;
     width: 100%;
     height: calc(100dvh - 103px);
@@ -1695,7 +1695,7 @@ kbd {
   .page-footer {
     min-height: 32px;
   }
-  #arena {
+  #arena-frame {
     top: 62px;
     bottom: 32px;
     height: calc(100dvh - 94px);

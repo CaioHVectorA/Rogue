@@ -57,7 +57,7 @@ select:focus-visible {
   min-height: 0;
   height: 100dvh;
 }
-:root[data-ui="mobile"] #arena {
+:root[data-ui="mobile"] #arena-frame {
   inset: auto;
   top: calc(var(--field-top) + var(--safe-top));
   left: calc(var(--field-side) + var(--safe-left));
