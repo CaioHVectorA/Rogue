@@ -32,16 +32,13 @@ async function clearRoom(page: Page) {
   });
 }
 
-test("menu, class selection, seed, help and safe rendering", async ({
+test("menu starts directly without class selection; seed, help and safe rendering", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await page.getByRole("button", { name: /Conjurador Controle/ }).click();
-  await expect(
-    page.getByRole("button", { name: /Conjurador Controle/ }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-action="class"]')).toHaveCount(0);
   await page.getByLabel("CÓDIGO DA RUN").fill("<img src=x onerror=alert(1)>");
   await page
     .getByRole("button", { name: "Como jogar", exact: true })

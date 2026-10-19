@@ -1,6 +1,6 @@
 # Builds que mudam decisões
 
-O piloto oferece um ponto de partida; as escolhas da run definem o estilo. Tiro básico continua exigindo parar. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
+Toda run normal começa com o mesmo kit básico, sem escolher classe. As escolhas da run definem o estilo. Tiro básico continua exigindo parar. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
 
 ## Ritmo da progressão
 

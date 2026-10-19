@@ -21,11 +21,11 @@ Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas
 
 Impactos incluem fragmentos, rastros, números de dano, ondas de choque, pausas curtas de impacto e sons locais reproduzidos pelo Kaplay. A quantidade de efeitos é limitada a 240 partículas no celular e 650 no desktop, com pequena reserva para anéis e indicadores. O modo reduzido remove tremor, pausas e números flutuantes e limita partículas a 45. Está no botão de configurações e respeita a preferência inicial do sistema.
 
-Seleção de pilotos, melhorias por ícones/atributos e arsenal substituem os painéis de texto. O botão de livro na seleção de melhorias abre as descrições completas. As opções de interface ficam na engrenagem.
+Apresentação visual da run, melhorias por ícones/atributos e arsenal substituem os painéis de texto. O botão de livro na seleção de melhorias abre as descrições completas. As opções de interface ficam na engrenagem.
 
 ## Uma run
 
-- Escolha Atirador (rajada), Conjurador (nova) ou Colosso (impacto e cura).
+- Aperte Jogar: todas as runs normais começam com o mesmo kit básico e Sobrecarga. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
 - As duas primeiras waves garantem ofertas de habilidades. A primeira preenche E; na segunda, escolha substituir Q ou E. Há nove poderes com recargas de 3,2 a 5,5s.
 - Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 16 perks; o coração pode repetir, os demais são únicos.

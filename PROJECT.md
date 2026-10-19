@@ -5,7 +5,7 @@
 1. **Posicionamento é ataque.** O tiro básico exige ficar parado; mira automática e recarga visível reduzem a carga de comandos. Q, E e esquiva abrem janelas sem apagar essa tensão.
 2. **Uma decisão por vez.** Menu → combate → recompensa → descanso → combate. Pausa e resultado são estados exclusivos. Sem loja sobreposta a combate nem recursos competindo pela mesma compra.
 3. **Runs completas e finitas.** 12 salas, três atos e chefes nas salas 4, 8 e 12. Cada chefe derrotado recupera 25% da vida e concede uma troca de ofertas. A última sala leva diretamente à vitória.
-4. **Clareza antes de quantidade.** Três caminhos, quatro famílias de inimigos comuns, nove habilidades, 16 perks e três variantes de guardião. Forma, cor, contorno e movimento distinguem ameaças.
+4. **Clareza antes de quantidade.** Um kit inicial comum, quatro famílias de inimigos comuns, nove habilidades, 16 perks e três variantes de guardião. Forma, cor, contorno e movimento distinguem ameaças.
 
 ## Sistemas
 
