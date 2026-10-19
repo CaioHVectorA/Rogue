@@ -2,6 +2,7 @@ import type { Game } from "../game/engine";
 import { ACTS, CLASSES, REWARDS, TOTAL_ROOMS, formatTime } from "../game/model";
 import type { ClassId } from "../game/model";
 import { icon } from "./icons";
+import { ITEM_VISUALS, pilotPortrait, statChip } from "./arsenal";
 import type { DeviceLayout } from "./device";
 
 const escape = (value: string) =>
@@ -22,6 +23,8 @@ export class Interface {
   selected: ClassId = "ranger";
   seed = freshSeed();
   help = false;
+  settings = false;
+  itemDetails = false;
   confirmAbandon = false;
   private previousPhase = "";
   private hud: HTMLElement;
@@ -32,8 +35,7 @@ export class Interface {
     private layout: DeviceLayout,
   ) {
     root.innerHTML = `
-      <header class="masthead"><a class="brand" href="#" aria-label="Rogue — início">${icon("mark")}ROGUE<span>RUN / REPEAT / RISE</span></a>
-      <div class="header-actions"><span class="edition">UM ROGUELITE DE RITMO & ESCOLHAS</span><label class="layout-switch"><span class="sr-only">Interface</span><select aria-label="Interface"><option value="auto">Auto</option><option value="mobile">Celular</option><option value="desktop">Desktop</option></select></label><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button></div></header>
+      <header class="masthead"><a class="brand" href="#" aria-label="Rogue — início">${icon("mark")}ROGUE</a><div class="header-actions"><button class="icon-button" data-action="sound" aria-label="Alternar som"></button><button class="icon-button" data-action="help" aria-label="Como jogar">${icon("book")}</button><button class="icon-button" data-action="settings" aria-label="Configurações">${icon("gear")}</button></div></header>
       <section class="hud" aria-label="Estado da run" hidden></section>
       <div class="overlay"></div>
       <div class="touch-controls" hidden><div class="movement-control"><div class="joystick" aria-label="Arraste para mover"><span></span></div><span class="stick-hint">SOLTE PARA ATIRAR</span></div><div class="touch-actions"><button data-action="dash" aria-label="Esquivar">${icon("arrow")}<span>Esquiva</span><small data-touch-cooldown="dash">Pronta</small></button><button data-action="skill" aria-label="Usar habilidade">${icon("bolt")}<span>Habilidade</span><small data-touch-cooldown="skill">Pronta</small></button></div></div>
@@ -49,8 +51,9 @@ export class Interface {
       if (button && !(button as HTMLButtonElement).disabled)
         this.action(button.dataset.action!, button.dataset.value);
     });
-    root.querySelector("select")!.addEventListener("change", (event) => {
-      this.layout.setPreference((event.target as HTMLSelectElement).value);
+    root.addEventListener("change", (event) => {
+      if ((event.target as HTMLElement).matches('[aria-label="Interface"]'))
+        this.layout.setPreference((event.target as HTMLSelectElement).value);
     });
     root.querySelector(".brand")!.addEventListener("click", (event) => {
       event.preventDefault();
@@ -64,7 +67,10 @@ export class Interface {
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        if (this.help) {
+        if (this.settings) {
+          this.settings = false;
+          this.render();
+        } else if (this.help) {
           this.help = false;
           this.render();
         } else game.pause();
@@ -75,7 +81,7 @@ export class Interface {
       ) {
         const focusable = Array.from(
           this.overlay.querySelectorAll<HTMLElement>(
-            'button:not(:disabled), input, [tabindex="0"]',
+            'button:not(:disabled), input, select, [tabindex="0"]',
           ),
         );
         const first = focusable[0],
@@ -95,6 +101,22 @@ export class Interface {
   private action(action: string, value?: string) {
     const g = this.game;
     switch (action) {
+      case "settings":
+        if (g.phase === "combat") g.pause();
+        this.settings = true;
+        this.render();
+        break;
+      case "close-settings":
+        this.settings = false;
+        this.render();
+        break;
+      case "item-info":
+        this.itemDetails = !this.itemDetails;
+        this.render();
+        break;
+      case "effects":
+        g.toggleEffects();
+        break;
       case "class":
         this.selected = value as ClassId;
         this.render();
@@ -167,8 +189,7 @@ export class Interface {
   render() {
     const g = this.game;
     document.documentElement.dataset.phase = g.phase;
-    this.root.querySelector<HTMLSelectElement>("select")!.value =
-      this.layout.preference;
+
     if (this.previousPhase !== g.phase) this.confirmAbandon = false;
     const sound = this.root.querySelector<HTMLButtonElement>(
       '[data-action="sound"]',
@@ -181,22 +202,37 @@ export class Interface {
     this.root.querySelector<HTMLElement>(".touch-controls")!.hidden =
       g.phase !== "combat" || this.layout.mode !== "mobile";
     this.root.dataset.phase = g.phase;
-    if (active) this.renderHud();
+    if (active) {
+      this.renderHud();
+      this.hud.insertAdjacentHTML(
+        "beforeend",
+        '<div class="combo-display" aria-label="Sequência de eliminações" hidden><span id="combo-rank"></span><strong id="combo-value"></strong><div class="combo-fuse"><i></i></div></div>',
+      );
+    }
     const previousFocus = (document.activeElement as HTMLElement)?.dataset
       .action;
     const previousValue = (document.activeElement as HTMLElement)?.dataset
       .value;
     this.overlay.classList.toggle(
       "is-gameplay",
-      g.phase === "combat" && !this.help,
+      g.phase === "combat" && !this.help && !this.settings,
     );
-    this.overlay.innerHTML = this.help ? this.helpScreen() : this.screen();
+    this.overlay.innerHTML = this.settings
+      ? this.settingsScreen()
+      : this.help
+        ? this.helpScreen()
+        : this.screen();
+    const modeSelect = this.root.querySelector<HTMLSelectElement>(
+      '[aria-label="Interface"]',
+    );
+    if (modeSelect) modeSelect.value = this.layout.preference;
+    this.overlay.classList.toggle("item-details", this.itemDetails);
     const modal = !!this.overlay.querySelector('[role="dialog"]');
     this.root.querySelector<HTMLElement>(".masthead")!.inert = modal;
     this.hud.inert = modal;
     const seedInput = this.overlay.querySelector<HTMLInputElement>("#seed");
     if (seedInput) seedInput.value = this.seed;
-    if (this.previousPhase !== g.phase || this.help) {
+    if (this.previousPhase !== g.phase || this.help || this.settings) {
       this.overlay.scrollTop = 0;
       if (g.phase !== "menu")
         requestAnimationFrame(() => {
@@ -225,12 +261,12 @@ export class Interface {
       this.hud.innerHTML = `<div class="mobile-hud"><div class="mobile-progress"><span class="eyebrow">ATO ${g.run.act} · ${g.run.room % 4 === 0 ? "GUARDIÃO" : `ENCONTRO ${g.run.room}/12`}</span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div><div class="mobile-status"><div class="vitals"><div class="vital-label">${icon("heart")}<strong id="hp-value"></strong></div><div class="meter"><i id="hp-meter"></i></div></div><span class="mobile-gold">${icon("coin")}<b id="gold-value"></b></span><span id="reload-state">${icon("target")}<span id="combat-hint"></span></span></div></div><div class="boss-health" id="boss-health" hidden><div><span>${ACTS[g.run.act - 1].boss}</span><small id="boss-phase"></small></div><div class="meter"><i id="boss-meter"></i></div></div>`;
       return;
     }
-    this.hud.innerHTML = `<div class="hud-top"><div class="vitals"><div class="vital-label">${icon("heart")}<span>INTEGRIDADE</span><strong id="hp-value"></strong></div><div class="meter"><i id="hp-meter"></i></div></div>
+    this.hud.innerHTML = `<div class="hud-top"><div class="vitals"><div class="vital-label">${icon("heart")}<strong id="hp-value"></strong></div><div class="meter"><i id="hp-meter"></i></div></div>
       <div class="route-mini">${Array.from({ length: TOTAL_ROOMS }, (_, i) => `<span class="${i + 1 < g.run.room ? "complete" : i + 1 === g.run.room ? "current" : ""} ${(i + 1) % 4 === 0 ? "boss-node" : ""}" title="Encontro ${i + 1}">${(i + 1) % 4 === 0 ? icon("crown") : ""}</span>`).join("")}</div>
       <div class="run-counters"><span>${icon("coin")}<b id="gold-value"></b></span><span id="time-value"></span><button class="icon-button" data-action="pause" aria-label="Pausar jogo">${icon("pause")}</button></div></div>
       <div class="boss-health" id="boss-health" hidden><div><span>${ACTS[g.run.act - 1].boss}</span><small id="boss-phase">GUARDIÃO DO ATO ${g.run.act}</small></div><div class="meter"><i id="boss-meter"></i></div></div>
-      <div class="hud-bottom"><div class="encounter-label"><span class="eyebrow">ATO ${String(g.run.act).padStart(2, "0")} / ${ACTS[g.run.act - 1].name.toUpperCase()}</span><strong>Encontro ${String(g.run.room).padStart(2, "0")}<small> / 12</small></strong><span id="combat-hint"></span></div>
-      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div><div class="ability"><kbd>Q</kbd><div><strong>${CLASSES[g.run.classId].skill}</strong><span id="skill-value"></span></div></div><div class="reload-ring" id="reload-state">${icon("target")}<span>Pare para atirar</span></div></div></div>`;
+      <div class="hud-bottom"><div class="encounter-label"><span class="eyebrow">ATO ${String(g.run.act).padStart(2, "0")} / ${ACTS[g.run.act - 1].name.toUpperCase()}</span><strong>WAVE ${String(g.run.room).padStart(2, "0")}<small> / 12</small></strong><span id="combat-hint"></span></div>
+      <div class="abilities"><div class="ability"><kbd>ESPAÇO</kbd><div><strong>Esquiva</strong><span id="dash-value"></span></div></div><div class="ability"><kbd>Q</kbd><div><strong>${CLASSES[g.run.classId].skill}</strong><span id="skill-value"></span></div></div><div class="reload-ring" id="reload-state">${icon("target")}</div></div></div>`;
   }
   tick() {
     const g = this.game;
@@ -239,6 +275,22 @@ export class Interface {
       const el = this.hud.querySelector<HTMLElement>(`#${id}`);
       if (el && el.textContent !== value) el.textContent = value;
     };
+    const combo = this.hud.querySelector<HTMLElement>(".combo-display")!;
+    combo.hidden = g.combo < 3 || g.phase !== "combat";
+    text("combo-value", `${g.combo} HIT`);
+    text(
+      "combo-rank",
+      g.combo >= 40
+        ? "ANNIHILATION"
+        : g.combo >= 20
+          ? "MASSACRE"
+          : g.combo >= 10
+            ? "RAMPAGE"
+            : "CHAIN",
+    );
+    combo.classList.toggle("massacre", g.combo >= 20);
+    combo.querySelector<HTMLElement>("i")!.style.width =
+      `${(g.comboTimer / 3.5) * 100}%`;
     text("hp-value", `${Math.ceil(g.player.hp)} / ${g.player.maxHp}`);
     text("gold-value", String(g.run.gold));
     text("time-value", formatTime(g.run.elapsed));
@@ -252,9 +304,7 @@ export class Interface {
     );
     text(
       "combat-hint",
-      g.phase === "combat"
-        ? `${g.enemies.length + g.spawnQueue.length} ameaças restantes`
-        : "O tempo da run está parado",
+      g.phase === "combat" ? `${g.enemies.length + g.spawnQueue.length}` : "—",
     );
     for (const action of ["dash", "skill"] as const) {
       const cooldown = action === "dash" ? g.player.dashCd : g.player.skillCd;
@@ -276,12 +326,7 @@ export class Interface {
     if (boss) {
       this.hud.querySelector<HTMLElement>("#boss-meter")!.style.width =
         `${Math.max(0, boss.hp / boss.maxHp) * 100}%`;
-      text(
-        "boss-phase",
-        boss.enraged
-          ? "FASE II · PRESSÃO CRESCENTE"
-          : `GUARDIÃO DO ATO ${g.run.act}`,
-      );
+      text("boss-phase", boss.enraged ? "II" : `I / ${g.run.act}`);
     }
   }
   private screen(): string {
@@ -299,74 +344,83 @@ export class Interface {
         return this.campScreen();
       case "paused":
         return this.dialog(
-          `<div class="emblem">${icon("pause")}</div><span class="eyebrow">RESPIRE. A RUN PODE ESPERAR.</span><h1>Uma breve <em>pausa.</em></h1><p>Encontre seu ritmo. O núcleo ainda está lá.</p><div class="stack-actions"><button class="primary" data-action="pause">Continuar a run ${icon("arrow")}</button><button class="secondary" data-action="help">Controles e regras ${icon("book")}</button><button class="text-button danger" data-action="abandon">${this.confirmAbandon ? "Confirmar encerramento desta run" : "Encerrar esta run"}</button></div>`,
+          `<div class="emblem">${icon("pause")}</div><h1>PAUSA</h1><div class="stack-actions"><button class="primary" data-action="pause" aria-label="Continuar a run">RETOMAR ${icon("arrow")}</button><button class="secondary" data-action="help" aria-label="Controles e regras">CONTROLES ${icon("book")}</button><button class="text-button danger" data-action="abandon" aria-label="${this.confirmAbandon ? "Confirmar encerramento desta run" : "Encerrar esta run"}">${this.confirmAbandon ? "CONFIRMAR SAÍDA" : "SAIR"}</button></div>`,
         );
       case "result":
         return this.resultScreen();
     }
   }
   private mobileMenuScreen() {
-    const stats = CLASSES[this.selected],
-      g = this.game;
-    return `<main class="mobile-menu"><section class="mobile-welcome"><span class="eyebrow">UMA VIDA. TRÊS GUARDIÕES.</span><h1>Encontre seu <em>ritmo.</em></h1><p>Mova para escapar. Solte para disparar.</p><div class="mobile-record"><span>${icon("crown")} ${g.records.wins} vitórias</span><span>Melhor ${g.records.bestRoom}/12</span><button class="text-button" data-action="help">Como jogar ${icon("arrow")}</button></div></section><section class="mobile-loadout panel"><div class="panel-heading"><span class="eyebrow">ESCOLHA SEU CAMINHO</span><span class="small-index">01—03</span></div><div class="mobile-class-list" role="group" aria-label="Caminho inicial">${(Object.keys(CLASSES) as ClassId[]).map((id, index) => `<button class="mobile-class ${id === this.selected ? "selected" : ""}" style="--class-color:${CLASSES[id].color}" data-action="class" data-value="${id}" aria-pressed="${id === this.selected}">${icon(["target", "bolt", "shield"][index])}<strong>${CLASSES[id].name}</strong><small>${CLASSES[id].hp} vida</small></button>`).join("")}</div><div class="mobile-skill" style="--class-color:${stats.color}"><span class="eyebrow">${stats.skill.toUpperCase()}</span><p>${stats.desc.replace("Q ", "Toque em Habilidade: ")}</p></div><details class="mobile-seed"><summary>Código da run e desafio diário</summary><div class="seed-row"><label for="seed">CÓDIGO DA RUN<input id="seed" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="seed-help"></label><button class="icon-button" data-action="random" aria-label="Gerar novo código">${icon("repeat")}</button><button class="text-button" data-action="daily">Diária UTC</button></div><p id="seed-help" class="seed-note">Mesmo código e escolhas, mesmas ofertas.</p></details></section><div class="mobile-start"><button class="primary start-button" data-action="start">Iniciar expedição ${icon("arrow")}</button><span>Controle à esquerda · esquiva e habilidade à direita</span></div></main>`;
+    return this.loadoutScreen(true);
   }
   private menuScreen() {
-    const g = this.game;
-    return `<main class="menu-layout"><section class="menu-copy"><span class="eyebrow"><i class="live-dot"></i> EXPEDIÇÃO 001 / O NÚCLEO</span><h1>Encontre<br>seu <em>ritmo.</em></h1><p class="lead">Mova-se para sobreviver.<br>Pare para atacar. Evolua a cada escolha.</p><div class="run-facts"><span><b>03</b> atos</span><span><b>12</b> encontros</span><span><b>01</b> vida</span></div><div class="menu-records"><span>${icon("crown")}<b>${g.records.wins}</b> vitórias</span><span>Melhor avanço <b>${g.records.bestRoom}/12</b></span><span>${g.records.bestTime ? `Recorde <b>${formatTime(g.records.bestTime)}</b>` : `${g.records.runs} runs concluídas`}</span></div></section>
-      <section class="loadout panel" aria-labelledby="loadout-title"><div class="panel-heading"><span class="eyebrow">ANTES DO PRIMEIRO PASSO</span><span class="small-index">01—03</span></div><h2 id="loadout-title">Escolha seu caminho</h2><p class="muted">Sua habilidade define o início. Suas escolhas, o destino.</p>
-      <div class="class-list" role="group" aria-label="Caminho inicial">${(
-        Object.keys(CLASSES) as ClassId[]
-      )
-        .map((id, index) => {
-          const stats = CLASSES[id];
-          return `<button class="class-card ${this.selected === id ? "selected" : ""}" style="--class-color:${stats.color}" data-action="class" data-value="${id}" aria-pressed="${this.selected === id}"><span class="class-symbol">${icon(["target", "bolt", "shield"][index])}</span><span><strong>${stats.name}</strong><small>${stats.title}</small></span><span class="radio-dot"></span></button>`;
-        })
-        .join(
-          "",
-        )}</div><div class="skill-preview">${icon("bolt")}<p><strong>${CLASSES[this.selected].skill}</strong><span>${CLASSES[this.selected].desc}</span></p><kbd>Q</kbd></div>
-      <div class="seed-row"><label for="seed">CÓDIGO DA RUN <input id="seed" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="seed-help"></label><button class="icon-button" data-action="random" aria-label="Gerar novo código">${icon("repeat")}</button><button class="text-button" data-action="daily">Diária UTC</button></div><p class="seed-note" id="seed-help">Mesmo código, mesmos encontros e ofertas. A build é sua.</p><button class="primary start-button" data-action="start">Iniciar expedição ${icon("arrow")}</button><span class="loadout-footnote">Sem melhorias permanentes. Cada run começa do zero.</span></section>
-      <div class="menu-controls"><span><kbd>W A S D</kbd> mover</span><span><kbd>ESPAÇO</kbd> esquivar</span><span><kbd>Q</kbd> habilidade</span><button class="text-button" data-action="help">Como jogar ${icon("arrow")}</button></div></main>`;
+    return this.loadoutScreen(false);
+  }
+  private loadoutScreen(mobile: boolean) {
+    const g = this.game,
+      current = CLASSES[this.selected];
+    const cards = (Object.keys(CLASSES) as ClassId[])
+      .map((id, index) => {
+        const stats = CLASSES[id];
+        return `<button class="pilot-select ${mobile ? "mobile-class" : "class-card"} ${id === this.selected ? "selected" : ""}" style="--class-color:${stats.color}" data-action="class" data-value="${id}" aria-label="${stats.name} ${stats.title}" aria-pressed="${id === this.selected}"><span class="pilot-index">0${index + 1}</span>${pilotPortrait(id)}<strong>${stats.name}</strong><span class="pilot-kit">${icon(["target", "bolt", "shield"][index])}<b>${stats.hp}</b>${icon("heart")}</span><span class="pilot-lock">${id === this.selected ? "EQUIPADO" : "+"}</span></button>`;
+      })
+      .join("");
+    const seed = `<div class="seed-row"><label for="seed">SEED <input id="seed" aria-label="CÓDIGO DA RUN" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="seed-help"></label><button class="icon-button" data-action="random" aria-label="Gerar novo código">${icon("repeat")}</button><button class="text-button" data-action="daily">DIÁRIA</button></div><span id="seed-help" class="sr-only">Mesmo código e escolhas, mesmas ofertas.</span>`;
+    return `<main class="arcade-menu ${mobile ? "mobile-menu" : "menu-layout"}"><div class="arcade-title"><span class="game-kicker">SURVIVE · EVOLVE · REPEAT</span><h1>ROGUE<span>COREBREAKER</span></h1><div class="boss-seals">${[1, 2, 3].map((n) => `<span>${icon("crown")}<b>${n}</b></span>`).join("")}</div></div><section class="pilot-deck" aria-label="Escolha de personagem"><div class="deck-label"><span>SELECIONE SEU PILOTO</span><span>01 / 03</span></div><div class="pilot-roster ${mobile ? "mobile-class-list" : "class-list"}" role="group" aria-label="Caminho inicial">${cards}</div><div class="equipped-skill" style="--class-color:${current.color}">${icon("bolt")}<div><strong>${current.skill}</strong><span>${mobile ? "TOQUE" : "Q"}</span></div><p>${current.desc.replace("Q ", "")}</p></div></section><div class="launch-panel">${mobile ? `<details class="mobile-seed"><summary>${icon("coin")} SEED / DIÁRIA</summary>${seed}</details>` : seed}<button class="primary start-button" data-action="start" aria-label="Iniciar expedição">${icon("target")}<span>JOGAR</span>${icon("arrow")}</button><div class="arcade-records"><span>${icon("crown")} ${g.records.wins}</span><span>${icon("mark")} ${g.records.bestRoom}/12</span><button class="text-button" data-action="help" aria-label="Como jogar">${icon("book")} CONTROLES</button></div></div></main>`;
   }
   private rewardScreen() {
-    const g = this.game;
-    const boss = g.run.room % 4 === 0;
-    return `<section class="wide-dialog" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="reward-heading"><span class="eyebrow">${boss ? "GUARDIÃO SUPERADO · +25% DE VIDA · +1 TROCA" : `ENCONTRO ${String(g.run.room).padStart(2, "0")} CONCLUÍDO`}</span><h1 id="screen-title">Sua próxima <em>possibilidade.</em></h1><p>Escolha uma melhoria. Ela acompanha você até o fim desta run.</p></div><div class="reward-grid">${g.run.offers
-      .map((id, index) => {
-        const reward = REWARDS.find((r) => r.id === id)!;
-        return `<button class="reward-card" style="--class-color:${reward.color}" data-action="reward" data-value="${id}"><div class="reward-card-top"><span class="eyebrow">${reward.tag}</span><span>0${index + 1}</span></div><div class="reward-symbol">${icon(reward.tag === "ATIRADOR" ? "target" : reward.tag === "COLOSSO" ? "shield" : "bolt")}</div><h2>${reward.name}</h2><p>${reward.desc}</p><div class="reward-card-bottom"><span>NÍVEL ${(g.run.rewards[id] ?? 0) + 1} / ${reward.max}</span>${icon("arrow")}</div></button>`;
+    const g = this.game,
+      boss = g.run.room % 4 === 0;
+    return `<section class="wide-dialog loot-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon(boss ? "crown" : "skull")}</span><div><small>WAVE ${g.run.room.toString().padStart(2, "0")} CLEAR</small><h1 id="screen-title">${boss ? "GUARDIÃO ABATIDO" : "UPGRADE!"}</h1></div><button class="icon-button" data-action="item-info" aria-label="Mostrar descrições das melhorias" aria-pressed="${this.itemDetails}">${icon("book")}</button></div><div class="reward-grid">${g.run.offers
+      .map((id) => {
+        const reward = REWARDS.find((r) => r.id === id)!,
+          item = ITEM_VISUALS[id];
+        return `<button class="reward-card loot-card" style="--class-color:${reward.color}" data-action="reward" data-value="${id}" aria-label="${escape(reward.name)}. ${escape(reward.desc)}"><div class="loot-category">${reward.tag}</div><div class="loot-object">${icon(item.glyph)}</div><div class="loot-stat"><strong>${item.value}</strong><span>${item.stat}</span></div><h2>${reward.name}</h2><span class="loot-hint">${item.hint}</span><p class="item-description">${reward.desc}</p><div class="loot-pips">${Array.from({ length: reward.max }, (_, i) => `<i class="${i <= (g.run.rewards[id] ?? 0) ? "lit" : ""}"></i>`).join("")}</div><span class="loot-select">EQUIPAR ${icon("arrow")}</span></button>`;
       })
       .join(
         "",
-      )}</div><div class="reward-footer"><span>${icon("coin")} ${g.run.gold} ouro coletado · nenhuma coleta ficou para trás</span><button class="secondary" data-action="reroll" ${!g.run.rerolls ? "disabled" : ""}>${icon("repeat")} Trocar ofertas <span class="count">${g.run.rerolls}</span></button></div></section>`;
+      )}</div><div class="loot-footer"><span>${icon("coin")} ${g.run.gold}</span>${boss ? `<span class="boss-bounty">${icon("heart")} +25% ${icon("repeat")} +1</span>` : ""}<button class="secondary" data-action="reroll" aria-label="Trocar ofertas" ${!g.run.rerolls ? "disabled" : ""}>${icon("repeat")} <b>${g.run.rerolls}</b></button></div></section>`;
   }
   private campScreen() {
     const g = this.game,
-      nextBoss = (g.run.room + 1) % 4 === 0;
-    const nextAct = Math.ceil((g.run.room + 1) / 4);
-    return `<section class="wide-dialog camp-dialog" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="camp-heading"><div><span class="eyebrow">ENTRE UM PASSO E OUTRO</span><h1 id="screen-title">Prepare o <em>próximo.</em></h1><p>Invista no que falta ou guarde ouro. Você escolhe quando seguir.</p></div><span class="gold-balance">${icon("coin")} ${g.run.gold}<small>OURO DISPONÍVEL</small></span></div><div class="camp-columns"><div class="camp-shop"><article class="shop-item"><div class="shop-icon">${icon("heart")}</div><div><h3>Recuperar o fôlego</h3><p>Cura 40% da vida máxima. Uma compra por descanso.</p><small>${Math.ceil(g.player.hp)} / ${g.player.maxHp} de vida</small></div><button class="secondary" data-action="heal" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}>${g.run.healed ? "Utilizado" : g.player.hp >= g.player.maxHp ? "Vida cheia" : `${g.healCost} ouro`}</button></article><article class="shop-item"><div class="shop-icon">${icon("target")}</div><div><h3>Afiar a precisão</h3><p>+8% de dano básico nesta run. Até duas compras por descanso.</p><small>${g.run.purchases} / 2 reforços adquiridos</small></div><button class="secondary" data-action="forge" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}>${g.run.purchases >= 2 ? "Esgotado" : `${g.forgeCost} ouro`}</button></article><div class="next-encounter ${nextBoss ? "boss-preview" : ""}">${icon(nextBoss ? "crown" : "mark")}<div><span class="eyebrow">A SEGUIR · ATO ${nextAct}</span><strong>${nextBoss ? ACTS[nextAct - 1].boss : ACTS[nextAct - 1].name}</strong><p>${nextBoss ? "Guardião: observe os avisos no chão e reserve sua esquiva." : ACTS[nextAct - 1].subtitle}</p></div></div></div><aside class="build-panel"><span class="eyebrow">SUA CONSTRUÇÃO</span><h3>${CLASSES[g.run.classId].name}</h3><div class="stat-line"><span>Dano básico</span><b>${g.player.damage.toFixed(1)}</b></div><div class="stat-line"><span>Recarga parado</span><b>${g.player.reload.toFixed(2)}s</b></div><div class="stat-line"><span>Vida máxima</span><b>${g.player.maxHp}</b></div><div class="build-tags">${this.buildTags()}</div></aside></div><div class="camp-footer"><span>Melhorias e ouro pertencem apenas a esta run.</span><button class="primary" data-action="next">${nextBoss ? "Enfrentar guardião" : `Seguir para o encontro ${g.run.room + 1}`} ${icon("arrow")}</button></div></section>`;
+      boss = (g.run.room + 1) % 4 === 0;
+    return `<section class="wide-dialog armory-screen" role="dialog" aria-modal="true" aria-labelledby="screen-title"><div class="loot-banner"><span>${icon("shield")}</span><div><small>CHECKPOINT ${g.run.room.toString().padStart(2, "0")}</small><h1 id="screen-title">ARSENAL</h1></div><span class="armory-gold">${icon("coin")} ${g.run.gold}</span></div><div class="armory-body"><div class="armory-items"><button class="shop-crate" data-action="heal" aria-label="Recuperar o fôlego. Cura 40% da vida máxima" ${g.run.healed || g.player.hp >= g.player.maxHp || g.run.gold < g.healCost ? "disabled" : ""}><span class="crate-symbol">${icon("heart")}</span><strong>+40%</strong><small>VIDA</small><span class="crate-price">${g.run.healed ? "USADO" : g.player.hp >= g.player.maxHp ? "MAX" : `${icon("coin")} ${g.healCost}`}</span></button><button class="shop-crate" data-action="forge" aria-label="Afiar a precisão. Mais 8% de dano" ${g.run.purchases >= 2 || g.run.gold < g.forgeCost ? "disabled" : ""}><span class="crate-symbol">${icon("target")}</span><strong>+8%</strong><small>DANO</small><span class="crate-price">${g.run.purchases >= 2 ? "MAX" : `${icon("coin")} ${g.forgeCost}`}</span></button></div><aside class="loadout-snapshot"><div class="equipped-stats">${statChip("heart", `${Math.ceil(g.player.hp)}/${g.player.maxHp}`, "VIDA")}${statChip("target", g.player.damage.toFixed(0), "DANO")}${statChip("repeat", `${g.player.reload.toFixed(2)}s`, "RECARGA")}</div><div class="equipped-inventory">${Object.entries(
+      g.run.rewards,
+    )
+      .map(
+        ([id, count]) =>
+          `<span title="${REWARDS.find((r) => r.id === id)!.name}">${icon(ITEM_VISUALS[id].glyph)}<b>${count}</b></span>`,
+      )
+      .join(
+        "",
+      )}</div></aside></div><div class="armory-next"><span>${icon(boss ? "crown" : "skull")} ${boss ? ACTS[Math.ceil((g.run.room + 1) / 4) - 1].boss.toUpperCase() : `WAVE ${g.run.room + 1}`}</span><button class="primary" data-action="next">${boss ? "ENFRENTAR" : "AVANÇAR"} ${icon("arrow")}</button></div></section>`;
   }
   private resultScreen() {
     const g = this.game;
     return this.dialog(
-      `<div class="emblem ${g.run.won ? "" : "fallen"}">${icon(g.run.won ? "crown" : "mark")}</div><span class="eyebrow">${g.run.won ? "OS TRÊS GUARDIÕES CAÍRAM" : "A EXPEDIÇÃO CHEGOU AO FIM"}</span><h1 id="screen-title">${g.run.won ? "Você encontrou<br>seu <em>ritmo.</em>" : "Todo fim é<br>um novo <em>começo.</em>"}</h1><p>${g.run.won ? "O núcleo silenciou. Uma nova construção espera na próxima run." : "Leve a experiência. Deixe o restante. Tente outro caminho."}</p><div class="result-stats"><div><strong>${g.run.room}<small>/12</small></strong><span>ENCONTRO</span></div><div><strong>${g.run.bosses}<small>/3</small></strong><span>GUARDIÕES</span></div><div><strong>${formatTime(g.run.elapsed)}</strong><span>TEMPO ATIVO</span></div><div><strong>${g.run.kills}</strong><span>ELIMINAÇÕES</span></div></div><div class="result-build"><span class="eyebrow">${CLASSES[g.run.classId].name.toUpperCase()} · SUA BUILD</span><div class="build-tags">${this.buildTags()}</div></div><div class="stack-actions"><button class="primary" data-action="retry">Repetir código e caminho ${icon("repeat")}</button><button class="secondary" data-action="menu">Nova expedição ${icon("arrow")}</button></div><p class="result-seed">CÓDIGO <code>${escape(g.run.seed)}</code> · Recordes salvos neste navegador</p>`,
+      `<div class="result-medal">${icon(g.run.won ? "crown" : "skull")}</div><span class="game-kicker">${g.run.won ? "CORE DESTROYED" : "RUN OVER"}</span><h1 id="screen-title">${g.run.won ? "VITÓRIA" : "DERROTA"}</h1><div class="result-stats"><div><strong>${g.run.kills}</strong><span>ABATES</span></div><div><strong>${g.peakCombo}</strong><span>SEQUÊNCIA</span></div><div><strong>${g.run.room}<small>/12</small></strong><span>WAVE</span></div><div><strong>${formatTime(g.run.elapsed)}</strong><span>TEMPO</span></div></div><div class="equipped-inventory result-inventory">${Object.entries(
+        g.run.rewards,
+      )
+        .map(
+          ([id, count]) =>
+            `<span title="${REWARDS.find((r) => r.id === id)!.name}">${icon(ITEM_VISUALS[id].glyph)}<b>${count}</b></span>`,
+        )
+        .join(
+          "",
+        )}</div><div class="stack-actions"><button class="primary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} REPETIR</button><button class="secondary" data-action="menu" aria-label="Nova expedição">ESCOLHER PILOTO ${icon("arrow")}</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
       "result-dialog",
     );
   }
-  private buildTags() {
-    const entries = Object.entries(this.game.run.rewards);
-    return entries.length
-      ? entries
-          .map(
-            ([id, count]) =>
-              `<span title="${escape(REWARDS.find((r) => r.id === id)!.desc)}">${REWARDS.find((r) => r.id === id)!.name}${count > 1 ? ` ×${count}` : ""}</span>`,
-          )
-          .join("")
-      : '<span class="muted">Seu caminho ainda está se formando.</span>';
+  private settingsScreen() {
+    return this.dialog(
+      `<span class="emblem">${icon("gear")}</span><h1>CONFIGURAÇÕES</h1><div class="settings-row"><label for="interface-mode">INTERFACE</label><select id="interface-mode" aria-label="Interface"><option value="auto">Auto</option><option value="mobile">Celular</option><option value="desktop">Desktop</option></select></div><button class="secondary effects-choice" data-action="effects">${icon("explosion")} EFEITOS <strong>${this.game.reducedMotion ? "REDUZIDOS" : "COMPLETOS"}</strong></button><button class="primary" data-action="close-settings" aria-label="Fechar configurações">VOLTAR ${icon("arrow")}</button>`,
+      "settings-dialog",
+    );
   }
   private helpScreen() {
     if (this.layout.mode === "mobile")
       return this.dialog(
-        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Cada caminho tem um poder diferente. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop no seletor do topo.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+        `<span class="eyebrow">FEITO PARA OS SEUS POLEGARES</span><h1 id="screen-title">Toque. Mova.<br><em>Encontre espaço.</em></h1><div class="help-list mobile-help"><div>${icon("target")}<p><b>Arraste o controle esquerdo para mover.</b> Solte o dedo para parar e disparar automaticamente no inimigo mais próximo.</p></div><div>${icon("arrow")}<p><b>Toque em Esquiva para escapar.</b> Funciona enquanto você move com o outro dedo. A proteção é breve; a recarga aparece no botão.</p></div><div>${icon("bolt")}<p><b>Toque em Habilidade para abrir espaço.</b> Cada caminho tem um poder diferente. O botão ilumina quando estiver pronto.</p></div><div>${icon("crown")}<p><b>Evite os círculos anunciados pelos chefes.</b> A arena inteira fica visível; os controles têm uma área própria fora do campo de combate.</p></div><div>${icon("pause")}<p><b>Pause pelo botão no topo.</b> Girar a tela ou sair da aba também pausa. Funciona em pé e deitado.</p></div></div><p class="help-note">Cada run começa do zero. Só seus recordes ficam salvos. Você pode trocar entre a interface de celular e desktop nas configurações da engrenagem.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
         "help-dialog",
       );
     return this.dialog(
@@ -375,6 +429,6 @@ export class Interface {
     );
   }
   private dialog(content: string, className = "") {
-    return `<section class="dialog ${className}" role="dialog" aria-modal="true" aria-label="${this.help ? "Como jogar" : this.game.phase === "paused" ? "Jogo pausado" : "Resultado da run"}">${content}</section>`;
+    return `<section class="dialog ${className}" role="dialog" aria-modal="true" aria-label="${this.settings ? "Configurações" : this.help ? "Como jogar" : this.game.phase === "paused" ? "Jogo pausado" : "Resultado da run"}">${content}</section>`;
   }
 }

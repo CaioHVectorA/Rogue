@@ -2,5 +2,8 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   server: { host: "0.0.0.0", port: 3001 },
-  build: { sourcemap: true },
+  build: {
+    sourcemap: true,
+    rollupOptions: { output: { manualChunks: { kaplay: ["kaplay"] } } },
+  },
 });

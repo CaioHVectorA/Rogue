@@ -13,6 +13,14 @@ npm run dev
 
 Abra http://localhost:3001. Para gerar uma versão estática, `npm run build`; para verificá-la, `npm run preview`. O diretório `dist/` funciona em hospedagens estáticas, inclusive em subdiretórios. Não há backend ou serviços externos.
 
+## Combate arcade
+
+Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas frequentes e patrulhas misturadas. Chefes têm escala visual maior e a sua queda elimina a horda restante. Sequências de eliminações geram um contador visual; não alteram secretamente dano ou recompensas.
+
+Impactos incluem fragmentos, rastros, números de dano, ondas de choque, pausas curtas de impacto e sons locais reproduzidos pelo Kaplay. A quantidade de efeitos é limitada a 240 partículas no celular e 650 no desktop, com pequena reserva para anéis e indicadores. O modo reduzido remove tremor, pausas e números flutuantes e limita partículas a 45. Está no botão de configurações e respeita a preferência inicial do sistema.
+
+Seleção de pilotos, melhorias por ícones/atributos e arsenal substituem os painéis de texto. O botão de livro na seleção de melhorias abre as descrições completas. As opções de interface ficam na engrenagem.
+
 ## Uma run
 
 - Escolha Atirador (rajada), Conjurador (nova) ou Colosso (impacto e cura).
@@ -24,7 +32,7 @@ Abra http://localhost:3001. Para gerar uma versão estática, `npm run build`; p
 
 No desktop: WASD/setas para movimento, Espaço para esquiva, Q para habilidade e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
 
-A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop no topo e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado e áreas de controle fora do campo de batalha. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
+A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop nas configurações e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado e áreas de controle fora do campo de batalha. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
 
 O código da run reproduz posições de spawn e sorteios de recompensa para as mesmas escolhas de build e de troca. Cada encontro usa sua própria sequência, independente do tempo de combate. A diária usa a data UTC. Não há placar online nem promessa de igualdade entre caminhos diferentes.
 
@@ -52,4 +60,4 @@ Prévias: [celular em pé](docs/preview/mobile-portrait.png), [celular deitado](
 
 Regras e decisões: [PROJECT.md](PROJECT.md). Próximos passos: [roadmap.md](roadmap.md).
 
-Esta versão substitui o protótipo em Kaplay por uma simulação TypeScript, arena Canvas 2D e interface HTML/CSS. O histórico Git preserva os sistemas anteriores. `ORIGINAL_REQUEST.md` registra o pedido histórico do protótipo, não a especificação atual.
+O jogo usa Kaplay.js 3001 como runtime: cenas, entidades, renderização WebGL, colisões, áudio e efeitos. As regras de runs ficam em TypeScript e as interfaces acessíveis em HTML/CSS. O histórico Git preserva os sistemas anteriores. `ORIGINAL_REQUEST.md` registra o pedido histórico do protótipo, não a especificação atual.

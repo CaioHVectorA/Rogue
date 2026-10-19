@@ -5,6 +5,7 @@ import type { Game } from "../../src/game/engine";
 declare global {
   interface Window {
     __rogue: Game;
+    __kaplay: import("kaplay").KAPLAYCtx;
   }
 }
 async function start(page: Page) {

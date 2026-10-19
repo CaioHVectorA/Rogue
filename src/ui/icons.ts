@@ -1,4 +1,16 @@
 const paths: Record<string, string> = {
+  gear: '<path d="m9 3 1-2h4l1 2 3 2h3l2 4-2 2v3l2 2-2 4h-3l-3 2-1 2h-4l-1-2-3-2H3l-2-4 2-2v-3L1 9l2-4h3Z"/><circle cx="12" cy="12" r="4"/>',
+  pierce: '<path d="M2 12h19m-6-5 6 5-6 5M7 3v6m0 6v6m5-18v6m0 6v6"/>',
+  double: '<path d="m4 4 5 5v12H2V9Zm14 0 5 5v12h-7V9Z"/>',
+  charge: '<path d="M5 5a10 10 0 1 1-2 10M5 1v5H1m12 0-5 8h5l-2 5 7-9h-5Z"/>',
+  toxin:
+    '<path d="M12 2C9 8 4 11 4 16a8 8 0 0 0 16 0c0-5-5-8-8-14Z"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M10 20h4"/>',
+  explosion: '<path d="m12 1 2 7 7-5-4 8 6 2-8 2 4 8-8-5-6 4 2-8-7-4 9-1Z"/>',
+  vampire:
+    '<path d="m2 5 7 4 3-6 3 6 7-4-3 13-7 4-7-4Z"/><path d="m7 12 3 6 2-5 2 5 3-6"/>',
+  dash: '<path d="m13 2 8 10-8 10 3-10ZM1 5h8M0 12h10M1 19h8"/>',
+  skull:
+    '<path d="M4 10a8 8 0 0 1 16 0v6l-4 2v4H8v-4l-4-2Z"/><path d="M9 19v3m6-3v3"/><circle cx="8" cy="11" r="2"/><circle cx="16" cy="11" r="2"/>',
   mark: '<path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 5 5-5 5-5-5Z"/>',
   arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
   heart:

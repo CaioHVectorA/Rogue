@@ -22,7 +22,6 @@ import type {
   EnemyKind,
   Bullet,
   Hazard,
-  Particle,
   Pickup,
   RecordBook,
   Point,
@@ -32,6 +31,18 @@ const clamp = (n: number, min: number, max: number) =>
   Math.max(min, Math.min(max, n));
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const RECORD_KEY = "rogue.records.v2";
+export type Feedback = {
+  type:
+    "burst" | "hit" | "kill" | "shot" | "skill" | "dash" | "clear" | "pickup";
+  x: number;
+  y: number;
+  color?: string;
+  count?: number;
+  speed?: number;
+  value?: number;
+  boss?: boolean;
+  radius?: number;
+};
 export class Game {
   width = WIDTH;
   height = HEIGHT;
@@ -41,7 +52,6 @@ export class Game {
   enemies: Enemy[] = [];
   bullets: Bullet[] = [];
   hazards: Hazard[] = [];
-  particles: Particle[] = [];
   pickups: Pickup[] = [];
   records: RecordBook = emptyRecords();
   keys = new Set<string>();
@@ -59,7 +69,15 @@ export class Game {
   reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   onChange: () => void = () => {};
   private nextId = 1;
-  private audio: AudioContext | null = null;
+  engineCollisions = false;
+  session = 0;
+  combo = 0;
+  comboTimer = 0;
+  peakCombo = 0;
+  hitStop = 0;
+  onFeedback: (event: Feedback) => void = () => {};
+  onSound: (frequency: number, volume: number) => void = () => {};
+  resumeSound: () => void = () => {};
   private chainQueue: Enemy[] = [];
   private offerRound = 0;
   constructor() {
@@ -80,12 +98,19 @@ export class Game {
       )
         this.records = saved;
       this.muted = localStorage.getItem("rogue.muted") === "true";
+      const effects = localStorage.getItem("rogue.effects.v1");
+      if (effects === "reduced") this.reducedMotion = true;
+      if (effects === "full") this.reducedMotion = false;
     } catch {
       /* Storage is optional, including in private browsing. */
     }
   }
   start(classId: ClassId, seed: string) {
     this.resumeAudio();
+    this.session++;
+    this.combo = 0;
+    this.comboTimer = 0;
+    this.peakCombo = 0;
     this.run = createRun(seed.slice(0, 40) || "rogue", classId);
     this.player = createPlayer(classId);
     this.random = randomFromSeed(this.run.seed);
@@ -113,7 +138,6 @@ export class Game {
       ...this.bullets,
       ...this.hazards,
       ...this.pickups,
-      ...this.particles,
       ...this.spawnQueue,
     ];
     for (const point of points) {
@@ -129,9 +153,10 @@ export class Game {
     this.enemies = [];
     this.bullets = [];
     this.hazards = [];
-    this.particles = [];
     this.pickups = [];
     this.chainQueue = [];
+    this.combo = 0;
+    this.comboTimer = 0;
     this.roomTime = 0;
     this.intro = 1.5;
     this.offerRound = 0;
@@ -150,7 +175,7 @@ export class Game {
         90 + this.random() * (side % 2 ? this.height - 180 : this.width - 180);
       return {
         kind,
-        at: 1.5 + i * 0.32,
+        at: 1.5 + Math.floor(i / 10) * 1.1 + (i % 10) * 0.09,
         x:
           kind === "boss"
             ? this.width / 2
@@ -277,6 +302,13 @@ export class Game {
         p.hp = Math.min(p.maxHp, p.hp + Math.min(12, hits * 3));
       this.burst(p, CLASSES[this.run.classId].color, 40, radius);
     }
+    this.onFeedback({
+      type: "skill",
+      x: p.x,
+      y: p.y,
+      radius: this.run.classId === "ranger" ? 110 : 250,
+      color: CLASSES[this.run.classId].color,
+    });
     this.shake = 5;
     this.sound(160, 0.22, "triangle", 0.06);
   }
@@ -291,6 +323,12 @@ export class Game {
     p.dashTime = 0.18;
     p.invulnerable = Math.max(p.invulnerable, 0.28);
     p.dashCd = 3 * Math.pow(0.85, this.run.rewards.speed ?? 0);
+    this.onFeedback({
+      type: "dash",
+      x: p.x,
+      y: p.y,
+      color: CLASSES[this.run.classId].color,
+    });
     this.sound(240, 0.06, "triangle", 0.025);
   }
   private direction() {
@@ -317,11 +355,11 @@ export class Game {
   private spawn(kind: EnemyKind, x: number, y: number) {
     const act = this.run.act;
     const stats = {
-      chaser: [32, 100, 13, 15],
-      runner: [22, 155, 10, 11],
-      shooter: [38, 65, 12, 16],
-      guard: [90, 57, 19, 23],
-      boss: [640 + (act - 1) * 450, 42, 23, 45],
+      chaser: [14, 88, 10, 14],
+      runner: [10, 145, 8, 11],
+      shooter: [30, 65, 12, 19],
+      guard: [70, 57, 19, 27],
+      boss: [900 + (act - 1) * 1100, 42, 23, 66],
     }[kind];
     const hp = stats[0] * (kind === "boss" ? 1 : 1 + (act - 1) * 0.38);
     this.enemies.push({
@@ -379,12 +417,28 @@ export class Game {
         this.run.rewards.pierce ?? 0,
       );
     }
-    this.burst(p, CLASSES[this.run.classId].color, 3, 30);
+    this.onFeedback({
+      type: "shot",
+      x: p.x,
+      y: p.y,
+      color: CLASSES[this.run.classId].color,
+    });
+    this.burst(p, CLASSES[this.run.classId].color, 5, 90);
     this.sound(390, 0.035, "triangle", 0.018);
   }
   private hitEnemy(enemy: Enemy, damage: number, poison = false) {
     if (enemy.hp <= 0) return;
     enemy.hp -= damage;
+    if (damage >= 1) {
+      this.onFeedback({
+        type: "hit",
+        x: enemy.x,
+        y: enemy.y,
+        value: Math.round(damage),
+        color: enemy.poisoned > 0 ? "#b8ff62" : "#fff3cd",
+      });
+      this.burst(enemy, "#ffda8a", 5, 120);
+    }
     enemy.flash = 0.12;
     if (poison) enemy.poisoned = 3;
     if (enemy.hp <= 0) this.chainQueue.push(enemy);
@@ -396,8 +450,40 @@ export class Game {
       if (!this.enemies.includes(enemy)) continue;
       this.enemies = this.enemies.filter((e) => e !== enemy);
       this.run.kills++;
+      this.combo = this.comboTimer > 0 ? this.combo + 1 : 1;
+      this.comboTimer = 3.5;
+      this.peakCombo = Math.max(this.peakCombo, this.combo);
+      this.onFeedback({
+        type: "kill",
+        x: enemy.x,
+        y: enemy.y,
+        boss: enemy.kind === "boss",
+        value: this.combo,
+      });
+      this.hitStop = this.reducedMotion
+        ? 0
+        : Math.max(
+            this.hitStop,
+            enemy.kind === "boss"
+              ? 0.13
+              : enemy.kind === "guard"
+                ? 0.035
+                : 0.012,
+          );
+      this.shake = Math.max(this.shake, enemy.kind === "boss" ? 14 : 1.5);
+      this.sound(
+        enemy.kind === "boss" ? 95 : 560,
+        0.1,
+        "triangle",
+        enemy.kind === "boss" ? 0.16 : 0.035,
+      );
+      if (enemy.kind === "boss") {
+        // A guardian's fall collapses its remaining horde in a single chain.
+        for (const other of this.enemies)
+          if (other.hp > 0) this.hitEnemy(other, other.hp + 1);
+      }
       if (enemy.kind === "boss") this.run.bosses++;
-      const value = enemy.kind === "boss" ? 35 : enemy.kind === "guard" ? 5 : 3;
+      const value = enemy.kind === "boss" ? 35 : enemy.kind === "guard" ? 3 : 1;
       this.pickups.push({ x: enemy.x, y: enemy.y, value, life: 0 });
       this.player.hp = Math.min(
         this.player.maxHp,
@@ -407,8 +493,8 @@ export class Game {
       this.burst(
         enemy,
         enemy.kind === "boss" ? "#ffbc8a" : "#a4f6c1",
-        enemy.kind === "boss" ? 55 : 10,
-        90,
+        enemy.kind === "boss" ? 130 : 18,
+        enemy.kind === "boss" ? 360 : 200,
       );
       if (enemy.poisoned > 0 && this.run.rewards.explosion) {
         this.burst(enemy, "#c5afff", 22, 130);
@@ -493,6 +579,8 @@ export class Game {
   update(dt: number) {
     if (this.phase !== "combat") return;
     const p = this.player;
+    this.comboTimer = Math.max(0, this.comboTimer - dt);
+    if (this.comboTimer === 0) this.combo = 0;
     this.roomTime += dt;
     this.run.elapsed += dt;
     this.intro = Math.max(0, this.intro - dt);
@@ -554,33 +642,53 @@ export class Game {
         enemy.timer = 2.3;
       }
       if (enemy.kind === "boss" && enemy.timer <= 0) this.bossAttack(enemy);
-      if (dist < enemy.radius + 14) this.hurt(enemy.damage);
+      if (!this.engineCollisions && dist < enemy.radius + 14)
+        this.hurt(enemy.damage);
       if (this.phase !== "combat") return;
     }
-    // Soft separation keeps enemy groups readable without quadratic physics machinery.
-    for (let i = 0; i < this.enemies.length; i++)
-      for (let j = i + 1; j < this.enemies.length; j++) {
-        const a = this.enemies[i],
-          b = this.enemies[j];
-        const dist = distance(a, b) || 0.01;
-        const overlap = a.radius + b.radius + 3 - dist;
-        if (overlap > 0) {
-          const amount = Math.min(overlap / 2, 45 * dt);
-          const dx = (a.x - b.x) / dist,
-            dy = (a.y - b.y) / dist;
-          a.x += dx * amount;
-          a.y += dy * amount;
-          b.x -= dx * amount;
-          b.y -= dy * amount;
+    // Local spatial buckets keep separation bounded as hordes grow.
+    const cells = new Map<string, Enemy[]>();
+    for (const enemy of this.enemies) {
+      const cx = Math.floor(enemy.x / 96),
+        cy = Math.floor(enemy.y / 96);
+      for (let dx = -1; dx <= 1; dx++)
+        for (let dy = -1; dy <= 1; dy++) {
+          for (const other of cells.get(`${cx + dx},${cy + dy}`) ?? []) {
+            const dist = distance(enemy, other) || 0.01;
+            const overlap = enemy.radius + other.radius + 2 - dist;
+            if (overlap <= 0) continue;
+            const amount = Math.min(overlap / 2, 45 * dt);
+            const nx = (enemy.x - other.x) / dist,
+              ny = (enemy.y - other.y) / dist;
+            enemy.x += nx * amount;
+            enemy.y += ny * amount;
+            other.x -= nx * amount;
+            other.y -= ny * amount;
+          }
         }
-      }
+      const key = `${cx},${cy}`;
+      const bucket = cells.get(key) ?? [];
+      bucket.push(enemy);
+      cells.set(key, bucket);
+      enemy.x = clamp(
+        enemy.x,
+        enemy.radius + 25,
+        this.width - enemy.radius - 25,
+      );
+      enemy.y = clamp(
+        enemy.y,
+        enemy.radius + 25,
+        this.height - enemy.radius - 25,
+      );
+    }
     for (const bullet of this.bullets) {
       const oldX = bullet.x,
         oldY = bullet.y;
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
       bullet.life -= dt;
-      // Swept segment collision prevents high-speed bullets tunnelling through targets.
+      if (this.engineCollisions) continue;
+      // Headless fallback used by simulations without a Kaplay scene.
       const hits = (target: Point, radius: number) => {
         const dx = bullet.x - oldX,
           dy = bullet.y - oldY;
@@ -631,7 +739,8 @@ export class Game {
       if (hazard.delay <= 0) {
         hazard.fired = true;
         hazard.life -= dt;
-        if (distance(hazard, p) < hazard.radius + 10) this.hurt(hazard.damage);
+        if (!this.engineCollisions && distance(hazard, p) < hazard.radius + 10)
+          this.hurt(hazard.damage);
       }
       if (this.phase !== "combat") return;
     }
@@ -644,22 +753,67 @@ export class Game {
         pickup.x += (p.x - pickup.x) * Math.min(1, dt * 9);
         pickup.y += (p.y - pickup.y) * Math.min(1, dt * 9);
       }
-      if (dist < 20) {
-        this.run.gold += pickup.value;
-        pickup.value = 0;
-      }
+      if (!this.engineCollisions && dist < 20) this.contactPickup(pickup);
     }
     this.pickups = this.pickups.filter((pickup) => pickup.value > 0);
-    for (const particle of this.particles) {
-      particle.x += particle.vx * dt;
-      particle.y += particle.vy * dt;
-      particle.life -= dt;
-    }
-    this.particles = this.particles.filter((particle) => particle.life > 0);
     if (!this.enemies.length && !this.spawnQueue.length && this.roomTime > 2)
       this.clearRoom();
   }
+  contactEnemy(enemy: Enemy) {
+    if (this.phase === "combat" && enemy.hp > 0 && this.enemies.includes(enemy))
+      this.hurt(enemy.damage);
+  }
+  contactBullet(bullet: Bullet, enemy?: Enemy) {
+    if (
+      this.phase !== "combat" ||
+      bullet.life <= 0 ||
+      !this.bullets.includes(bullet)
+    )
+      return;
+    if (bullet.hostile) {
+      this.hurt(bullet.damage);
+      bullet.life = 0;
+      return;
+    }
+    if (
+      !enemy ||
+      enemy.hp <= 0 ||
+      !this.enemies.includes(enemy) ||
+      bullet.hit.has(enemy.id)
+    )
+      return;
+    bullet.hit.add(enemy.id);
+    this.hitEnemy(enemy, bullet.damage, !!this.run.rewards.poison);
+    if (--bullet.pierce < 0) bullet.life = 0;
+  }
+  contactHazard(hazard: Hazard) {
+    if (
+      this.phase === "combat" &&
+      hazard.fired &&
+      hazard.life > 0 &&
+      this.hazards.includes(hazard)
+    )
+      this.hurt(hazard.damage);
+  }
+  contactPickup(pickup: Pickup) {
+    if (
+      this.phase !== "combat" ||
+      pickup.value <= 0 ||
+      !this.pickups.includes(pickup)
+    )
+      return;
+    this.run.gold += pickup.value;
+    pickup.value = 0;
+    this.onFeedback({ type: "pickup", x: this.player.x, y: this.player.y });
+    this.sound(920, 0.05, "sine", 0.02);
+  }
   private clearRoom() {
+    this.onFeedback({
+      type: "clear",
+      x: this.player.x,
+      y: this.player.y,
+      boss: this.run.room % 4 === 0,
+    });
     this.run.gold +=
       this.pickups.reduce((sum, drop) => sum + drop.value, 0) +
       8 +
@@ -698,23 +852,26 @@ export class Game {
     this.setPhase("result");
   }
   burst(origin: Point, color: string, count: number, speed: number) {
-    if (this.reducedMotion) count = Math.min(count, 3);
-    for (let i = 0; i < count && this.particles.length < 350; i++) {
-      // Cosmetic randomness is deliberately separate from the run seed.
-      const angle = Math.random() * Math.PI * 2;
-      const velocity = Math.random() * speed;
-      const life = 0.2 + Math.random() * 0.35;
-      this.particles.push({
-        x: origin.x,
-        y: origin.y,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        life,
-        maxLife: life,
-        color,
-        radius: 1 + Math.random() * 3,
-      });
+    this.onFeedback({
+      type: "burst",
+      x: origin.x,
+      y: origin.y,
+      color,
+      count: this.reducedMotion ? Math.min(count, 3) : count,
+      speed,
+    });
+  }
+  toggleEffects() {
+    this.reducedMotion = !this.reducedMotion;
+    try {
+      localStorage.setItem(
+        "rogue.effects.v1",
+        this.reducedMotion ? "reduced" : "full",
+      );
+    } catch {
+      /* Optional. */
     }
+    this.onChange();
   }
   toggleMute() {
     this.muted = !this.muted;
@@ -726,36 +883,14 @@ export class Game {
     this.onChange();
   }
   private resumeAudio() {
-    try {
-      this.audio ??= new AudioContext();
-      void this.audio.resume().catch(() => {});
-    } catch {
-      /* Audio is optional. */
-    }
+    this.resumeSound();
   }
   private sound(
     frequency: number,
-    duration: number,
-    type: OscillatorType,
+    _duration: number,
+    _type: OscillatorType,
     volume: number,
   ) {
-    if (this.muted || !this.audio || this.audio.state !== "running") return;
-    const oscillator = this.audio.createOscillator();
-    const gain = this.audio.createGain();
-    oscillator.type = type;
-    oscillator.frequency.value = frequency;
-    gain.gain.setValueAtTime(volume, this.audio.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      this.audio.currentTime + duration,
-    );
-    oscillator.connect(gain);
-    gain.connect(this.audio.destination);
-    oscillator.start();
-    oscillator.stop(this.audio.currentTime + duration);
-    oscillator.onended = () => {
-      oscillator.disconnect();
-      gain.disconnect();
-    };
+    if (!this.muted) this.onSound(frequency, volume);
   }
 }

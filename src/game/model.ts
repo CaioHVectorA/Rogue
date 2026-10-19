@@ -40,14 +40,6 @@ export interface Hazard extends Point {
   damage: number;
   fired: boolean;
 }
-export interface Particle extends Point {
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  radius: number;
-}
 export interface Pickup extends Point {
   value: number;
   life: number;
@@ -100,7 +92,7 @@ export const CLASSES = {
     color: "#a4f6c1",
     hp: 100,
     damage: 18,
-    reload: 0.62,
+    reload: 0.36,
     speed: 235,
     cooldown: 8,
   },
@@ -112,7 +104,7 @@ export const CLASSES = {
     color: "#c5afff",
     hp: 90,
     damage: 16,
-    reload: 0.68,
+    reload: 0.4,
     speed: 235,
     cooldown: 9,
   },
@@ -124,7 +116,7 @@ export const CLASSES = {
     color: "#ffbc8a",
     hp: 140,
     damage: 21,
-    reload: 0.8,
+    reload: 0.46,
     speed: 215,
     cooldown: 11,
   },
@@ -339,11 +331,18 @@ export function applyReward(run: Run, player: Player, id: string): boolean {
   return true;
 }
 export function roomComposition(room: number): EnemyKind[] {
-  if (room % 4 === 0) return ["boss"];
+  if (room % 4 === 0)
+    return [
+      "boss",
+      ...Array.from(
+        { length: 6 + Math.ceil(room / 4) * 3 },
+        () => "chaser" as const,
+      ),
+    ];
   const act = Math.ceil(room / 4);
   const stage = (room - 1) % 4;
   const result: EnemyKind[] = Array.from(
-    { length: 4 + stage * 2 + act },
+    { length: 18 + stage * 10 + (act - 1) * 12 },
     () => "chaser",
   );
   if (stage >= 1 || act >= 2)

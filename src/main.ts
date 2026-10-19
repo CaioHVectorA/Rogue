@@ -1,19 +1,25 @@
 import { Game } from "./game/engine";
-import { Renderer } from "./game/renderer";
+import { KaplayRuntime } from "./game/kaplay";
 import { Interface } from "./ui/interface";
 import { DeviceLayout } from "./ui/device";
 import { TouchControls } from "./ui/touch";
 import { arenaDimensions } from "./game/viewport";
 import "./ui/style.css";
 import "./ui/mobile.css";
+import "./ui/arcade.css";
 
 const app = document.querySelector<HTMLElement>("#app")!;
 app.innerHTML =
-  '<canvas id="arena" aria-label="Arena do Rogue. Mova com WASD ou setas, espaço para esquivar, Q para habilidade. As estatísticas aparecem na interface ao redor."></canvas><div id="interface"></div>';
+  '<div id="arena-frame"><canvas id="arena" aria-label="Arena do Rogue. Mova com WASD ou setas, espaço para esquivar, Q para habilidade. As estatísticas aparecem na interface ao redor."></canvas></div><div id="interface"></div>';
 const layout = new DeviceLayout();
 const game = new Game();
-const renderer = new Renderer(document.querySelector("#arena")!, game);
 const ui = new Interface(document.querySelector("#interface")!, game, layout);
+const runtime = new KaplayRuntime(
+  document.querySelector("#arena")!,
+  document.querySelector("#arena-frame")!,
+  game,
+  () => ui.tick(),
+);
 const touch = new TouchControls(
   document.querySelector("#interface")!,
   game,
@@ -27,11 +33,11 @@ game.onChange = () => {
 };
 const canvas = document.querySelector<HTMLCanvasElement>("#arena")!;
 function fitArena() {
-  renderer.setMobile(layout.mode === "mobile");
+  runtime.setMobile(layout.mode === "mobile");
   const size = arenaDimensions(
     canvas.clientWidth,
     canvas.clientHeight,
-    renderer.mobile,
+    runtime.mobile,
   );
   game.resizeArena(size.width, size.height);
 }
@@ -85,26 +91,5 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("beforeunload", (event) => {
   if (game.phase !== "menu" && game.phase !== "result") event.preventDefault();
 });
-let lastTime = performance.now(),
-  accumulator = 0,
-  hudElapsed = 0;
-function frame(now: number) {
-  const dt = Math.min((now - lastTime) / 1000, 0.1);
-  lastTime = now;
-  if (game.phase === "combat") {
-    accumulator += dt;
-    while (accumulator >= 1 / 120 && game.phase === "combat") {
-      game.update(1 / 120);
-      accumulator -= 1 / 120;
-    }
-  } else accumulator = 0;
-  renderer.draw(dt);
-  hudElapsed += dt;
-  if (hudElapsed > 0.1) {
-    ui.tick();
-    hudElapsed = 0;
-  }
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
-if (import.meta.env.DEV) Object.assign(window, { __rogue: game });
+if (import.meta.env.DEV)
+  Object.assign(window, { __rogue: game, __kaplay: runtime.k });

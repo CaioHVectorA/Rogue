@@ -27,11 +27,19 @@ test("mobile and desktop have different menus and HUDs; manual override persists
   await expect(page.locator(".mobile-menu")).toBeVisible();
   await expect(page.locator(".mobile-class")).toHaveCount(3);
   await expect(page.locator(".class-card")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
   await page.getByLabel("Interface", { exact: true }).selectOption("desktop");
+  await page.getByRole("button", { name: "Fechar configurações" }).click();
   await expect(page.locator(".menu-layout")).toBeVisible();
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-ui", "desktop");
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
   await page.getByLabel("Interface", { exact: true }).selectOption("auto");
+  await page.getByRole("button", { name: "Fechar configurações" }).click();
   await enter(page);
   await expect(page.locator(".mobile-hud")).toBeVisible();
   await expect(page.locator(".route-mini")).toHaveCount(0);
