@@ -105,3 +105,13 @@ it("rail shots pierce a line and earned weapons swap only at camp", () => {
   expect(g.run.weapons).toEqual(["pulse"]);
   expect(g.run.skills).toEqual([null, null]);
 });
+
+it("the basic laboratory preset is also empty and can unequip either skill", () => {
+  const g = arena();
+  g.practice(1, 1, "fresh");
+  expect(g.run.skills).toEqual([null, null]);
+  g.labEquip("nova", 0);
+  expect(g.run.skills).toEqual(["nova", null]);
+  g.labEquip("", 0);
+  expect(g.run.skills).toEqual([null, null]);
+});

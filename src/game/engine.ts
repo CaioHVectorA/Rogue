@@ -1263,10 +1263,7 @@ export class Game {
     this.run.act = Math.ceil(room / 4);
     this.run.gold = 250;
     this.player.damage += (this.run.act - 1) * 6;
-    const builds: Record<
-      string,
-      { skills: [string, string]; perks: string[] }
-    > = {
+    const builds: Record<string, { skills: Run["skills"]; perks: string[] }> = {
       control: {
         skills: ["vortex", "storm"],
         perks: ["poison", "explosion", "echo"],
@@ -1283,7 +1280,7 @@ export class Game {
         skills: ["decoy", "mine"],
         perks: ["speed", "dashload", "gambit"],
       },
-      fresh: { skills: ["volley", "nova"], perks: [] },
+      fresh: { skills: [null, null], perks: [] },
     };
     const preset = builds[build] ?? builds.control;
     this.run.skills = [...preset.skills];
@@ -1331,11 +1328,11 @@ export class Game {
   labEquip(id: string, slot: 0 | 1) {
     if (
       !this.run.practice ||
-      !SKILLS.some((s) => s.id === id) ||
-      this.run.skills[1 - slot] === id
+      (id !== "" && !SKILLS.some((s) => s.id === id)) ||
+      (id !== "" && this.run.skills[1 - slot] === id)
     )
       return;
-    this.run.skills[slot] = id;
+    this.run.skills[slot] = id || null;
     this.player.skillCd = this.player.secondCd = 0;
     this.fields = [];
     this.onChange();
