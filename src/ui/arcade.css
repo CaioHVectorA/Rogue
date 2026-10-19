@@ -1682,3 +1682,65 @@ body {
 :root[data-ui="mobile"] .loot-stat {
   grid-row: 1 / 3;
 }
+
+.run-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 620px;
+}
+.run-pilot {
+  width: 170px;
+  height: 170px;
+  filter: drop-shadow(0 0 25px #a4f6c122);
+}
+.run-pilot .pilot-portrait {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+.run-evolution {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  color: #ffd56b;
+}
+.run-evolution > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.run-evolution > span > .icon {
+  width: 28px;
+  height: 28px;
+}
+.run-evolution small {
+  color: #a5b8d5;
+  font: 9px monospace;
+  letter-spacing: 1px;
+}
+.run-evolution > .icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.4;
+}
+:root[data-ui="mobile"] .run-pilot {
+  width: 140px;
+  height: 140px;
+}
+:root[data-ui="mobile"] .run-evolution {
+  gap: 10px;
+}
+:root[data-ui="mobile"] .run-evolution small {
+  font-size: 7px;
+  letter-spacing: 0.3px;
+}
+@media (max-height: 620px) {
+  .run-pilot {
+    display: none;
+  }
+}

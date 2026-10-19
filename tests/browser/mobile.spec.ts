@@ -25,7 +25,8 @@ test("mobile and desktop have different menus and HUDs; manual override persists
   const { page, context } = await phone(browser);
   await expect(page.locator("html")).toHaveAttribute("data-ui", "mobile");
   await expect(page.locator(".mobile-menu")).toBeVisible();
-  await expect(page.locator(".mobile-class")).toHaveCount(3);
+  await expect(page.locator(".mobile-class")).toHaveCount(0);
+  await expect(page.locator(".run-intro")).toBeVisible();
   await expect(page.locator(".class-card")).toHaveCount(0);
   await page
     .getByRole("button", { name: "Configurações", exact: true })

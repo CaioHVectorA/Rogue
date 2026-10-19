@@ -29,7 +29,6 @@ export const freshSeed = () =>
     .join("")
     .toUpperCase();
 export class Interface {
-  selected: ClassId = "ranger";
   seed = freshSeed();
   help = false;
   settings = false;
@@ -190,12 +189,8 @@ export class Interface {
       case "effects":
         g.toggleEffects();
         break;
-      case "class":
-        this.selected = value as ClassId;
-        this.render();
-        break;
       case "start":
-        g.start(this.selected, this.seed.trim() || freshSeed());
+        g.start("ranger", this.seed.trim() || freshSeed());
         break;
       case "daily":
         this.seed = `DIARIA-${new Date().toISOString().slice(0, 10)}`;
@@ -236,7 +231,7 @@ export class Interface {
         g.nextRoom();
         break;
       case "retry":
-        g.start(g.run.classId, g.run.seed);
+        g.start("ranger", g.run.seed);
         break;
       case "menu":
         this.seed = freshSeed();
@@ -462,16 +457,9 @@ export class Interface {
     return this.loadoutScreen(false);
   }
   private loadoutScreen(mobile: boolean) {
-    const g = this.game,
-      current = CLASSES[this.selected];
-    const cards = (Object.keys(CLASSES) as ClassId[])
-      .map((id, index) => {
-        const stats = CLASSES[id];
-        return `<button class="pilot-select ${mobile ? "mobile-class" : "class-card"} ${id === this.selected ? "selected" : ""}" style="--class-color:${stats.color}" data-action="class" data-value="${id}" aria-label="${stats.name} ${stats.title}" aria-pressed="${id === this.selected}"><span class="pilot-index">0${index + 1}</span>${pilotPortrait(id)}<strong>${stats.name}</strong><span class="pilot-kit">${icon(["target", "bolt", "shield"][index])}<b>${stats.hp}</b>${icon("heart")}</span><span class="pilot-lock">${id === this.selected ? "EQUIPADO" : "+"}</span></button>`;
-      })
-      .join("");
+    const g = this.game;
     const seed = `<div class="seed-row"><label for="seed">SEED <input id="seed" aria-label="CÓDIGO DA RUN" maxlength="40" autocomplete="off" spellcheck="false" aria-describedby="seed-help"></label><button class="icon-button" data-action="random" aria-label="Gerar novo código">${icon("repeat")}</button><button class="text-button" data-action="daily">DIÁRIA</button></div><span id="seed-help" class="sr-only">Mesmo código e escolhas, mesmas ofertas.</span>`;
-    return `<main class="arcade-menu ${mobile ? "mobile-menu" : "menu-layout"}"><div class="arcade-title"><span class="game-kicker">SURVIVE · EVOLVE · REPEAT</span><h1>ROGUE<span>COREBREAKER</span></h1><div class="boss-seals">${[1, 2, 3].map((n) => `<span>${icon("crown")}<b>${n}</b></span>`).join("")}</div></div><section class="pilot-deck" aria-label="Escolha de personagem"><div class="deck-label"><span>SELECIONE SEU PILOTO</span><span>01 / 03</span></div><div class="pilot-roster ${mobile ? "mobile-class-list" : "class-list"}" role="group" aria-label="Caminho inicial">${cards}</div><div class="equipped-skill" style="--class-color:${current.color}">${icon("bolt")}<div><strong>${current.skill}</strong><span>${mobile ? "TOQUE" : "Q"}</span></div><p>${current.desc.replace("Q ", "")}</p></div></section><div class="launch-panel">${mobile ? `<details class="mobile-seed"><summary>${icon("coin")} SEED / DIÁRIA</summary>${seed}</details>` : seed}<button class="primary start-button" data-action="start" aria-label="Iniciar expedição">${icon("target")}<span>JOGAR</span>${icon("arrow")}</button><div class="arcade-records"><span>${icon("crown")} ${g.records.wins}</span><span>${icon("mark")} ${g.records.bestRoom}/12</span><button class="text-button" data-action="help" aria-label="Como jogar">${icon("book")} CONTROLES</button></div></div></main>`;
+    return `<main class="arcade-menu ${mobile ? "mobile-menu" : "menu-layout"}"><div class="arcade-title"><span class="game-kicker">SURVIVE · EVOLVE · REPEAT</span><h1>ROGUE<span>COREBREAKER</span></h1><div class="boss-seals">${[1, 2, 3].map((n) => `<span>${icon("crown")}<b>${n}</b></span>`).join("")}</div></div><section class="run-intro" aria-label="Evolua durante a run"><div class="run-pilot">${pilotPortrait("ranger")}</div><div class="run-evolution"><span>${icon("target")}<small>SOBREVIVA</small></span>${icon("arrow")}<span>${icon("bolt")}<small>DESCUBRA PODERES</small></span>${icon("arrow")}<span>${icon("explosion")}<small>CRIE SUA BUILD</small></span></div></section><div class="launch-panel">${mobile ? `<details class="mobile-seed"><summary>${icon("coin")} SEED / DIÁRIA</summary>${seed}</details>` : seed}<button class="primary start-button" data-action="start" aria-label="Iniciar expedição">${icon("target")}<span>JOGAR</span>${icon("arrow")}</button><div class="arcade-records"><span>${icon("crown")} ${g.records.wins}</span><span>${icon("mark")} ${g.records.bestRoom}/12</span><button class="text-button" data-action="help" aria-label="Como jogar">${icon("book")} CONTROLES</button></div></div></main>`;
   }
   private rewardScreen() {
     const g = this.game,
@@ -514,7 +502,7 @@ export class Interface {
         )
         .join(
           "",
-        )}</div><div class="stack-actions"><button class="primary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} REPETIR</button><button class="secondary" data-action="menu" aria-label="Nova expedição">ESCOLHER PILOTO ${icon("arrow")}</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
+        )}</div><div class="stack-actions"><button class="primary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} REPETIR</button><button class="secondary" data-action="menu" aria-label="Nova expedição">NOVA RUN ${icon("arrow")}</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
       "result-dialog",
     );
   }
