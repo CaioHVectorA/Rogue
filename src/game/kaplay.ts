@@ -36,7 +36,7 @@ export class KaplayRuntime {
       canvas,
       root,
       global: false,
-      debug: false,
+      debug: import.meta.env.DEV,
       focus: false,
       background: "#090d19",
       pixelDensity: Math.min(devicePixelRatio || 1, 1.5),
