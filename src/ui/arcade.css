@@ -2543,3 +2543,7 @@ body {
   right: calc(10px + var(--safe-right));
   bottom: calc(14px + var(--safe-bottom));
 }
+/* HUD buttons must remain above the invisible movement surface. */
+:root[data-ui="mobile"] .hud {
+  z-index: 4;
+}

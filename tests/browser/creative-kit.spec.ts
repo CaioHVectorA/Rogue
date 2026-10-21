@@ -28,6 +28,13 @@ test("floating movement starts anywhere on the left, follows drag and releases c
     y: 0,
   });
   await expect(page.locator(".joystick")).not.toHaveClass(/is-dragging/);
+  await page
+    .getByRole("button", { name: "Entender ataque: Pistola de pulso" })
+    .tap();
+  await expect(
+    page.getByRole("dialog", { name: "Entender poder" }),
+  ).toBeVisible();
+  await page.locator('[data-action="close-power"]').click();
   await context.close();
 });
 test("touch preferences persist and eight-way direction buttons survive pause without stuck input", async ({
