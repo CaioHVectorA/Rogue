@@ -425,6 +425,28 @@ export class KaplayRuntime {
         if (e.kind === "shooter")
           this.ring(zero, e.radius + 6, color, 0.6, 1.5);
       }
+      if (e.shock > 0)
+        for (let i = 0; i < e.shock; i++)
+          this.poly(
+            { x: -9 + i * 6, y: -e.radius - 22 },
+            2.5,
+            4,
+            "#85d8ef",
+            0.95,
+            Math.PI / 4,
+          );
+      if (e.venom > 0)
+        for (let i = 0; i < e.venom; i++)
+          this.poly(
+            { x: -9 + i * 6, y: -e.radius - 30 },
+            2.5,
+            6,
+            "#b8ff62",
+            0.95,
+            0,
+          );
+      if (e.kind === "guard" && e.timer < 0.65)
+        this.ring(zero, e.radius + 8, "#ffda8a", 0.6, 2);
       if (e.hp < e.maxHp && e.kind !== "boss") {
         k.drawRect({
           pos: k.vec2(-15, -e.radius - 9),
@@ -594,13 +616,31 @@ export class KaplayRuntime {
           });
       }
     }
+    for (const boss of g.enemies.filter(
+      (e) => e.kind === "boss" && e.windup > 0,
+    )) {
+      const end = {
+        x: boss.x + boss.dashVX * 0.3,
+        y: boss.y + boss.dashVY * 0.3,
+      };
+      k.drawLine({
+        p1: k.vec2(boss.x, boss.y),
+        p2: k.vec2(end.x, end.y),
+        width: boss.radius * 1.4,
+        color: k.Color.fromHex("#ff6b88"),
+        opacity: 0.12,
+      });
+      this.ring(end, boss.radius, "#ff6b88", 0.75, 3);
+    }
     for (const field of g.fields) {
       const color =
         field.kind === "vortex"
           ? "#c5afff"
-          : field.kind === "mine"
-            ? "#ffbc8a"
-            : "#85d8ef";
+          : field.kind === "toxin"
+            ? "#b8ff62"
+            : field.kind === "mine"
+              ? "#ffbc8a"
+              : "#85d8ef";
       this.ring(field, field.radius, color, 0.22, 2);
       this.ring(
         field,
@@ -637,6 +677,21 @@ export class KaplayRuntime {
             width: 2,
             opacity: g.reducedMotion ? 0.3 : 0.7,
           });
+        }
+      if (field.kind === "toxin")
+        for (let i = 0; i < 4; i++) {
+          const a = (i * TAU) / 4 + this.time * 0.3;
+          this.poly(
+            {
+              x: field.x + Math.cos(a) * field.radius * 0.6,
+              y: field.y + Math.sin(a) * field.radius * 0.6,
+            },
+            7,
+            6,
+            color,
+            0.35,
+            a,
+          );
         }
       if (field.kind === "turret") this.poly(field, 22, 6, color, 1, this.time);
       if (field.kind === "mine")
@@ -699,6 +754,24 @@ export class KaplayRuntime {
     if (!this.sceneReady) return;
     const k = this.k,
       g = this.game;
+    if (event.type === "reaction") {
+      if (this.fxCount >= (g.reducedMotion ? 45 : this.mobile ? 250 : 650))
+        return;
+      const node = this.fxRoot.add([
+        k.pos(event.x, event.y - 45),
+        k.text(event.label!, {
+          size: this.mobile ? 24 : 18,
+          font: "monospace",
+        }),
+        k.anchor("center"),
+        k.color(k.Color.fromHex(event.color!)),
+        k.opacity(1),
+        k.lifespan(0.65, { fade: 0.35 }),
+        "feedback",
+      ]);
+      this.trackFx(node);
+      return;
+    }
     if (event.type === "beam") {
       if (this.fxCount >= (g.reducedMotion ? 45 : this.mobile ? 260 : 680))
         return;

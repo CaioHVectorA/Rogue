@@ -21,7 +21,7 @@ async function clearRoom(page: Page) {
     const game = window.__rogue;
     game.player.invulnerable = 1000;
     // Fast-forward spawn timers, then deliver lethal damage through the real death queue.
-    for (let i = 0; i < 2400 && game.spawnQueue.length; i++)
+    for (let i = 0; i < 3600 && game.spawnQueue.length; i++)
       game.update(1 / 120);
     for (let phase = 0; phase < 4; phase++)
       for (const enemy of [...game.enemies]) {
@@ -235,7 +235,7 @@ test("boss telegraphs are fixed and delayed; phase two accelerates", async ({
     delay: 1.1,
     fixed: true,
     phaseTwo: true,
-    interval: 2.2,
+    interval: 2,
   });
 });
 

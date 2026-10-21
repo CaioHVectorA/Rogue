@@ -17,7 +17,7 @@ No desenvolvimento, o inspetor nativo do Kaplay está habilitado (clique na aren
 
 ## Combate arcade
 
-Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas frequentes e patrulhas misturadas. Chefes têm escala visual maior e a sua queda elimina a horda restante. Acertos e abates alimentam o combo. A barra base de 3,5s consome mais rápido conforme o combo sobe (até 4×) e ainda mais durante movimento (1,7×). O combo aumenta a chance de uma moeda extra por abate até 65%; Febre do ouro transforma esse bônus em três moedas e zera a sequência ao sofrer dano. O bônus aparece no HUD e não aumenta dano.
+Hordas de 18 a mais de 70 inimigos, com unidades básicas mais frágeis, rajadas frequentes e patrulhas misturadas. Chefes têm escala visual maior e a sua queda elimina a horda restante. Acertos e abates alimentam o combo. A barra base de 3,5s consome mais rápido conforme o combo sobe (até 4×) e ainda mais durante movimento (1,7×). O combo aumenta a chance de uma moeda extra por abate até 40%; Febre do ouro transforma esse bônus em duas moedas e zera a sequência ao sofrer dano. O bônus aparece no HUD e não aumenta dano.
 
 Impactos incluem fragmentos, rastros, números de dano, ondas de choque, pausas curtas de impacto e sons locais reproduzidos pelo Kaplay. A quantidade de efeitos é limitada a 240 partículas no celular e 650 no desktop, com pequena reserva para anéis e indicadores. O modo reduzido remove tremor, pausas e números flutuantes e limita partículas a 45. Está no botão de configurações e respeita a preferência inicial do sistema.
 
@@ -27,10 +27,10 @@ Apresentação visual da run, melhorias por ícones/atributos e arsenal substitu
 
 - Aperte Jogar: todas as runs normais começam com o mesmo kit básico, com pistola rápida e sem habilidades. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
-- Na wave 1, escolha uma forma de disparo automático. Nas waves 2 e 3, receba suas primeiras habilidades Q/E. Há nove poderes com recargas de 3,2 a 5,5s.
-- Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 16 perks; o coração pode repetir, os demais são únicos.
+- Na wave 1, escolha uma relíquia inicial. Nas waves 2 e 3, receba suas primeiras habilidades Q/E; a primeira arma alternativa chega após o boss da wave 4. Há dez poderes com recargas de 3,2 a 5,5s.
+- Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 24 perks; o coração pode repetir, os demais são únicos.
 - No descanso, compre cura ou dano com o ouro coletado. A coleta restante é automática ao limpar a sala.
-- Chefes têm 1800/3600/5400 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
+- Chefes têm 2700/5700/8700 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
 - A derrota encerra a run. Só recordes ficam no navegador; não há poder permanente nem retomada após recarregar.
 
 No desktop: WASD/setas para movimento, Espaço para esquiva, Q e E para habilidades e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
@@ -41,9 +41,15 @@ O código da run reproduz posições de spawn e sorteios de recompensa para as m
 
 ## Ataques e habilidades
 
-O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, troque por metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia ou disparo pesado perfurante. O arsenal preserva os modelos adquiridos para trocar entre encontros.
+O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, conquiste formas alternativas como metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia, agulhas tóxicas ou disparo pesado perfurante. Cada arma troca vantagens por limites; não é um salto automático de dano. O arsenal preserva os modelos adquiridos para trocar entre encontros.
 
 Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque equipado pode ser consultado pelo HUD; o livro reúne explicações dos poderes da build. O jogador verde e os alvos vermelhos dos diagramas distinguem ataques ao redor, cones e áreas no inimigo.
+
+## Raio e veneno
+
+Raio acumula cargas e provoca sobrecargas; torres e esquivas podem consumir essas cargas. Veneno prepara doses para contágio, controle ou catálise com impactos sísmicos. A Eletrólise liga os dois: descargas transportam doses já aplicadas. O draft favorece combinações utilizáveis e os cards mostram o vínculo entre arma, habilidade e perk.
+
+A dificuldade das waves também cresce: ameaças mistas chegam em grupos sucessivos, inimigos comuns não caem todos com um tiro e os bosses podem investir após anunciar a direção. O celular ganhou arena maior e personagens mais legíveis, com os controles preservados fora do campo.
 
 ## Laboratório de gameplay
 

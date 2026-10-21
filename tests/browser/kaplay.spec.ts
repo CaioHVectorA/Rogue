@@ -55,7 +55,7 @@ test("hordes, combo feedback and effect budgets stay bounded across restarts", a
     g.player.invulnerable = 1000;
     g.player.reload = 100;
     g.player.charge = 0;
-    for (let i = 0; i < 1200; i++) g.update(1 / 120);
+    for (let i = 0; i < 3600 && g.spawnQueue.length; i++) g.update(1 / 120);
   });
   await expect
     .poll(() => page.evaluate(() => window.__kaplay.get("foe").length))
@@ -101,6 +101,8 @@ test("equipment descriptions and reduced effects remain available without fillin
     g.run.act = 1;
     g.roomTime = 3;
     g.update(1 / 120);
+    g.run.offers = ["anchor", "double", "dashload"];
+    g.onChange();
   });
   await expect(page.locator(".reward-card")).toHaveCount(3);
   await expect(page.locator(".item-description").first()).toBeHidden();
