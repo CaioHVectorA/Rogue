@@ -55,6 +55,7 @@ export interface Field extends Point {
   timer: number;
   power: number;
   blocks: number;
+  ultimate?: boolean;
 }
 export interface Hazard extends Point {
   radius: number;
@@ -87,7 +88,7 @@ export interface Player extends Point {
 }
 export interface Run {
   seed: string;
-  skills: [string | null, string | null];
+  skills: [ability: string | null, ultimate: string | null];
   weapon: WeaponId;
   weapons: WeaponId[];
   practice: boolean;
@@ -104,7 +105,8 @@ export interface Run {
   offers: string[];
   rerolls: number;
   purchases: number;
-  healed: boolean;
+  training: Partial<Record<HeroStat, number>>;
+  ultimateCharge: number;
   won: boolean;
   finished: boolean;
 }
@@ -368,8 +370,110 @@ export const SKILLS = [
     glyph: "toxin",
   },
 ] as const;
-export const skillById = (id: string) => SKILLS.find((s) => s.id === id)!;
+export const ULTIMATES = [
+  {
+    id: "tempest",
+    name: "Olho da tempestade",
+    tag: "ULTIMATE · RAIO",
+    desc: "Uma tempestade acompanha você por 5s. Raios atingem a horda e acumulam cargas; a ativação apaga tiros próximos. Leve o temporal até os inimigos.",
+    cooldown: 8,
+    color: "#85d8ef",
+    glyph: "bolt",
+  },
+  {
+    id: "plague",
+    name: "Eclosão tóxica",
+    tag: "ULTIMATE · VENENO",
+    desc: "Detona doses já aplicadas em qualquer lugar da arena e planta três nuvens nos alvos mais próximos. Sem doses, prepara veneno; com doses, provoca uma reação em cadeia.",
+    cooldown: 8,
+    color: "#b8ff62",
+    glyph: "toxin",
+  },
+  {
+    id: "cataclysm",
+    name: "Cataclismo",
+    tag: "ULTIMATE · IMPACTO",
+    desc: "Três ondas crescentes partem do local da ativação, empurram a horda e apagam tiros. Cada impacto também detona doses de veneno com Catálise.",
+    cooldown: 8,
+    color: "#ffbc8a",
+    glyph: "seismic",
+  },
+] as const;
+export const isUltimate = (id: string) => ULTIMATES.some((s) => s.id === id);
+export const skillById = (id: string) =>
+  [...SKILLS, ...ULTIMATES].find((s) => s.id === id)!;
+export const HERO_STATS = [
+  {
+    id: "vitality",
+    name: "Vitalidade",
+    glyph: "heart",
+    effect: "+12 vida máxima",
+    desc: "Acrescenta 12 de vida máxima e preenche apenas esses 12 pontos.",
+  },
+  {
+    id: "cadence",
+    name: "Cadência",
+    glyph: "repeat",
+    effect: "−6% intervalo de tiro",
+    desc: "Dispara mais rápido com qualquer arma. Não muda o dano por tiro.",
+  },
+  {
+    id: "agility",
+    name: "Agilidade",
+    glyph: "dash",
+    effect: "+10 velocidade",
+    desc: "Aumenta a velocidade de movimento.",
+  },
+  {
+    id: "defense",
+    name: "Resistência",
+    glyph: "shield",
+    effect: "−1 dano recebido",
+    desc: "Reduz cada impacto em 1. Todo ataque ainda causa pelo menos 1 de dano.",
+  },
+  {
+    id: "recovery",
+    name: "Regeneração",
+    glyph: "vampire",
+    effect: "+1 vida / 10s",
+    desc: "Recupera vida a cada dez segundos de combate ativo.",
+  },
+  {
+    id: "focus",
+    name: "Sintonia",
+    glyph: "bolt",
+    effect: "−6% recarga do Q",
+    desc: "Reduz a recarga da habilidade Q. A ultimate continua dependendo de combate.",
+  },
+  {
+    id: "evasion",
+    name: "Reflexos",
+    glyph: "arrow",
+    effect: "−0,18s na esquiva",
+    desc: "Encurta a espera entre esquivas, sem aumentar a invulnerabilidade.",
+  },
+  {
+    id: "magnet",
+    name: "Magnetismo",
+    glyph: "coin",
+    effect: "+35 alcance de coleta",
+    desc: "Atrai moedas de mais longe. Não aumenta a quantidade de ouro.",
+  },
+] as const;
+export type HeroStat = (typeof HERO_STATS)[number]["id"];
+export const TRAINING_CAP = 3;
+export const trainingCost = (run: Run, id: HeroStat) =>
+  22 + (run.training[id] ?? 0) * 18 + (run.act - 1) * 5;
+
 export const REWARDS: Reward[] = [
+  ...ULTIMATES.map((s) => ({
+    id: `ultimate:${s.id}`,
+    name: s.name,
+    tag: s.tag,
+    desc: s.desc,
+    max: 1,
+    color: s.color,
+  })),
   ...WEAPONS.filter((w) => w.id !== "pulse").map((w) => ({
     id: `weapon:${w.id}`,
     name: w.name,
@@ -414,7 +518,7 @@ export const REWARDS: Reward[] = [
     id: "echo",
     name: "Eco instável",
     tag: "COMBINAR",
-    desc: "Usar Q adianta a recarga de E; usar E adianta Q. Alterne as habilidades para manter o fluxo.",
+    desc: "Ativar a ultimate deixa Q pronto imediatamente. Prepare o controle e solte os dois poderes em sequência.",
     max: 1,
     color: "#c5afff",
   },
@@ -422,7 +526,7 @@ export const REWARDS: Reward[] = [
     id: "battery",
     name: "Bateria de abates",
     tag: "CONJURAR",
-    desc: "Cada abate devolve um instante das duas recargas. Hordas alimentam suas habilidades.",
+    desc: "Abates adiantam um instante da recarga de Q. A ultimate continua carregando apenas com ataques acertados.",
     max: 1,
     color: "#c5afff",
   },
@@ -534,7 +638,7 @@ export const REWARDS: Reward[] = [
     id: "faraday",
     name: "Gaiola de Faraday",
     tag: "RAIO · CIRCUITO",
-    desc: "Chuva de raios dentro do ímã consome cargas para saltar entre inimigos. Agrupe primeiro; conjure a tempestade depois.",
+    desc: "O Olho da tempestade dentro do ímã consome cargas para saltar entre inimigos. Agrupe primeiro; leve a ultimate até a horda.",
     max: 1,
     color: "#85d8ef",
   },
@@ -615,7 +719,8 @@ export function createRun(seed: string, classId: ClassId): Run {
     offers: [],
     rerolls: 1,
     purchases: 0,
-    healed: false,
+    training: {},
+    ultimateCharge: 0,
     won: false,
     finished: false,
   };
@@ -651,11 +756,13 @@ export function rewardOffers(
   const kind =
     run.room === 1
       ? "relic"
-      : run.room <= 3
+      : run.room === 2
         ? "skill"
         : run.room === 4
           ? "weapon"
-          : "perk";
+          : run.room === 8
+            ? "ultimate"
+            : "perk";
   const projectile = !["circle", "chain"].includes(
     weaponById(run.weapon).pattern,
   );
@@ -664,8 +771,15 @@ export function rewardOffers(
     if ((run.rewards[r.id] ?? 0) >= r.max) return false;
     if (kind === "relic")
       return ["capacitor", "poison", "dashload"].includes(r.id);
+    if (r.id.startsWith("ultimate:"))
+      return kind === "ultimate" && !run.skills[1];
     if (r.id.startsWith("skill:"))
-      return kind === "skill" && !run.skills.includes(r.id.slice(6));
+      return (
+        (kind === "skill" ||
+          (kind === "perk" && [5, 7, 10].includes(run.room))) &&
+        !run.skills.includes(r.id.slice(6))
+      );
+    if (kind === "ultimate") return false;
     if (r.id.startsWith("weapon:"))
       return run.room >= 4 && !run.weapons.includes(r.id.slice(7) as WeaponId);
     if (kind === "skill" || kind === "weapon") return false;
@@ -687,7 +801,10 @@ export function rewardOffers(
     if (r.id === "rod" && !run.skills.includes("turret")) return false;
     if (
       r.id === "faraday" &&
-      !(run.skills.includes("vortex") && run.skills.includes("storm"))
+      !(
+        run.skills.includes("vortex") &&
+        (run.skills.includes("storm") || run.skills.includes("tempest"))
+      )
     )
       return false;
     if (
@@ -731,12 +848,7 @@ export function rewardOffers(
   }
   return result;
 }
-export function applyReward(
-  run: Run,
-  player: Player,
-  id: string,
-  slot: 0 | 1 = !run.skills[0] ? 0 : !run.skills[1] ? 1 : 0,
-): boolean {
+export function applyReward(run: Run, player: Player, id: string): boolean {
   const reward = REWARDS.find((r) => r.id === id);
   if (!reward || (run.rewards[id] ?? 0) >= reward.max) return false;
   if (id.startsWith("weapon:")) {
@@ -749,8 +861,14 @@ export function applyReward(
   if (id.startsWith("skill:")) {
     const skill = id.slice(6);
     if (run.skills.includes(skill)) return false;
-    run.skills[slot] = skill;
-    player.skillCd = player.secondCd = 0;
+    run.skills[0] = skill;
+    player.skillCd = 0;
+  }
+  if (id.startsWith("ultimate:")) {
+    if (run.skills[1]) return false;
+    run.skills[1] = id.slice(9);
+    run.ultimateCharge = 100;
+    player.secondCd = 0;
   }
   run.rewards[id] = (run.rewards[id] ?? 0) + 1;
   if (id === "health") {
@@ -796,11 +914,13 @@ export function buildElements(run: Run) {
     storm:
       !!run.rewards.capacitor ||
       run.weapon === "arc" ||
-      run.skills.includes("storm"),
+      run.skills.includes("storm") ||
+      run.skills.includes("tempest"),
     toxin:
       !!run.rewards.poison ||
       run.weapon === "needle" ||
-      run.skills.includes("venom"),
+      run.skills.includes("venom") ||
+      run.skills.includes("plague"),
   };
 }
 export function rewardSynergy(run: Run, id: string): string | null {
@@ -841,7 +961,6 @@ export function advanceRoom(run: Run): boolean {
   if (run.room >= TOTAL_ROOMS) return false;
   run.room++;
   run.act = Math.ceil(run.room / 4);
-  run.healed = false;
   run.purchases = 0;
   return true;
 }

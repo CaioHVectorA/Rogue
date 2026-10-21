@@ -38,27 +38,25 @@ function simulate(g: Game, seconds: number) {
 }
 
 describe("playstyle mechanics", () => {
-  it("drafts a weapon, then two skills, then perks and weapon forms", () => {
+  it("drafts a relic, Q, a weapon and a late ultimate", () => {
     const { g } = arena();
     for (const room of [1, 2, 3, 4, 8, 11]) {
       g.run.room = room;
       const offers = rewardOffers(g.run, randomFromSeed(`draft:${room}`));
       expect(offers).toHaveLength(3);
       expect(
-        offers.every(
-          (id) => id.startsWith("skill:") === (room === 2 || room === 3),
-        ),
+        offers.every((id) => id.startsWith("skill:") === (room === 2)),
       ).toBe(true);
       expect(offers).not.toContain(`skill:${g.run.skills[0]}`);
     }
-    expect(applyReward(g.run, g.player, "skill:storm", 1)).toBe(true);
-    expect(g.run.skills).toEqual(["volley", "storm"]);
-    expect(applyReward(g.run, g.player, "skill:storm", 0)).toBe(false);
+    expect(applyReward(g.run, g.player, "skill:storm")).toBe(true);
+    expect(g.run.skills).toEqual(["storm", null]);
+    expect(applyReward(g.run, g.player, "skill:storm")).toBe(false);
   });
   for (const skill of SKILLS)
     it(`${skill.id} has a real combat effect and an independent short cooldown`, () => {
       const { g, enemy } = arena();
-      g.run.skills = [skill.id, "volley"];
+      g.run.skills = [skill.id, null];
       g.skill();
       expect(g.player.skillCd).toBe(skill.cooldown);
       expect(g.player.secondCd).toBe(0);
@@ -96,14 +94,16 @@ describe("playstyle mechanics", () => {
   });
   it("makes alternating skills and nearby kills feed a build", () => {
     const { g, enemy } = arena();
-    g.run.skills = ["nova", "storm"];
+    g.run.skills = ["nova", "tempest"];
+    g.run.ultimateCharge = 100;
     for (const id of ["echo", "battery", "vampire"])
       applyReward(g.run, g.player, id);
     g.player.hp = 50;
-    g.skill(1);
-    const before = g.player.secondCd;
     g.skill(0);
-    expect(g.player.secondCd).toBeCloseTo(before - 0.8);
+    expect(g.player.skillCd).toBeGreaterThan(0);
+    g.skill(1);
+    expect(g.player.skillCd).toBe(0);
+    g.skill(0);
     const cd = g.player.skillCd;
     enemy.x = g.player.x + 100;
     (g as any).hitEnemy(enemy, 100000);
@@ -188,7 +188,7 @@ describe("playstyle mechanics", () => {
     const g = new Game();
     g.practice(12, 4, "control", "arcanist");
     expect(g.enemies[0].phase).toBe(4);
-    expect(g.run.skills).toEqual(["vortex", "storm"]);
+    expect(g.run.skills).toEqual(["vortex", "tempest"]);
     g.intro = 0;
     for (let i = 0; i < 10; i++) {
       g.player.skillCd = 0;

@@ -5,10 +5,11 @@ Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habil
 ## Ritmo da progressão
 
 - Wave 1: um fragmento inicial de cargas, toxina ou fuga; sem troca de arma e sem explosão imediata de poder.
-- Waves 2 e 3: receba Q e E, com slots vazios sugeridos automaticamente. Poderes equipados não aparecem nas ofertas.
+- Wave 2: primeira habilidade Q, com recarga curta. Wave 3 entrega uma melhoria da build e mantém E bloqueado.
 - Wave 4: primeira forma alternativa de disparo, após vencer o boss.
-- Waves 5–11: perks de comportamento, sinergias condicionais e novas formas de disparo. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
-- Descanso: ouro compra cura ou melhoria modesta da arma. Poder de base acompanha os atos, enquanto os perks continuam definindo o comportamento.
+- Wave 8: primeira ultimate E, após vencer o segundo boss.
+- Waves 5–11: perks de comportamento, sinergias condicionais e novas formas de disparo. Nas waves 5, 7 e 10, habilidades novas também podem aparecer para substituir Q. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
+- Descanso: ouro treina oito atributos gerais do herói; no máximo duas compras por checkpoint e três níveis por atributo. Custos crescem por nível e ato. Não há compra de dano bruto nem cura consumível.
 
 ## Formas de ataque automático
 
@@ -25,7 +26,7 @@ Pare para atacar. A wave 4 oferece três armas; novos modelos podem aparecer dep
 
 Armas curtas não desperdiçam recarga se todos estiverem fora do alcance. Escopeta expira os chumbos no alcance e não recebe extensão por ricochete. Ondas sísmicas mostram o círculo de alcance; a escopeta mostra os limites do cone. Perks exclusivos de projéteis não são oferecidos enquanto emissor sísmico ou arco elétrico estão equipados; os já adquiridos continuam disponíveis ao voltar para outra arma. Habilidades e armas usam o dano-base, com fatores próprios de cada padrão.
 
-Os cards mostram um diagrama (piloto verde, inimigos vermelhos, área de atuação), efeito em texto e comando. As habilidades equipadas e o ataque têm explicações acessíveis pelo HUD/livro, com pausa e retorno ao combate. O laboratório também permite trocar o ataque automático.
+Os cards mostram uma cena animada do próprio modelo de combate (piloto verde, inimigos vermelhos, projéteis e áreas reais), efeito em texto e comando. Prévias são isoladas da run, silenciosas e não gravam recordes. Só cards visíveis são animados, a até 24 quadros/s; efeitos reduzidos mostram uma cena estática. As habilidades equipadas e o ataque têm explicações acessíveis pelo HUD/livro, com pausa e retorno ao combate. O laboratório também permite trocar o ataque automático.
 
 ## Habilidades
 
@@ -43,6 +44,18 @@ Os cards mostram um diagrama (piloto verde, inimigos vermelhos, área de atuaç�
 
 Zonas amigáveis têm cor fria/âmbar e geometria própria, distinta dos círculos vermelhos de dano inimigo. Até seis zonas coexistem. Torre e ataques de habilidades usam o mesmo sistema de projéteis/colisões do Kaplay. Zonas fazem consultas radiais no modelo; o Kaplay desenha o estado e seus efeitos.
 
+## Ultimates e atributos
+
+E é um recurso de combate, desbloqueado após a wave 8. Começa em 100 de carga; usar consome toda a carga e impõe uma trava mínima de 8s. Ataques diretos acertados geram 0,035 de carga por ponto de vida efetivamente removido, limitados a 6 de carga por segundo com reserva máxima de 6. Erros, espera, veneno periódico, reações secundárias e dano das ultimates não geram carga. Carga persiste entre waves; reiniciar a run a remove. As travas das fases dos bosses continuam valendo.
+
+| Ultimate           | Decisão                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Olho da tempestade | Tempestade móvel de 5s, raio de 240, múltiplas descargas; a ativação apaga tiros próximos. Levar o herói à horda permite aproveitar a área.                                                 |
+| Eclosão tóxica     | Consome doses existentes pela arena, causa dano e espalha impacto/doses a até quatro vizinhos por alvo. Planta três nuvens nos alvos próximos. Preparar veneno antes amplifica a detonação. |
+| Cataclismo         | Três impactos de raios 160/250/340 no local da ativação, separados por 0,55s. Empurram, apagam tiros e ativam Catálise. O centro não acompanha o herói.                                     |
+
+O arsenal separa atributos de perks. Vitalidade acrescenta 12 de vida máxima (preenche só os 12 novos); Cadência reduz o intervalo em 6% por nível; Agilidade soma 10 de velocidade; Resistência subtrai 1 de cada impacto, mínimo 1; Regeneração cura 1 por 10s ativos; Sintonia reduz a recarga de Q em 6%; Reflexos tira 0,18s da esquiva; Magnetismo amplia a atração em 35. Cada atributo aceita três níveis. Preço: `22 + 18 × nível atual + 5 × (ato − 1)`. O painel indica efeitos, níveis e limite de duas compras por checkpoint. Nenhum atributo fica salvo para a próxima run.
+
 ## Perks e combinações
 
 | Grupo                            | Interação                                                                                       |
@@ -52,7 +65,7 @@ Zonas amigáveis têm cor fria/âmbar e geometria própria, distinta dos círcul
 | Poço + toxina + reação em cadeia | Concentre a horda, desacelere e espalhe explosões/veneno; explosão também funciona sem toxina   |
 | Gatilho de fuga + rastro + mina  | Esquiva dispara para trás, recarrega a arma e deixa uma armadilha                               |
 | Impacto + lâminas + fome         | Cura exige aproximação; lâminas destroem tiros próximos, mas contato e chão continuam perigosos |
-| Eco + bateria                    | Alternar Q/E adianta a outra recarga; abates abastecem ambas                                    |
+| Eco + bateria                    | Ultimate deixa Q pronto com Eco; abates adiantam apenas Q com Bateria                           |
 | Casulo + retaliação              | Um impacto é bloqueado a cada oito segundos; dano real abre uma explosão e apaga tiros próximos |
 | Bússola + febre do ouro          | Ser cercado aumenta os alvos possíveis, mas uma falha derruba o combo e seu bônus de saque      |
 
@@ -83,7 +96,7 @@ Frasco ou F2, disponível no build publicado. Estado, wave, fase, piloto, quatro
 
 ## Rebalanceamento: progressão gradual e builds elementais
 
-O primeiro fragmento oferece Núcleo estático, Frasco de toxina ou Gatilho de fuga. Nenhum troca a arma nem limpa uma horda sozinho. Q/E chegam após waves 2 e 3; a primeira escolha de arma é conquistada após o boss da wave 4. Novas formas de ataque trocam dano concentrado por cadência, alcance, perfuração, área ou preparação de elementos. O dano base rápido continua sendo uma opção válida. A loja oferece uma melhoria fixa de dois pontos de calibre por descanso, com limite de uma compra: não há mais crescimento composto de dano. O bônus de saque do combo é limitado a 40%, e Febre do ouro dá duas moedas extras em vez de três.
+O primeiro fragmento oferece Núcleo estático, Frasco de toxina ou Gatilho de fuga. Nenhum troca a arma nem limpa uma horda sozinho. Q chega após a wave 2; E vira ultimate após a wave 8; a primeira escolha de arma é conquistada após o boss da wave 4. Novas formas de ataque trocam dano concentrado por cadência, alcance, perfuração, área ou preparação de elementos. O dano base rápido continua sendo uma opção válida. O arsenal vende oito atributos com três níveis cada e duas compras por checkpoint, sem aumentar o dano bruto. O bônus de saque do combo é limitado a 40%, e Febre do ouro dá duas moedas extras em vez de três.
 
 ### Raio
 
@@ -117,4 +130,4 @@ A arena usa mais altura em retrato e mais largura em paisagem. Cabeçalho compac
 
 ### Referência de validação
 
-Em simulações com invencibilidade e uso automático das habilidades, os quatro presets anteriores derrotavam o primeiro boss em 11–22s. Com os ajustes, ficaram em 18–51s; os novos presets de raio, veneno e híbrido em 35–45s. No mesmo cenário parado e sem habilidades da wave 3, a versão anterior completava o encontro com vida; a nova foi derrotada. Isso verifica pressão maior e duração relativa, sem substituir playtests humanos de esquiva, posicionamento e dificuldade.
+Antes da introdução das ultimates e do novo arsenal, em simulações com invencibilidade e uso automático das habilidades, os quatro presets anteriores derrotavam o primeiro boss em 11–22s. Com os ajustes, ficaram em 18–51s; os novos presets de raio, veneno e híbrido em 35–45s. No mesmo cenário parado e sem habilidades da wave 3, a versão anterior completava o encontro com vida; a nova foi derrotada. Isso verifica pressão maior e duração relativa, sem substituir playtests humanos de esquiva, posicionamento e dificuldade.

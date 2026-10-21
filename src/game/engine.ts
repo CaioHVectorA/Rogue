@@ -5,6 +5,11 @@ import {
   WEAPONS,
   weaponById,
   SKILLS,
+  ULTIMATES,
+  isUltimate,
+  HERO_STATS,
+  TRAINING_CAP,
+  trainingCost,
   REWARDS,
   skillById,
   comboDrain,
@@ -22,6 +27,7 @@ import {
 } from "./model";
 import type {
   Field,
+  HeroStat,
   WeaponId,
   Element,
   Phase,
@@ -76,7 +82,6 @@ export class Game {
   hazards: Hazard[] = [];
   pickups: Pickup[] = [];
   fields: Field[] = [];
-  rewardSlot: 0 | 1 = 0;
   labGod = false;
   labSpeed = 1;
   private lootRandom = randomFromSeed("loot");
@@ -84,6 +89,10 @@ export class Game {
   private shotCount = 0;
   private batteryCd = 0;
   private reactionCd = 0;
+  private regenerationTime = 0;
+  private energyBudget = 6;
+  private ultimateDamage = false;
+  private ultimatePulses: (Point & { delay: number; radius: number })[] = [];
   records: RecordBook = emptyRecords();
   keys = new Set<string>();
   stick = { x: 0, y: 0 };
@@ -190,6 +199,9 @@ export class Game {
     this.pickups = [];
     this.chainQueue = [];
     this.fields = [];
+    this.ultimatePulses = [];
+    this.energyBudget = 6;
+    this.regenerationTime = 0;
     this.hitClock = 0;
     this.shotCount = 0;
     this.batteryCd = this.reactionCd = 0;
@@ -256,7 +268,7 @@ export class Game {
   }
   chooseReward(id: string) {
     if (this.phase !== "reward" || !this.run.offers.includes(id)) return;
-    if (!applyReward(this.run, this.player, id, this.rewardSlot)) return;
+    if (!applyReward(this.run, this.player, id)) return;
     this.run.offers = [];
     this.sound(660, 0.12, "sine", 0.04);
     this.setPhase("camp");
@@ -275,29 +287,153 @@ export class Game {
     );
     this.onChange();
   }
-  get healCost() {
-    return 18 + (this.run.act - 1) * 7;
-  }
-  get forgeCost() {
-    return 28 + (this.run.act - 1) * 12;
-  }
-  buy(kind: "heal" | "forge") {
-    if (this.phase !== "camp") return;
+  buy(id: HeroStat) {
+    if (this.phase !== "camp" || !HERO_STATS.some((s) => s.id === id)) return;
+    const rank = this.run.training[id] ?? 0,
+      cost = trainingCost(this.run, id);
+    if (rank >= TRAINING_CAP || this.run.purchases >= 2 || this.run.gold < cost)
+      return;
+    this.run.gold -= cost;
+    this.run.training[id] = rank + 1;
+    this.run.purchases++;
     const p = this.player;
-    if (kind === "heal") {
-      if (this.run.healed || this.run.gold < this.healCost || p.hp >= p.maxHp)
-        return;
-      this.run.gold -= this.healCost;
-      this.run.healed = true;
-      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.4));
-    } else {
-      if (this.run.purchases >= 1 || this.run.gold < this.forgeCost) return;
-      this.run.gold -= this.forgeCost;
-      this.run.purchases++;
-      p.damage += 2;
+    if (id === "vitality") {
+      p.maxHp += 12;
+      p.hp = Math.min(p.maxHp, p.hp + 12);
     }
+    if (id === "cadence") p.reload *= 0.94;
+    if (id === "agility") p.speed += 10;
     this.sound(520, 0.1, "sine", 0.04);
     this.onChange();
+  }
+  /** Only actual direct damage charges E; proc chains and ultimates cannot feed themselves. */
+  private gainUltimate(damage: number) {
+    if (
+      !this.run.skills[1] ||
+      !isUltimate(this.run.skills[1]) ||
+      this.ultimateDamage
+    )
+      return;
+    const gain = Math.min(this.energyBudget, Math.max(0, damage) * 0.035);
+    this.energyBudget -= gain;
+    this.run.ultimateCharge = Math.min(100, this.run.ultimateCharge + gain);
+  }
+  private castUltimate(id: string) {
+    const p = this.player;
+    this.run.ultimateCharge = 0;
+    p.secondCd = skillById(id).cooldown;
+    p.invulnerable = Math.max(p.invulnerable, 0.6);
+    if (this.run.rewards.echo) p.skillCd = 0;
+    this.ultimateDamage = true;
+    if (id === "tempest") {
+      this.bullets = this.bullets.filter(
+        (b) => !b.hostile || distance(b, p) > 240,
+      );
+      this.addField("storm", p);
+      Object.assign(this.fields.at(-1)!, {
+        ultimate: true,
+        radius: 240,
+        life: 5,
+        power: p.damage * 2.2,
+      });
+    } else if (id === "plague") {
+      const targets = this.enemies
+        .filter((e) => e.hp > 0)
+        .sort((a, b) => distance(a, p) - distance(b, p));
+      for (const enemy of targets)
+        if (enemy.venom > 0 && enemy.transition <= 0) {
+          const doses = enemy.venom;
+          enemy.venom = 0;
+          enemy.poisoned = 0;
+          this.hitEnemy(enemy, p.damage * (1 + doses * 0.7));
+          for (const other of targets
+            .filter((e) => e !== enemy && e.hp > 0 && distance(e, enemy) < 110)
+            .slice(0, 4)) {
+            this.hitEnemy(other, p.damage * doses * 0.3);
+            this.addToxin(other);
+          }
+          this.onFeedback({
+            type: "skill",
+            x: enemy.x,
+            y: enemy.y,
+            radius: 65,
+            color: "#b8ff62",
+          });
+        }
+      for (const target of targets.slice(0, 3)) {
+        this.addField("toxin", target);
+        Object.assign(this.fields.at(-1)!, {
+          ultimate: true,
+          radius: 125,
+          life: 4.5,
+          power: p.damage * 1.8,
+        });
+      }
+    } else if (id === "cataclysm") {
+      this.ultimatePulses = [160, 250, 340].map((radius, i) => ({
+        x: p.x,
+        y: p.y,
+        delay: i * 0.55,
+        radius,
+      }));
+    }
+    this.ultimateDamage = false;
+    this.onFeedback({
+      type: "skill",
+      x: p.x,
+      y: p.y,
+      radius: id === "tempest" ? 240 : 160,
+      color: skillById(id).color,
+    });
+    this.burst(p, skillById(id).color, 60, 240);
+    this.shake = 8;
+    this.sound(95, 0.35, "triangle", 0.09);
+  }
+  private updateUltimate(dt: number) {
+    this.ultimateDamage = true;
+    for (const pulse of this.ultimatePulses) {
+      pulse.delay -= dt;
+      if (pulse.delay > 0) continue;
+      for (const enemy of [...this.enemies])
+        if (distance(enemy, pulse) < pulse.radius + enemy.radius) {
+          this.hitEnemy(
+            enemy,
+            this.player.damage * 2,
+            !!this.run.rewards.poison,
+            "neutral",
+          );
+          this.catalyse(enemy);
+          if (enemy.kind !== "boss") {
+            const d = distance(enemy, pulse) || 1;
+            enemy.x = clamp(
+              enemy.x + ((enemy.x - pulse.x) / d) * 45,
+              45,
+              this.width - 45,
+            );
+            enemy.y = clamp(
+              enemy.y + ((enemy.y - pulse.y) / d) * 45,
+              45,
+              this.height - 45,
+            );
+            enemy.slowed = Math.max(enemy.slowed, 1);
+          }
+        }
+      this.bullets = this.bullets.filter(
+        (b) => !b.hostile || distance(b, pulse) > pulse.radius,
+      );
+      this.onFeedback({
+        type: "skill",
+        x: pulse.x,
+        y: pulse.y,
+        radius: pulse.radius,
+        color: "#ffbc8a",
+      });
+      this.burst(pulse, "#ffbc8a", 25, 180);
+    }
+    this.ultimatePulses = this.ultimatePulses.filter(
+      (pulse) => pulse.delay > 0,
+    );
+    this.ultimateDamage = false;
   }
   nextRoom() {
     if (this.phase !== "camp") return;
@@ -313,13 +449,18 @@ export class Game {
       (slot === 0 ? p.skillCd : p.secondCd) > 0
     )
       return;
-    const definition = skillById(id);
-    if (slot === 0) p.skillCd = definition.cooldown;
-    else p.secondCd = definition.cooldown;
-    if (this.run.rewards.echo) {
-      if (slot === 0) p.secondCd = Math.max(0, p.secondCd - 0.8);
-      else p.skillCd = Math.max(0, p.skillCd - 0.8);
+    if (slot === 1) {
+      if (
+        !isUltimate(id) ||
+        this.run.ultimateCharge < 100 ||
+        !this.enemies.some((e) => e.hp > 0)
+      )
+        return;
+      this.castUltimate(id);
+      return;
     }
+    const definition = skillById(id);
+    p.skillCd = definition.cooldown * 0.94 ** (this.run.training.focus ?? 0);
     const target = this.nearest() ?? {
       x: p.x + this.aim.x * 180,
       y: p.y + this.aim.y * 180,
@@ -413,9 +554,13 @@ export class Game {
   }
   private updateFields(dt: number) {
     for (const field of this.fields) {
+      this.ultimateDamage = !!field.ultimate;
       field.life -= dt;
       field.timer -= dt;
-      if (field.kind === "orbit") {
+      if (
+        field.kind === "orbit" ||
+        (field.kind === "storm" && field.ultimate)
+      ) {
         field.x = this.player.x;
         field.y = this.player.y;
       }
@@ -526,10 +671,21 @@ export class Game {
               }
             }
           }
-        if (field.kind === "storm") this.burst(field, "#85d8ef", 5, 120);
+        if (field.kind === "storm") {
+          this.burst(field, "#85d8ef", field.ultimate ? 12 : 5, 120);
+          if (field.ultimate)
+            this.onFeedback({
+              type: "skill",
+              x: field.x,
+              y: field.y,
+              radius: field.radius,
+              color: "#85d8ef",
+            });
+        }
         field.timer = field.kind === "toxin" ? 0.6 : 0.5;
       }
     }
+    this.ultimateDamage = false;
     this.fields = this.fields.filter((f) => f.life > 0);
   }
   dash() {
@@ -542,7 +698,7 @@ export class Game {
     p.dashY = length ? direction.y / length : this.aim.y;
     p.dashTime = 0.18;
     p.invulnerable = Math.max(p.invulnerable, 0.28);
-    p.dashCd = 2.6;
+    p.dashCd = 2.6 - (this.run.training.evasion ?? 0) * 0.18;
     if (this.run.rewards.speed) this.addField("mine", p);
     if (this.run.rewards.dashload) {
       p.charge = this.fireInterval;
@@ -769,6 +925,7 @@ export class Game {
     element?: Element,
   ) {
     if (enemy.hp <= 0) return;
+    const hpBefore = enemy.hp;
     if (enemy.kind === "boss") {
       if (enemy.transition > 0) return;
       const floor =
@@ -797,6 +954,8 @@ export class Game {
         }
       }
     } else enemy.hp -= damage;
+    if (element !== undefined)
+      this.gainUltimate(Math.min(damage, hpBefore - Math.max(0, enemy.hp)));
     if (damage >= 1) {
       if (this.hitClock <= 0) {
         this.combo = this.comboTimer > 0 ? this.combo + 1 : 1;
@@ -962,7 +1121,6 @@ export class Game {
       if (this.run.rewards.battery && this.batteryCd <= 0) {
         this.batteryCd = 0.12;
         this.player.skillCd = Math.max(0, this.player.skillCd - 0.16);
-        this.player.secondCd = Math.max(0, this.player.secondCd - 0.16);
       }
       this.pickups.push({ x: enemy.x, y: enemy.y, value, life: 0 });
       this.player.hp = Math.min(
@@ -1024,7 +1182,10 @@ export class Game {
       this.burst(p, "#85d8ef", 25, 180);
       return;
     }
-    const actual = Math.max(1, Math.round(damage));
+    const actual = Math.max(
+      1,
+      Math.round(damage) - (this.run.training.defense ?? 0),
+    );
     if (this.run.rewards.gambit) {
       this.combo = 0;
       this.comboTimer = 0;
@@ -1185,6 +1346,15 @@ export class Game {
       const spawn = this.spawnQueue.shift()!;
       this.spawn(spawn.kind, spawn.x, spawn.y);
     }
+    this.energyBudget = Math.min(6, this.energyBudget + dt * 6);
+    if (this.intro <= 0 && this.enemies.some((e) => e.hp > 0)) {
+      this.regenerationTime += dt;
+      if (this.regenerationTime >= 10) {
+        p.hp = Math.min(p.maxHp, p.hp + (this.run.training.recovery ?? 0));
+        this.regenerationTime -= 10;
+      }
+    }
+    this.updateUltimate(dt);
     this.updateFields(dt);
     for (const enemy of [...this.enemies]) {
       enemy.transition = Math.max(0, enemy.transition - dt);
@@ -1373,7 +1543,10 @@ export class Game {
     for (const pickup of this.pickups) {
       pickup.life += dt;
       const dist = distance(pickup, p);
-      if (dist < 150 || pickup.life > 5) {
+      if (
+        dist < 150 + (this.run.training.magnet ?? 0) * 35 ||
+        pickup.life > 5
+      ) {
         pickup.x += (p.x - pickup.x) * Math.min(1, dt * 9);
         pickup.y += (p.y - pickup.y) * Math.min(1, dt * 9);
       }
@@ -1502,7 +1675,6 @@ export class Game {
       );
       this.run.rerolls++;
     }
-    this.rewardSlot = !this.run.skills[0] ? 0 : !this.run.skills[1] ? 1 : 0;
     this.run.offers = rewardOffers(
       this.run,
       randomFromSeed(`${this.run.seed}:offers:${this.run.room}:0`),
@@ -1550,37 +1722,38 @@ export class Game {
     this.player.damage += (this.run.act - 1) * 6;
     const builds: Record<string, { skills: Run["skills"]; perks: string[] }> = {
       control: {
-        skills: ["vortex", "storm"],
+        skills: ["vortex", "tempest"],
         perks: ["poison", "explosion", "echo"],
       },
       gunner: {
-        skills: ["volley", "turret"],
+        skills: ["volley", "cataclysm"],
         perks: ["anchor", "pierce", "ricochet"],
       },
       brawler: {
-        skills: ["quake", "orbit"],
+        skills: ["quake", "cataclysm"],
         perks: ["vampire", "armor", "thorns"],
       },
       trickster: {
-        skills: ["decoy", "mine"],
+        skills: ["decoy", "plague"],
         perks: ["speed", "dashload", "gambit"],
       },
       lightning: {
-        skills: ["storm", "turret"],
+        skills: ["turret", "tempest"],
         perks: ["capacitor", "rod", "groundwire"],
       },
       toxin: {
-        skills: ["venom", "quake"],
+        skills: ["quake", "plague"],
         perks: ["poison", "catalyst", "mycelium"],
       },
       hybrid: {
-        skills: ["vortex", "storm"],
+        skills: ["vortex", "tempest"],
         perks: ["capacitor", "poison", "electrolysis", "faraday"],
       },
       fresh: { skills: [null, null], perks: [] },
     };
     const preset = builds[build] ?? builds.control;
     this.run.skills = [...preset.skills];
+    this.run.ultimateCharge = this.run.skills[1] ? 100 : 0;
     this.run.weapon =
       build === "brawler"
         ? "seismic"
@@ -1610,13 +1783,69 @@ export class Game {
       this.fields = [];
       this.spawnQueue = [];
       if (state === "reward") {
-        this.rewardSlot = 0;
         this.run.offers = rewardOffers(this.run, randomFromSeed("LAB-OFFERS"));
         this.setPhase("reward");
       } else if (state === "result") this.finish(false);
       else this.setPhase("camp");
     }
     this.onChange();
+  }
+  /** Isolated teaching scene: the real combat model, no audio, records or live-run state. */
+  static demonstration(power: string) {
+    const g = new Game(),
+      id = power.split(":")[1];
+    g.width = 800;
+    g.height = 450;
+    g.run = createRun("POWER-PREVIEW", "ranger");
+    g.run.practice = true;
+    g.phase = "combat";
+    const radial = [
+      "nova",
+      "quake",
+      "orbit",
+      "seismic",
+      "cataclysm",
+      "tempest",
+    ].includes(id);
+    g.player.x = radial ? 390 : ["mine", "decoy"].includes(id) ? 300 : 160;
+    g.player.y = 245;
+    g.player.invulnerable = 100;
+    g.player.hp = 70;
+    if (power.startsWith("weapon:")) g.run.weapon = id as WeaponId;
+    else {
+      g.player.reload = 1000;
+      g.run.skills = isUltimate(id) ? [null, id] : [id, null];
+    }
+    g.run.ultimateCharge = 100;
+    const points = radial
+      ? [
+          [490, 240],
+          [325, 320],
+          [275, 210],
+          [590, 260],
+          [700, 95],
+        ]
+      : [
+          [400, 230],
+          [460, 290],
+          [445, 160],
+          [530, 230],
+          [680, 110],
+        ];
+    for (const [i, [x, y]] of points.entries()) {
+      g.spawn(i === 4 ? "guard" : "chaser", x, y);
+      const e = g.enemies.at(-1)!;
+      e.hp = e.maxHp = 85;
+      e.speed = ["mine", "decoy"].includes(id) ? 75 : 8;
+      e.timer = 100;
+      if (id === "plague" && i < 3) {
+        e.venom = 3;
+        e.poisoned = 3;
+      }
+    }
+    // Keep the scene alive until its loop resets, even when the demonstrated attack clears it.
+    g.spawnQueue = [{ kind: "guard", at: 9999, x: 700, y: 100 }];
+    return g;
   }
   labWeapon(id: string) {
     if (!this.run.practice || !WEAPONS.some((w) => w.id === id)) return;
@@ -1629,11 +1858,13 @@ export class Game {
   labEquip(id: string, slot: 0 | 1) {
     if (
       !this.run.practice ||
-      (id !== "" && !SKILLS.some((s) => s.id === id)) ||
+      (id !== "" &&
+        !(slot === 0 ? SKILLS : ULTIMATES).some((s) => s.id === id)) ||
       (id !== "" && this.run.skills[1 - slot] === id)
     )
       return;
     this.run.skills[slot] = id || null;
+    if (slot === 1) this.run.ultimateCharge = id ? 100 : 0;
     this.player.skillCd = this.player.secondCd = 0;
     this.fields = [];
     this.onChange();
@@ -1641,10 +1872,7 @@ export class Game {
   labPerk(id: string) {
     if (
       this.run.practice &&
-      REWARDS.some(
-        (r) =>
-          r.id === id && !id.startsWith("skill:") && !id.startsWith("weapon:"),
-      )
+      REWARDS.some((r) => r.id === id && !id.includes(":"))
     ) {
       applyReward(this.run, this.player, id);
       this.onChange();

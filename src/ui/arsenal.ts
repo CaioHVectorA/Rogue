@@ -1,5 +1,5 @@
 import type { ClassId } from "../game/model";
-import { CLASSES, SKILLS, WEAPONS } from "../game/model";
+import { CLASSES, SKILLS, ULTIMATES, WEAPONS } from "../game/model";
 import { icon } from "./icons";
 
 const SKILL_HINTS: Record<string, string> = {
@@ -45,15 +45,15 @@ export const ITEM_VISUALS: Record<
   },
   echo: {
     glyph: "repeat",
-    value: "Q⇄E",
+    value: "E→Q",
     stat: "ECO",
-    hint: "Uma habilidade adianta a outra",
+    hint: "Ultimate deixa Q pronto",
   },
   battery: {
     glyph: "charge",
     value: "↻",
     stat: "BATERIA",
-    hint: "Abates alimentam as recargas",
+    hint: "Abates adiantam a recarga de Q",
   },
   poison: {
     glyph: "toxin",
@@ -167,6 +167,12 @@ export const ITEM_VISUALS: Record<
     WEAPONS.map((w) => [
       `weapon:${w.id}`,
       { glyph: w.glyph, value: "AUTO", stat: w.tag, hint: w.hint },
+    ]),
+  ),
+  ...Object.fromEntries(
+    ULTIMATES.map((s) => [
+      `ultimate:${s.id}`,
+      { glyph: s.glyph, value: "E", stat: "ULTIMATE", hint: s.desc },
     ]),
   ),
   ...Object.fromEntries(
