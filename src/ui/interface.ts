@@ -558,7 +558,7 @@ export class Interface {
     const g = this.game,
       e = buildElements(g.run);
     if (!e.storm && !e.toxin) return "";
-    return `<div class="build-synergies" aria-label="Sinergias da build">${e.storm ? `<span class="storm">${icon("bolt")} RAIO <small>4 CARGAS → SOBRECARGA</small><b>${g.run.reactions.overload}</b></span>` : ""}${e.toxin ? `<span class="toxin">${icon("toxin")} VENENO <small>DOSES → ${g.run.rewards.catalyst ? "CATÁLISE" : "CONTÁGIO"}</small><b>${g.run.reactions.catalysis}</b></span>` : ""}${g.run.rewards.electrolysis ? `<span>${icon("repeat")} ELETRÓLISE</span>` : ""}</div>`;
+    return `<div class="build-synergies" aria-label="Sinergias da build">${e.storm ? `<span class="storm">${icon("bolt")} RAIO <small>CARGAS → DESCARGAS</small><b>${g.run.reactions.overload + g.run.reactions.conduction}</b></span>` : ""}${e.toxin ? `<span class="toxin">${icon("toxin")} VENENO <small>${g.run.rewards.catalyst ? "DOSES → CATÁLISE" : "ACUMULE ATÉ 4 DOSES"}</small>${g.run.rewards.catalyst ? `<b>${g.run.reactions.catalysis}</b>` : ""}</span>` : ""}${g.run.rewards.electrolysis ? `<span>${icon("repeat")} ELETRÓLISE</span>` : ""}</div>`;
   }
   private powerScreen(id: string) {
     const info = powerInfo(id);
