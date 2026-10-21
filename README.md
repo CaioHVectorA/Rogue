@@ -27,9 +27,9 @@ Apresentação visual da run, melhorias por ícones/atributos e arsenal substitu
 
 - Aperte Jogar: todas as runs normais começam com o mesmo kit básico, com pistola rápida e sem habilidades. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
-- Na wave 1, escolha uma relíquia inicial. Nas waves 2 e 3, receba suas primeiras habilidades Q/E; a primeira arma alternativa chega após o boss da wave 4. Há dez poderes com recargas de 3,2 a 5,5s.
+- Na wave 1, escolha uma relíquia inicial. Após a wave 2, escolha Q entre dez habilidades de recarga curta. A primeira arma alternativa chega após o boss da wave 4. Após o segundo boss (wave 8), escolha uma de três ultimates para E, carregadas por dano direto acertado. Nas waves 5, 7 e 10 podem aparecer substituições para Q.
 - Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 24 perks; o coração pode repetir, os demais são únicos.
-- No descanso, compre cura ou dano com o ouro coletado. A coleta restante é automática ao limpar a sala.
+- No descanso, treine atributos gerais do herói com o ouro coletado. A coleta restante é automática ao limpar a sala.
 - Chefes têm 2700/5700/8700 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
 - A derrota encerra a run. Só recordes ficam no navegador; não há poder permanente nem retomada após recarregar.
 
@@ -43,7 +43,7 @@ O código da run reproduz posições de spawn e sorteios de recompensa para as m
 
 O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, conquiste formas alternativas como metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia, agulhas tóxicas ou disparo pesado perfurante. Cada arma troca vantagens por limites; não é um salto automático de dano. O arsenal preserva os modelos adquiridos para trocar entre encontros.
 
-Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque equipado pode ser consultado pelo HUD; o livro reúne explicações dos poderes da build. O jogador verde e os alvos vermelhos dos diagramas distinguem ataques ao redor, cones e áreas no inimigo.
+Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque equipado pode ser consultado pelo HUD; o livro reúne explicações dos poderes da build. Cenas animadas com o jogador verde e alvos vermelhos demonstram movimento, alcance e efeitos dos ataques.
 
 ## Raio e veneno
 
@@ -55,7 +55,7 @@ A dificuldade das waves também cresce: ameaças mistas chegam em grupos sucessi
 
 O frasco no cabeçalho, a opção nas configurações ou **F2** abrem o laboratório, inclusive na Vercel. Escolha estado (combate, recompensa, arsenal ou resultado), wave, boss/fase, piloto e preset. Saltar reinicia a run com 250 de ouro e marca **LAB** no campo; a prática nunca grava recordes. Uma run normal reinicia sem cheats ou poderes transferidos.
 
-Durante a prática, reabra o frasco para trocar Q/E, adicionar perks, ativar invencibilidade, mudar o ritmo entre 0,5× e 3× e limpar o encontro. O painel pausa o combate. F1 e os objetos de console continuam exclusivos do servidor de desenvolvimento.
+Durante a prática, reabra o frasco para trocar Q e a ultimate E (já carregada), adicionar perks, ativar invencibilidade, mudar o ritmo entre 0,5× e 3× e limpar o encontro. O painel pausa o combate. F1 e os objetos de console continuam exclusivos do servidor de desenvolvimento.
 
 | Estilo   | Habilidades               | Interação                                                    |
 | -------- | ------------------------- | ------------------------------------------------------------ |
@@ -91,3 +91,9 @@ Prévias: [celular em pé](docs/preview/mobile-portrait.png), [celular deitado](
 Regras e decisões: [PROJECT.md](PROJECT.md). Próximos passos: [roadmap.md](roadmap.md).
 
 O jogo usa Kaplay.js 3001 como runtime: cenas, entidades, renderização WebGL, colisões, áudio e efeitos. As regras de runs ficam em TypeScript e as interfaces acessíveis em HTML/CSS. O histórico Git preserva os sistemas anteriores. `ORIGINAL_REQUEST.md` registra o pedido histórico do protótipo, não a especificação atual.
+
+### Arsenal e prévias de combate
+
+O ouro compra níveis de Vitalidade, Cadência, Agilidade, Resistência, Regeneração, Sintonia, Reflexos e Magnetismo. Cada atributo aceita três níveis; são até duas compras por checkpoint. O preço começa em 22, sobe 18 por nível comprado do atributo e 5 por ato. Não há consumível de cura nem compra de dano bruto. Tudo reinicia com a run.
+
+As prévias dos poderes usam cenas isoladas do mesmo modelo de combate. Canvas 2D apresenta essas demonstrações; o jogo continua em Kaplay/WebGL. Um único loop a até 24 quadros/s anima apenas cards visíveis, para ao sair da aba/tela e mostra um quadro estático com efeitos reduzidos. As cenas não alteram a run nem os recordes.

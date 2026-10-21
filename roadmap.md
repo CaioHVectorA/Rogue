@@ -3,7 +3,7 @@
 ## Implementado
 
 - [x] Ciclo completo de run com início, escolha, descanso, derrota e vitória.
-- [x] Três pilotos, dez habilidades ativas em Q/E e 24 perks de comportamento.
+- [x] Três pilotos no laboratório, dez habilidades para Q, três ultimates tardias para E e 24 perks de comportamento.
 - [x] Três atos, 12 encontros e três guardiões com quatro fases e transições.
 - [x] Interface HTML responsiva, HUD, teclado e controles de toque.
 - [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
@@ -27,3 +27,6 @@
 - [ ] Considerar retomada de run com versionamento e validação de save.
 
 Adicionar conteúdo depois de confirmar que o ciclo curto sustenta partidas repetidas.
+
+- [x] Arsenal com oito atributos gerais, limites por checkpoint e níveis reiniciados por run.
+- [x] Prévias animadas com o modelo real de combate e respeito a efeitos reduzidos.

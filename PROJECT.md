@@ -57,3 +57,7 @@ Ao redimensionar o campo durante combate, o jogo pausa e remapeia jogador, inimi
 ## Limites atuais
 
 O balanceamento inicial é coberto por simulações e testes de fluxo, mas precisa de sessões humanas com diferentes níveis de habilidade. Os três chefes compartilham uma base geométrica e comportamental, com padrões progressivos. Não há conteúdo narrativo extenso, salvamento de run, multiplayer ou placar remoto.
+
+## Ultimate e evolução geral do herói
+
+Q é obtido após a wave 2; E fica reservado à ultimate, escolhida após o segundo boss na wave 8. Três ultimates usam carga por dano acertado com orçamento limitado, sem carga passiva e sem se alimentarem do próprio dano. O laboratório permite escolher qualquer Q e ultimate carregada. O arsenal oferece oito atributos, com três níveis e duas compras por checkpoint; substitui cura e calibre. Prévias instrucionais usam o modelo real em cenas isoladas e Canvas 2D, com animação apenas para cards visíveis; a arena jogável permanece em Kaplay/WebGL.

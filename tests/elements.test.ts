@@ -49,7 +49,7 @@ it("first clear offers modest relics and the first weapon draft is earned after 
     "dashload",
     "poison",
   ]);
-  for (const room of [2, 3]) {
+  for (const room of [2]) {
     run.room = room;
     expect(
       rewardOffers(run, randomFromSeed("a")).every((id) =>
@@ -89,9 +89,10 @@ it("weapon sidegrades do not multiply single-target output; waves mix pressure e
   g.phase = "camp";
   g.run.gold = 1000;
   const damage = g.player.damage;
-  g.buy("forge");
-  g.buy("forge");
-  expect(g.player.damage).toBe(damage + 2);
+  g.buy("cadence");
+  g.buy("cadence");
+  expect(g.player.damage).toBe(damage);
+  expect(g.run.training.cadence).toBe(2);
 });
 it("shotgun hits cannot produce seven charges; overloads cannot recursively trigger themselves", () => {
   const g = arena(),
@@ -174,7 +175,7 @@ it("conditional perks only appear when their inputs exist and one fitting offer 
     for (const id of ["faraday", "rod", "catalyst", "electrolysis", "mycelium"])
       expect(offers).not.toContain(id);
   }
-  g.run.skills = ["vortex", "storm"];
+  g.run.skills = ["vortex", "tempest"];
   applyReward(g.run, g.player, "capacitor");
   applyReward(g.run, g.player, "poison");
   const offers = rewardOffers(g.run, randomFromSeed("SYNERGY"));

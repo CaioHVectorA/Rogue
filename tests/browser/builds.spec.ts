@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("runs start without skills, draft a small relic, then equip Q and E", async ({
+test("runs start without skills, draft a small relic and Q while keeping E locked", async ({
   page,
 }) => {
   await page.goto("/");
@@ -24,8 +24,8 @@ test("runs start without skills, draft a small relic, then equip Q and E", async
       .first()
       .getAttribute("data-value"))!;
     if (room === 1) expect(["capacitor", "poison", "dashload"]).toContain(id);
-    else expect(id.startsWith("skill:")).toBe(true);
-    if (room > 1) {
+    else expect(id.startsWith("skill:")).toBe(room === 2);
+    if (room === 2) {
       await expect(page.locator(".power-description").first()).toBeVisible();
       await expect(page.locator(".power-diagram").first()).toBeVisible();
     }
@@ -34,7 +34,7 @@ test("runs start without skills, draft a small relic, then equip Q and E", async
     if (room === 1) expect(skills).toEqual([null, null]);
     expect(await page.evaluate(() => window.__rogue.run.weapon)).toBe("pulse");
     if (room === 2) expect(skills).toEqual([id.slice(6), null]);
-    if (room === 3) expect(skills[1]).toBe(id.slice(6));
+    if (room === 3) expect(skills[1]).toBeNull();
     await page.locator('[data-action="next"]').click();
   }
 });
@@ -53,7 +53,7 @@ test("laboratory jumps to boss phases, edits builds and keeps records clean", as
   await expect(page.locator("#boss-phase")).toContainText("IV / IV");
   expect(await page.evaluate(() => window.__rogue.run.skills)).toEqual([
     "quake",
-    "orbit",
+    "cataclysm",
   ]);
   await page.keyboard.press("F2");
   await expect(
@@ -68,7 +68,7 @@ test("laboratory jumps to boss phases, edits builds and keeps records clean", as
       speed: window.__rogue.labSpeed,
       skills: window.__rogue.run.skills,
     })),
-  ).toEqual({ god: true, speed: 2, skills: ["storm", "orbit"] });
+  ).toEqual({ god: true, speed: 2, skills: ["storm", "cataclysm"] });
   await page.locator('[data-action="lab-clear"]').click();
   await expect(page.locator("#interface")).toHaveAttribute(
     "data-phase",
@@ -131,7 +131,7 @@ for (const [width, height] of [
       window.__rogue.labGod = true;
     });
     const second = page.getByRole("button", {
-      name: "Usar segunda habilidade",
+      name: "Usar ultimate",
       exact: true,
     });
     await expect(second).toBeVisible();
@@ -266,7 +266,10 @@ test("lightning and poison builds react through the real runtime", async ({
   await expect
     .poll(() => page.evaluate(() => window.__rogue.enemies[0]?.venom ?? 0))
     .toBeGreaterThanOrEqual(3);
-  await page.evaluate(() => window.__rogue.skill(1));
+  await page.evaluate(() => {
+    window.__rogue.player.skillCd = 0;
+    window.__rogue.skill();
+  });
   await expect
     .poll(() => page.evaluate(() => window.__rogue.run.reactions.catalysis))
     .toBeGreaterThan(0);

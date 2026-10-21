@@ -186,19 +186,19 @@ test("shop rejects overspending and duplicate rewards", async ({ page }) => {
     g.chooseReward(id!);
     g.run.gold = 100;
     g.player.hp = 10;
-    g.buy("heal");
-    g.buy("heal");
-    if (g.player.hp !== Math.round(g.player.maxHp * 0.4) + 10)
-      throw new Error("Duplicate heal");
-    g.buy("forge");
-    g.buy("forge");
-    const damage = g.player.damage;
-    g.buy("forge");
-    if (g.player.damage !== damage) throw new Error("Forge cap bypassed");
+    g.buy("vitality");
+    g.buy("agility");
+    const hp = g.player.hp,
+      speed = g.player.speed;
+    g.buy("cadence");
+    if (g.player.hp !== hp || g.player.speed !== speed || g.run.purchases !== 2)
+      throw new Error("Checkpoint purchase cap bypassed");
+    if (hp !== 22 || g.run.training.vitality !== 1)
+      throw new Error("Vitality is not a full heal");
     g.run.gold = 0;
     g.run.purchases = 0;
-    g.buy("forge");
-    if (g.player.damage !== damage || g.run.gold < 0)
+    g.buy("agility");
+    if (g.player.speed !== speed || g.run.gold < 0)
       throw new Error("Overspending");
   }, chosen);
   expect(await page.evaluate(() => window.__rogue.run.rewards)).toEqual(
