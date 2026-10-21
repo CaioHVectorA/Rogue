@@ -270,3 +270,18 @@ it("a wall imprints crystal fragments and piercing casulos still obey their clou
   g.contactBullet(seed, other);
   expect(g.fields.filter((f) => f.source === "seed")).toHaveLength(2);
 });
+
+it("the skater can leave a toxic trail while casulos occupy the front line, without exceeding the shared field cap", () => {
+  const g = arena("overdrive", 5);
+  spawn(g, 250);
+  g.run.weapon = "spore";
+  g.run.rewards.slipstream = 1;
+  g.run.rewards.poison = 1;
+  g.player.reload = 0.2;
+  g.stick.y = 0.2;
+  g.skill();
+  simulate(g, 1.45);
+  expect(g.fields.some((f) => f.source === "trail")).toBe(true);
+  expect(g.fields.some((f) => f.source === "seed")).toBe(true);
+  expect(g.fields.length).toBeLessThanOrEqual(6);
+});

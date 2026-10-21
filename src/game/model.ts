@@ -73,7 +73,7 @@ export interface Field extends Point {
   ultimate?: boolean;
   level?: number;
   angle?: number;
-  source?: "seed";
+  source?: "seed" | "trail";
 }
 export interface Hazard extends Point {
   radius: number;

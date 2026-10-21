@@ -1343,11 +1343,15 @@ export class Game {
         this.overdrive > 0 &&
         p.moving &&
         this.trailCd <= 0 &&
-        this.fields.filter((f) => f.kind === "toxin").length < 3
+        this.fields.filter((f) => f.source === "trail").length < 3
       ) {
         this.trailCd = 1.2;
         this.addField("toxin", p);
-        Object.assign(this.fields.at(-1)!, { life: 1.5, radius: 55 });
+        Object.assign(this.fields.at(-1)!, {
+          life: 1.5,
+          radius: 55,
+          source: "trail",
+        });
       }
       this.onFeedback({ type: "shot", x: p.x, y: p.y, color: weapon.color });
     }
