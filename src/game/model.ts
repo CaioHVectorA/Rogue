@@ -8,6 +8,7 @@ export interface Point {
   x: number;
   y: number;
 }
+export type Element = "neutral" | "storm" | "toxin";
 export interface Enemy extends Point {
   id: number;
   kind: EnemyKind;
@@ -25,6 +26,13 @@ export interface Enemy extends Point {
   phase: number;
   transition: number;
   slowed: number;
+  venom: number;
+  shock: number;
+  markCd: number;
+  windup: number;
+  dashLeft: number;
+  dashVX: number;
+  dashVY: number;
 }
 export interface Bullet extends Point {
   vx: number;
@@ -37,13 +45,16 @@ export interface Bullet extends Point {
   hit: Set<number>;
   color?: string;
   ricochets?: boolean;
+  element?: Element;
+  origin?: "turret";
 }
 export interface Field extends Point {
-  kind: "vortex" | "storm" | "turret" | "mine" | "orbit" | "decoy";
+  kind: "vortex" | "storm" | "turret" | "mine" | "orbit" | "decoy" | "toxin";
   radius: number;
   life: number;
   timer: number;
   power: number;
+  blocks: number;
 }
 export interface Hazard extends Point {
   radius: number;
@@ -80,6 +91,7 @@ export interface Run {
   weapon: WeaponId;
   weapons: WeaponId[];
   practice: boolean;
+  reactions: { overload: number; catalysis: number; conduction: number };
   classId: ClassId;
   room: number;
   act: number;
@@ -186,52 +198,52 @@ export const WEAPONS = [
     id: "minigun",
     name: "Metralhadora",
     tag: "CADÊNCIA",
-    desc: "Uma sequência muito rápida de projéteis. Pare e mantenha a pressão sobre o alvo mais próximo.",
+    desc: "Tiros mais fracos em sequência rápida. Troca dano concentrado por frequência de marcas e cargas.",
     hint: "Uma corrente de tiros",
     glyph: "charge",
     color: "#a4f6c1",
-    interval: 0.13,
+    interval: 0.14,
     range: 700,
-    power: 0.8,
+    power: 0.58,
     pattern: "line",
   },
   {
     id: "shotgun",
     name: "Escopeta",
     tag: "CONE CURTO",
-    desc: "Sete chumbos em leque. Atinge apenas a curta distância; aproxime-se para concentrar os chumbos num alvo.",
+    desc: "Sete chumbos curtos e uma pausa maior entre tiros. De perto concentra dano; de longe perde força.",
     hint: "Perto: concentre sete chumbos",
     glyph: "shotgun",
     color: "#ffbc8a",
-    interval: 0.44,
+    interval: 0.5,
     range: 290,
-    power: 0.48,
+    power: 0.34,
     pattern: "cone",
   },
   {
     id: "seismic",
     name: "Emissor sísmico",
     tag: "AO SEU REDOR",
-    desc: "Pare para emitir ondas em todas as direções. Só atinge inimigos dentro do círculo próximo. Não dispara projéteis.",
+    desc: "Ondas lentas atingem só o círculo próximo. Troca dano em alvo único por cobertura ao redor; exige ficar perto.",
     hint: "Só atinge quem entra no círculo",
     glyph: "seismic",
     color: "#ffda8a",
-    interval: 0.48,
-    range: 160,
-    power: 1.4,
+    interval: 0.6,
+    range: 135,
+    power: 0.95,
     pattern: "circle",
   },
   {
     id: "arc",
     name: "Arco elétrico",
     tag: "EM CADEIA",
-    desc: "Um choque instantâneo salta por até três inimigos próximos entre si. Alcance médio; não atravessa a arena.",
+    desc: "Choques fracos saltam por até três alvos próximos e acumulam cargas. Combine com descargas e tempestades.",
     hint: "O choque salta entre três alvos",
     glyph: "bolt",
     color: "#85d8ef",
-    interval: 0.3,
-    range: 400,
-    power: 0.9,
+    interval: 0.36,
+    range: 340,
+    power: 0.6,
     pattern: "chain",
   },
   {
@@ -242,9 +254,22 @@ export const WEAPONS = [
     hint: "Alinhe a horda e atravesse a fila",
     glyph: "pierce",
     color: "#c5afff",
-    interval: 0.5,
+    interval: 0.52,
     range: 950,
-    power: 2.4,
+    power: 2,
+    pattern: "line",
+  },
+  {
+    id: "needle",
+    name: "Agulha tóxica",
+    tag: "VENENO",
+    desc: "Agulhas atravessam dois alvos e aplicam duas doses de toxina. Dano direto menor; prepare doses antes de detonar.",
+    hint: "Perfure e prepare doses de veneno",
+    glyph: "toxin",
+    color: "#b8ff62",
+    interval: 0.28,
+    range: 560,
+    power: 0.8,
     pattern: "line",
   },
 ] as const;
@@ -319,7 +344,7 @@ export const SKILLS = [
     id: "orbit",
     name: "Lâminas orbitais",
     tag: "CORPO A CORPO",
-    desc: "Por 3,2s, lâminas acompanham você, ferem inimigos próximos e destroem tiros que entram no círculo.",
+    desc: "Por 3,2s, lâminas acompanham você e ferem inimigos próximos. Podem cortar até seis tiros; depois disso, reposicione-se.",
     cooldown: 5,
     color: "#ffda8a",
     glyph: "crown",
@@ -332,6 +357,15 @@ export const SKILLS = [
     cooldown: 4.8,
     color: "#85d8ef",
     glyph: "dash",
+  },
+  {
+    id: "venom",
+    name: "Frasco ácido",
+    tag: "VENENO",
+    desc: "Arremessa um frasco no alvo mais próximo. A nuvem aplica doses de toxina por 3s; prepare uma detonação ou atraia a horda.",
+    cooldown: 4.6,
+    color: "#b8ff62",
+    glyph: "toxin",
   },
 ] as const;
 export const skillById = (id: string) => SKILLS.find((s) => s.id === id)!;
@@ -356,7 +390,7 @@ export const REWARDS: Reward[] = [
     id: "dashload",
     name: "Gatilho de fuga",
     tag: "HIT & RUN",
-    desc: "Esquivar recarrega o tiro e dispara uma rajada para trás. Seu recuo também ataca.",
+    desc: "Esquivar prepara o próximo tiro e lança dois disparos leves para trás. Recuar ajuda a preparar marcas e doses.",
     max: 1,
     color: "#85d8ef",
   },
@@ -394,17 +428,17 @@ export const REWARDS: Reward[] = [
   },
   {
     id: "poison",
-    name: "Toxina glacial",
-    tag: "CONTROLAR",
-    desc: "Tiros envenenam e desaceleram. Envenene a linha de frente para criar espaço.",
+    name: "Frasco de toxina",
+    tag: "VENENO · DOSES",
+    desc: "Ataques aplicam uma dose de toxina. Doses acumulam até quatro; prepare inimigos para explosões e catálise.",
     max: 1,
     color: "#b8ff62",
   },
   {
     id: "explosion",
-    name: "Reação em cadeia",
-    tag: "DETONAR",
-    desc: "Abates explodem; com toxina, a explosão também transmite veneno. Combine com um poço gravitacional.",
+    name: "Estopim tóxico",
+    tag: "VENENO · DETONAR",
+    desc: "Inimigos mortos com três doses explodem e levam uma dose a até cinco vizinhos. A cadeia exige preparar a horda.",
     max: 1,
     color: "#c5afff",
   },
@@ -420,7 +454,7 @@ export const REWARDS: Reward[] = [
     id: "armor",
     name: "Casulo reativo",
     tag: "BLOQUEAR",
-    desc: "Um escudo bloqueia um impacto e lança uma onda de repulsão. Reconstrói sozinho após seis segundos.",
+    desc: "Um escudo bloqueia um impacto e lança uma onda de repulsão. Reconstrói sozinho após oito segundos.",
     max: 1,
     color: "#ffbc8a",
   },
@@ -472,6 +506,70 @@ export const REWARDS: Reward[] = [
     max: 1,
     color: "#ffda8a",
   },
+  {
+    id: "capacitor",
+    name: "Núcleo estático",
+    tag: "RAIO · CARGAS",
+    desc: "Ataques acumulam cargas. Na quarta carga, uma descarga leve salta para um vizinho. Cargas restantes passam adiante no abate; chumbos contam como um ataque.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "groundwire",
+    name: "Aterramento",
+    tag: "RAIO · ESQUIVA",
+    desc: "Esquivar consome cargas dos inimigos próximos e devolve uma descarga que os desacelera. Aproxime-se para abrir espaço.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "rod",
+    name: "Para-raios",
+    tag: "RAIO · TORRE",
+    desc: "A torre procura inimigos carregados. Seu disparo consome as cargas e lança choques em até dois vizinhos.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "faraday",
+    name: "Gaiola de Faraday",
+    tag: "RAIO · CIRCUITO",
+    desc: "Chuva de raios dentro do ímã consome cargas para saltar entre inimigos. Agrupe primeiro; conjure a tempestade depois.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "catalyst",
+    name: "Catalisador sísmico",
+    tag: "VENENO · CATÁLISE",
+    desc: "Ondas sísmicas, pisada e minas consomem três ou mais doses para causar uma explosão de dano. Envenene antes de detonar.",
+    max: 1,
+    color: "#b8ff62",
+  },
+  {
+    id: "mycelium",
+    name: "Jardim fúngico",
+    tag: "VENENO · CONTÁGIO",
+    desc: "Abates com duas doses deixam pequenas nuvens que contaminam quem passa. Atraia a próxima fila para o jardim.",
+    max: 1,
+    color: "#b8ff62",
+  },
+  {
+    id: "viscosity",
+    name: "Melaço tóxico",
+    tag: "VENENO · CONTROLE",
+    desc: "Inimigos com três doses ficam lentos. O controle aparece depois de aplicar veneno, criando janelas para parar.",
+    max: 1,
+    color: "#b8ff62",
+  },
+  {
+    id: "electrolysis",
+    name: "Eletrólise",
+    tag: "RAIO + VENENO",
+    desc: "A sobrecarga transfere até duas doses de toxina para os alvos atingidos pelo salto. Prepare veneno; use raio para espalhar.",
+    max: 1,
+    color: "#c5afff",
+  },
   ...SKILLS.map((s) => ({
     id: `skill:${s.id}`,
     name: s.name,
@@ -484,7 +582,7 @@ export const REWARDS: Reward[] = [
 export const comboDrain = (combo: number, moving: boolean) =>
   (1 + Math.min(3, combo / 16)) * (moving ? 1.7 : 1);
 export const comboLootChance = (combo: number) =>
-  Math.min(0.65, Math.max(0, combo - 2) * 0.018);
+  Math.min(0.4, Math.max(0, combo - 2) * 0.012);
 // FNV-1a + Mulberry32: the same seed produces the same encounter and reward stream.
 export function randomFromSeed(seed: string): () => number {
   let state = 2166136261;
@@ -504,6 +602,7 @@ export function createRun(seed: string, classId: ClassId): Run {
     weapon: "pulse",
     weapons: ["pulse"],
     practice: false,
+    reactions: { overload: 0, catalysis: 0, conduction: 0 },
     classId,
     room: 1,
     act: 1,
@@ -549,34 +648,86 @@ export function rewardOffers(
   random: () => number,
   exclude: string[] = [],
 ): string[] {
-  // Learn one system at a time: weapon, Q, E, then perks and new weapon forms.
-  const kind = run.room === 1 ? "weapon:" : run.room <= 3 ? "skill:" : "perk";
+  const kind =
+    run.room === 1
+      ? "relic"
+      : run.room <= 3
+        ? "skill"
+        : run.room === 4
+          ? "weapon"
+          : "perk";
   const projectile = !["circle", "chain"].includes(
     weaponById(run.weapon).pattern,
   );
+  const elements = buildElements(run);
   const eligible = REWARDS.filter((r) => {
     if ((run.rewards[r.id] ?? 0) >= r.max) return false;
-    if (r.id === "ricochet" && run.weapon === "shotgun") return false;
+    if (kind === "relic")
+      return ["capacitor", "poison", "dashload"].includes(r.id);
     if (r.id.startsWith("skill:"))
-      return kind === "skill:" && !run.skills.includes(r.id.slice(6));
+      return kind === "skill" && !run.skills.includes(r.id.slice(6));
     if (r.id.startsWith("weapon:"))
-      return (
-        kind !== "skill:" && !run.weapons.includes(r.id.slice(7) as WeaponId)
-      );
-    return (
-      kind === "perk" &&
-      (projectile ||
-        !["anchor", "double", "pierce", "crossfire", "ricochet"].includes(r.id))
-    );
+      return run.room >= 4 && !run.weapons.includes(r.id.slice(7) as WeaponId);
+    if (kind === "skill" || kind === "weapon") return false;
+    if (
+      !projectile &&
+      ["anchor", "double", "pierce", "crossfire", "ricochet"].includes(r.id)
+    )
+      return false;
+    if (r.id === "ricochet" && run.weapon === "shotgun") return false;
+    if (r.id === "echo" && !run.skills.every(Boolean)) return false;
+    if (r.id === "battery" && !run.skills.some(Boolean)) return false;
+    if (
+      ["explosion", "catalyst", "mycelium", "viscosity"].includes(r.id) &&
+      !elements.toxin
+    )
+      return false;
+    if (["groundwire", "rod", "faraday"].includes(r.id) && !elements.storm)
+      return false;
+    if (r.id === "rod" && !run.skills.includes("turret")) return false;
+    if (
+      r.id === "faraday" &&
+      !(run.skills.includes("vortex") && run.skills.includes("storm"))
+    )
+      return false;
+    if (
+      r.id === "catalyst" &&
+      !(
+        run.weapon === "seismic" ||
+        run.skills.some((id) => id === "quake" || id === "mine")
+      )
+    )
+      return false;
+    if (r.id === "electrolysis" && !(elements.storm && elements.toxin))
+      return false;
+    return true;
   });
-  const fresh = eligible.filter((r) => !exclude.includes(r.id));
-  const pool = [...fresh, ...eligible.filter((r) => exclude.includes(r.id))];
-  // Draw without replacement, preferring unseen offers during a reroll.
+  // A fully collected weapon draft falls back to legal passives (also useful in the lab).
+  if (kind === "weapon" && eligible.length < 3) {
+    for (const r of REWARDS)
+      if (
+        !r.id.includes(":") &&
+        ["capacitor", "poison", "dashload", "health", "anchor"].includes(
+          r.id,
+        ) &&
+        (run.rewards[r.id] ?? 0) < r.max
+      )
+        eligible.push(r);
+  }
+  const pool = [
+    ...eligible.filter((r) => !exclude.includes(r.id)),
+    ...eligible.filter((r) => exclude.includes(r.id)),
+  ];
   const result: string[] = [];
   while (result.length < 3 && pool.length) {
-    const freshCount = pool.filter((r) => !exclude.includes(r.id)).length;
-    const index = Math.floor(random() * (freshCount || pool.length));
-    result.push(pool.splice(index, 1)[0].id);
+    const fresh = pool.filter((r) => !exclude.includes(r.id));
+    let choices = fresh.length ? fresh : pool;
+    // One fitting offer helps a build become coherent; the others keep the draft open.
+    const fitting = choices.filter((r) => rewardSynergy(run, r.id));
+    if (!result.length && fitting.length) choices = fitting;
+    const picked = choices[Math.floor(random() * choices.length)];
+    result.push(picked.id);
+    pool.splice(pool.indexOf(picked), 1);
   }
   return result;
 }
@@ -609,29 +760,82 @@ export function applyReward(
   return true;
 }
 export function roomComposition(room: number): EnemyKind[] {
+  const act = Math.ceil(room / 4),
+    stage = (room - 1) % 4;
   if (room % 4 === 0)
     return [
       "boss",
-      ...Array.from(
-        { length: 6 + Math.ceil(room / 4) * 3 },
-        () => "chaser" as const,
-      ),
+      ...Array.from({ length: 6 + act * 2 }, () => "chaser" as const),
     ];
-  const act = Math.ceil(room / 4);
-  const stage = (room - 1) % 4;
-  const result: EnemyKind[] = Array.from(
-    { length: 18 + stage * 10 + (act - 1) * 12 },
-    () => "chaser",
-  );
-  if (stage >= 1 || act >= 2)
-    result.push(
-      ...Array.from({ length: act + stage }, () => "runner" as const),
-    );
-  if (stage >= 2 || act >= 2)
-    result.push(...Array.from({ length: act }, () => "shooter" as const));
-  if (act >= 2)
-    result.push(...Array.from({ length: act - 1 }, () => "guard" as const));
+  const groups: Record<Exclude<EnemyKind, "boss">, number> = {
+    chaser: 20 + stage * 6 + (act - 1) * 8,
+    runner: 2 + stage * 2 + (act - 1) * 2,
+    shooter: 1 + stage + (act - 1) * 2,
+    guard: Math.max(0, stage + act - 1),
+  };
+  const result: EnemyKind[] = [];
+  // Interleave threats: ranged and flankers no longer arrive only after the basic horde.
+  while (Object.values(groups).some((n) => n > 0))
+    for (const kind of [
+      "chaser",
+      "chaser",
+      "runner",
+      "chaser",
+      "shooter",
+      "chaser",
+      "guard",
+    ] as const)
+      if (groups[kind] > 0) {
+        result.push(kind);
+        groups[kind]--;
+      }
   return result;
+}
+export function buildElements(run: Run) {
+  return {
+    storm:
+      !!run.rewards.capacitor ||
+      run.weapon === "arc" ||
+      run.skills.includes("storm"),
+    toxin:
+      !!run.rewards.poison ||
+      run.weapon === "needle" ||
+      run.skills.includes("venom"),
+  };
+}
+export function rewardSynergy(run: Run, id: string): string | null {
+  const e = buildElements(run);
+  if (id === "electrolysis" && e.storm && e.toxin)
+    return "RAIO + DOSES → CONTÁGIO";
+  if (id === "faraday") return "ÍMÃ + TEMPESTADE → CIRCUITO";
+  if (id === "rod") return "TORRE + CARGAS → PARA-RAIOS";
+  if (id === "catalyst") return "DOSES + IMPACTO → CATÁLISE";
+  if (
+    e.storm &&
+    [
+      "capacitor",
+      "groundwire",
+      "weapon:arc",
+      "skill:storm",
+      "skill:turret",
+    ].includes(id)
+  )
+    return "CARGAS → DESCARGAS EM CADEIA";
+  if (
+    e.toxin &&
+    [
+      "poison",
+      "explosion",
+      "mycelium",
+      "viscosity",
+      "weapon:needle",
+      "skill:venom",
+      "skill:quake",
+      "skill:mine",
+    ].includes(id)
+  )
+    return "DOSES → CONTROLE E DETONAÇÃO";
+  return null;
 }
 export function advanceRoom(run: Run): boolean {
   if (run.room >= TOTAL_ROOMS) return false;

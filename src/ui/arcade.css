@@ -1990,3 +1990,175 @@ body {
   padding: 9px;
   font-size: 11px;
 }
+
+/* Elemental reactions explain the build without a class selection. */
+.build-synergies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.build-synergies > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #819dc244;
+  padding: 9px;
+  color: #c5afff;
+  font: 10px monospace;
+}
+.build-synergies .icon {
+  width: 17px;
+  height: 17px;
+}
+.build-synergies .storm {
+  color: #85d8ef;
+}
+.build-synergies .toxin {
+  color: #b8ff62;
+}
+.build-synergies small {
+  font-size: 8px;
+  color: #9aa9c3;
+}
+.synergy-hint {
+  display: block;
+  font: 10px/1.6 monospace;
+  color: #c5afff;
+  padding-top: 10px;
+}
+:root[data-ui] .elemental-card .item-description {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.elemental-card .loot-hint {
+  display: none;
+}
+:root[data-ui="mobile"] .elemental-card .item-description,
+:root[data-ui="mobile"] .synergy-hint {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+:root[data-ui="mobile"] .elemental-card .loot-pips {
+  display: none;
+}
+
+/* More playfield and larger world silhouettes, with controls still outside combat. */
+:root[data-ui="mobile"] {
+  --mobile-header: 36px;
+  --field-top: 104px;
+  --field-bottom: 124px;
+  --field-side: 6px;
+}
+:root[data-ui="mobile"] .masthead {
+  padding-left: calc(10px + var(--safe-left));
+  padding-right: calc(10px + var(--safe-right));
+}
+:root[data-ui="mobile"] .brand {
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+:root[data-ui="mobile"] .brand > .icon {
+  width: 20px;
+  height: 20px;
+}
+:root[data-ui="mobile"] .header-actions .icon-button {
+  width: 28px;
+  height: 30px;
+  min-height: 28px;
+}
+:root[data-ui="mobile"] .mobile-hud {
+  padding: 0 12px 3px;
+}
+:root[data-ui="mobile"] .mobile-progress {
+  min-height: 25px;
+  gap: 8px;
+}
+:root[data-ui="mobile"] .mobile-progress .icon-button {
+  width: 32px;
+  height: 28px;
+  min-height: 28px;
+}
+:root[data-ui="mobile"] .mobile-status {
+  min-height: 25px;
+}
+:root[data-ui="mobile"] .mobile-status .vitals {
+  width: 105px;
+}
+:root[data-ui="mobile"] .mobile-status .meter {
+  margin-top: 3px;
+}
+:root[data-ui="mobile"] .boss-health {
+  margin: 0 12px;
+}
+:root[data-ui="mobile"] .touch-controls:not([hidden]) {
+  bottom: calc(8px + var(--safe-bottom));
+  left: calc(10px + var(--safe-left));
+  right: calc(10px + var(--safe-right));
+  height: 108px;
+}
+:root[data-ui="mobile"] .joystick {
+  width: 88px;
+  height: 88px;
+}
+:root[data-ui="mobile"] .stick-hint {
+  display: none;
+}
+:root[data-ui="mobile"] .touch-actions {
+  grid-template-columns: repeat(2, 56px);
+  gap: 6px;
+}
+:root[data-ui="mobile"] .touch-actions > button,
+:root[data-ui="mobile"] .touch-actions > button:last-child {
+  width: 56px;
+  height: 52px;
+  min-height: 52px;
+  border-radius: 14px;
+}
+:root[data-ui="mobile"] .touch-actions > button span {
+  font-size: 7px;
+  max-width: 52px;
+}
+:root[data-ui="mobile"] .touch-actions > button small {
+  font-size: 9px;
+}
+:root[data-ui="mobile"] .weapon-indicator {
+  top: calc(var(--field-top) + var(--safe-top) + 5px);
+  left: calc(var(--field-side) + var(--safe-left) + 5px);
+}
+:root[data-ui="mobile"] .build-synergies > span {
+  flex-wrap: wrap;
+  padding: 7px;
+  font-size: 9px;
+}
+@media (orientation: landscape) {
+  :root[data-ui="mobile"] {
+    --mobile-header: 32px;
+    --field-top: 80px;
+    --field-bottom: 6px;
+    --field-side: 104px;
+  }
+  :root[data-ui="mobile"] .mobile-hud {
+    padding: 0 12px;
+    gap: 15px;
+  }
+  :root[data-ui="mobile"] .mobile-progress,
+  :root[data-ui="mobile"] .mobile-status {
+    min-height: 27px;
+  }
+  :root[data-ui="mobile"] .touch-controls:not([hidden]) {
+    height: calc(100dvh - 95px - var(--safe-top) - var(--safe-bottom));
+    align-items: flex-end;
+  }
+  :root[data-ui="mobile"] .touch-actions {
+    display: flex;
+    gap: 6px;
+  }
+  :root[data-ui="mobile"] .touch-actions > button,
+  :root[data-ui="mobile"] .touch-actions > button:last-child {
+    width: 68px;
+    height: 52px;
+    min-height: 52px;
+  }
+}

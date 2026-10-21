@@ -2,6 +2,7 @@ import { skillById, weaponById } from "../game/model";
 import type { WeaponId } from "../game/model";
 
 const GUIDES: Record<string, { where: string; pattern: string }> = {
+  venom: { where: "NO INIMIGO MAIS PRÓXIMO", pattern: "field" },
   volley: { where: "NA DIREÇÃO DO ALVO", pattern: "cone" },
   nova: { where: "AO SEU REDOR", pattern: "circle" },
   quake: { where: "AO SEU REDOR", pattern: "circle" },

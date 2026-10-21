@@ -3,7 +3,7 @@
 ## Implementado
 
 - [x] Ciclo completo de run com início, escolha, descanso, derrota e vitória.
-- [x] Três pilotos, nove habilidades ativas em Q/E e 16 perks de comportamento.
+- [x] Três pilotos, dez habilidades ativas em Q/E e 24 perks de comportamento.
 - [x] Três atos, 12 encontros e três guardiões com quatro fases e transições.
 - [x] Interface HTML responsiva, HUD, teclado e controles de toque.
 - [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
@@ -15,9 +15,12 @@
 
 - [x] Habilidades nas primeiras waves, combo ligado a risco/ouro e laboratório com estados/presets.
 
+- [x] Cargas de raio, doses de veneno, reações entre armas/habilidades/perks e arena móvel ampliada.
+
 ## Depois de playtests
 
-- [ ] Ajustar duração e pressão por ato com observações de jogadores.
+- [x] Rebalancear a pressão das waves, armas, economia e fases dos bosses.
+- [ ] Continuar ajustando duração e pressão com playtests humanos.
 - [ ] Dar silhuetas e movimentos ainda mais distintos aos três chefes.
 - [x] Escolhas que modificam padrões, mantendo a regra de parar para atirar.
 - [ ] Explorar encontros de risco/recompensa, variações de arena e eventos.

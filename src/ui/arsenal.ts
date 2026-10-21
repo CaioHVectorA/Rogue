@@ -12,6 +12,7 @@ const SKILL_HINTS: Record<string, string> = {
   mine: "Deixe o presente e atraia a horda",
   orbit: "Entre na horda; lâminas apagam tiros",
   decoy: "Sua cópia atrai a horda e explode",
+  venom: "Crie doses antes de detonar",
 };
 
 export const ITEM_VISUALS: Record<
@@ -56,15 +57,15 @@ export const ITEM_VISUALS: Record<
   },
   poison: {
     glyph: "toxin",
-    value: "❄",
+    value: "4",
     stat: "TOXINA",
-    hint: "Envenene e freie a linha de frente",
+    hint: "Acumule doses e prepare uma reação",
   },
   explosion: {
     glyph: "explosion",
     value: "∞",
     stat: "CADEIA",
-    hint: "Abates explodem e espalham toxina",
+    hint: "Prepare três doses antes do abate",
   },
   health: {
     glyph: "heart",
@@ -113,6 +114,54 @@ export const ITEM_VISUALS: Record<
     value: "♦",
     stat: "APOSTAR",
     hint: "Combo dá mais ouro; dano zera tudo",
+  },
+  capacitor: {
+    glyph: "bolt",
+    value: "ϟ",
+    stat: "CARGAS",
+    hint: "Quatro cargas liberam uma descarga",
+  },
+  groundwire: {
+    glyph: "dash",
+    value: "ϟ",
+    stat: "ATERRAR",
+    hint: "Esquiva consome cargas próximas",
+  },
+  rod: {
+    glyph: "target",
+    value: "ϟ",
+    stat: "PARA-RAIOS",
+    hint: "Torre descarrega os alvos marcados",
+  },
+  faraday: {
+    glyph: "mark",
+    value: "↯",
+    stat: "CIRCUITO",
+    hint: "Ímã + tempestade criam um circuito",
+  },
+  catalyst: {
+    glyph: "seismic",
+    value: "✦",
+    stat: "CATÁLISE",
+    hint: "Doses + impacto viram uma detonação",
+  },
+  mycelium: {
+    glyph: "toxin",
+    value: "❀",
+    stat: "CONTÁGIO",
+    hint: "Abates plantam um jardim tóxico",
+  },
+  viscosity: {
+    glyph: "toxin",
+    value: "≋",
+    stat: "CONTROLE",
+    hint: "Três doses prendem a linha de frente",
+  },
+  electrolysis: {
+    glyph: "bolt",
+    value: "ϟ●",
+    stat: "HÍBRIDO",
+    hint: "O raio transporta doses de veneno",
   },
   ...Object.fromEntries(
     WEAPONS.map((w) => [

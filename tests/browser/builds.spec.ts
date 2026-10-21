@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("runs start without skills, draft a weapon, then equip Q and E", async ({
+test("runs start without skills, draft a small relic, then equip Q and E", async ({
   page,
 }) => {
   await page.goto("/");
@@ -23,12 +23,16 @@ test("runs start without skills, draft a weapon, then equip Q and E", async ({
       .locator(".reward-card")
       .first()
       .getAttribute("data-value"))!;
-    expect(id.startsWith(room === 1 ? "weapon:" : "skill:")).toBe(true);
-    await expect(page.locator(".power-description").first()).toBeVisible();
-    await expect(page.locator(".power-diagram").first()).toBeVisible();
+    if (room === 1) expect(["capacitor", "poison", "dashload"]).toContain(id);
+    else expect(id.startsWith("skill:")).toBe(true);
+    if (room > 1) {
+      await expect(page.locator(".power-description").first()).toBeVisible();
+      await expect(page.locator(".power-diagram").first()).toBeVisible();
+    }
     await page.locator(".reward-card").first().click();
     const skills = await page.evaluate(() => window.__rogue.run.skills);
     if (room === 1) expect(skills).toEqual([null, null]);
+    expect(await page.evaluate(() => window.__rogue.run.weapon)).toBe("pulse");
     if (room === 2) expect(skills).toEqual([id.slice(6), null]);
     if (room === 3) expect(skills[1]).toBe(id.slice(6));
     await page.locator('[data-action="next"]').click();
@@ -189,7 +193,7 @@ test("equipped attacks explain their footprint and return to combat", async ({
   await page
     .getByRole("button", { name: "Entender ataque: Escopeta", exact: true })
     .click();
-  await expect(page.locator(".power-help")).toContainText("curta distância");
+  await expect(page.locator(".power-help")).toContainText("De perto");
   await expect(page.locator(".power-diagram")).toBeVisible();
 });
 
@@ -220,5 +224,51 @@ test("Kaplay shotgun collisions hurt nearby enemies and leave distant enemies un
     .poll(() => page.evaluate(() => window.__rogue.enemies[0].hp))
     .toBeLessThan(10000);
   expect(await page.evaluate(() => window.__rogue.enemies[1].hp)).toBe(10000);
+  expect(errors).toEqual([]);
+});
+
+test("lightning and poison builds react through the real runtime", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Iniciar expedição" }).click();
+  await page.evaluate(() => {
+    const g = window.__rogue;
+    g.practice(4, 1, "lightning");
+    g.labGod = true;
+    g.run.weapon = "minigun";
+    g.run.skills = [null, null];
+    g.intro = 0;
+    g.enemies = [];
+    g.spawnQueue = [];
+    g.roomTime = 0;
+    for (const dx of [130, 220]) {
+      (g as any).spawn("guard", g.player.x + dx, g.player.y);
+      const e = g.enemies.at(-1)!;
+      e.hp = e.maxHp = 10000;
+      e.speed = 0;
+      e.timer = 100;
+    }
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__rogue.run.reactions.overload))
+    .toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const g = window.__rogue;
+    g.practice(4, 1, "toxin");
+    g.labGod = true;
+    g.intro = 0;
+    g.player.y = g.enemies[0].y + 130;
+    g.skill();
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.__rogue.enemies[0]?.venom ?? 0))
+    .toBeGreaterThanOrEqual(3);
+  await page.evaluate(() => window.__rogue.skill(1));
+  await expect
+    .poll(() => page.evaluate(() => window.__rogue.run.reactions.catalysis))
+    .toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });

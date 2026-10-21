@@ -10,7 +10,7 @@ describe("device layouts", () => {
     expect(detectInterface(1024, false)).toBe("desktop");
     expect(detectInterface(1440, false)).toBe("desktop");
   });
-  it("fits both phone orientations without changing world area", () => {
+  it("fits both phone orientations with larger silhouettes and the same mobile area", () => {
     for (const [width, height] of [
       [366, 530],
       [566, 264],
@@ -18,7 +18,7 @@ describe("device layouts", () => {
     ]) {
       const world = arenaDimensions(width, height, true);
       expect(world.width / world.height).toBeCloseTo(width / height);
-      expect(world.width * world.height).toBeCloseTo(1200 * 760);
+      expect(world.width * world.height).toBeCloseTo(1200 * 760 * 0.82);
       const scale = Math.min(width / world.width, height / world.height);
       expect(world.width * scale).toBeCloseTo(width);
       expect(world.height * scale).toBeCloseTo(height);

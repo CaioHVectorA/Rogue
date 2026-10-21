@@ -94,6 +94,9 @@ for (const size of [
       expect(controls.right).toBeLessThanOrEqual(boxes.width);
       expect(controls.bottom).toBeLessThanOrEqual(boxes.height);
     }
+    if (size[0] < size[1])
+      expect(a.height / boxes.height).toBeGreaterThan(0.58);
+    else expect(a.width / boxes.width).toBeGreaterThan(0.7);
     expect(a.width).toBeGreaterThan(200);
     expect(a.height).toBeGreaterThan(180);
     expect(boxes.world.width / boxes.world.height).toBeCloseTo(

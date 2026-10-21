@@ -23,6 +23,7 @@ import {
 import type {
   Field,
   WeaponId,
+  Element,
   Phase,
   ClassId,
   Player,
@@ -41,6 +42,7 @@ const clamp = (n: number, min: number, max: number) =>
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const RECORD_KEY = "rogue.records.v2";
 export type Feedback = {
+  label?: string;
   toX?: number;
   toY?: number;
   type:
@@ -52,7 +54,8 @@ export type Feedback = {
     | "dash"
     | "clear"
     | "pickup"
-    | "beam";
+    | "beam"
+    | "reaction";
   x: number;
   y: number;
   color?: string;
@@ -79,6 +82,8 @@ export class Game {
   private lootRandom = randomFromSeed("loot");
   private hitClock = 0;
   private shotCount = 0;
+  private batteryCd = 0;
+  private reactionCd = 0;
   records: RecordBook = emptyRecords();
   keys = new Set<string>();
   stick = { x: 0, y: 0 };
@@ -187,6 +192,7 @@ export class Game {
     this.fields = [];
     this.hitClock = 0;
     this.shotCount = 0;
+    this.batteryCd = this.reactionCd = 0;
     this.combo = 0;
     this.comboTimer = 0;
     this.roomTime = 0;
@@ -211,7 +217,10 @@ export class Game {
         90 + this.random() * (side % 2 ? this.height - 180 : this.width - 180);
       return {
         kind,
-        at: 1.5 + Math.floor(i / 10) * 1.1 + (i % 10) * 0.09,
+        at:
+          1.5 +
+          Math.floor(i / 8) * (this.run.room % 4 === 0 ? 2.1 : 2.5) +
+          (i % 8) * 0.14,
         x:
           kind === "boss"
             ? this.width / 2
@@ -253,7 +262,8 @@ export class Game {
     this.setPhase("camp");
   }
   reroll() {
-    if (this.phase !== "reward" || this.run.rerolls <= 0) return;
+    if (this.phase !== "reward" || this.run.rerolls <= 0 || this.run.room === 1)
+      return;
     this.run.rerolls--;
     this.offerRound++;
     this.run.offers = rewardOffers(
@@ -269,7 +279,7 @@ export class Game {
     return 18 + (this.run.act - 1) * 7;
   }
   get forgeCost() {
-    return 22 + this.run.purchases * 15;
+    return 28 + (this.run.act - 1) * 12;
   }
   buy(kind: "heal" | "forge") {
     if (this.phase !== "camp") return;
@@ -281,10 +291,10 @@ export class Game {
       this.run.healed = true;
       p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.4));
     } else {
-      if (this.run.purchases >= 2 || this.run.gold < this.forgeCost) return;
+      if (this.run.purchases >= 1 || this.run.gold < this.forgeCost) return;
       this.run.gold -= this.forgeCost;
       this.run.purchases++;
-      p.damage *= 1.08;
+      p.damage += 2;
     }
     this.sound(520, 0.1, "sine", 0.04);
     this.onChange();
@@ -307,8 +317,8 @@ export class Game {
     if (slot === 0) p.skillCd = definition.cooldown;
     else p.secondCd = definition.cooldown;
     if (this.run.rewards.echo) {
-      if (slot === 0) p.secondCd = Math.max(0, p.secondCd - 1.3);
-      else p.skillCd = Math.max(0, p.skillCd - 1.3);
+      if (slot === 0) p.secondCd = Math.max(0, p.secondCd - 0.8);
+      else p.skillCd = Math.max(0, p.skillCd - 0.8);
     }
     const target = this.nearest() ?? {
       x: p.x + this.aim.x * 180,
@@ -317,10 +327,10 @@ export class Game {
     const angle = Math.atan2(target.y - p.y, target.x - p.x);
     if (id === "volley") {
       for (let i = -3; i <= 3; i++)
-        this.projectile(p, angle + i * 0.13, p.damage * 1.8, false, 2, 720);
+        this.projectile(p, angle + i * 0.13, p.damage * 1.35, false, 2, 720);
     } else if (id === "nova" || id === "quake") {
       let hits = 0;
-      const radius = id === "nova" ? 265 : 220;
+      const radius = id === "nova" ? 205 : 170;
       for (const enemy of [...this.enemies]) {
         if (distance(p, enemy) > radius + enemy.radius) continue;
         hits++;
@@ -330,28 +340,35 @@ export class Game {
           enemy.y = clamp(enemy.y + Math.sin(a) * 85, 45, this.height - 45);
         }
         if (id === "nova") enemy.slowed = 2;
-        this.hitEnemy(enemy, p.damage * (id === "quake" ? 3 : 2.6));
+        this.hitEnemy(
+          enemy,
+          p.damage * (id === "quake" ? 2.2 : 1.6),
+          !!this.run.rewards.poison,
+          "neutral",
+        );
+        if (id === "quake") this.catalyse(enemy);
       }
       if (id === "quake")
-        p.hp = Math.min(p.maxHp, p.hp + Math.min(12, hits * 3));
+        p.hp = Math.min(p.maxHp, p.hp + Math.min(8, hits * 2));
       else
         this.bullets = this.bullets.filter(
           (b) => !b.hostile || distance(b, p) > radius,
         );
     } else {
-      const at = id === "vortex" || id === "storm" ? target : p;
-      this.addField(id as Field["kind"], at);
+      const at =
+        id === "vortex" || id === "storm" || id === "venom" ? target : p;
+      this.addField(id === "venom" ? "toxin" : (id as Field["kind"]), at);
       if (id === "decoy") p.invulnerable = Math.max(p.invulnerable, 0.5);
     }
     this.onFeedback({
       type: "skill",
-      x: id === "vortex" || id === "storm" ? target.x : p.x,
-      y: id === "vortex" || id === "storm" ? target.y : p.y,
+      x: id === "vortex" || id === "storm" || id === "venom" ? target.x : p.x,
+      y: id === "vortex" || id === "storm" || id === "venom" ? target.y : p.y,
       radius:
         id === "nova"
-          ? 265
+          ? 205
           : id === "quake"
-            ? 220
+            ? 170
             : id === "vortex"
               ? 185
               : id === "storm"
@@ -372,6 +389,7 @@ export class Game {
       mine: 150,
       orbit: 100,
       decoy: 120,
+      toxin: 115,
     };
     const lives = {
       vortex: 3,
@@ -380,6 +398,7 @@ export class Game {
       mine: 5,
       orbit: 3.2,
       decoy: 2.5,
+      toxin: 3,
     };
     this.fields.push({
       kind,
@@ -389,6 +408,7 @@ export class Game {
       life: lives[kind],
       timer: kind === "mine" ? 0.45 : 0,
       power: this.player.damage,
+      blocks: 6,
     });
   }
   private updateFields(dt: number) {
@@ -409,23 +429,36 @@ export class Game {
           }
         }
       }
-      if (field.kind === "orbit")
-        this.bullets = this.bullets.filter(
-          (b) => !b.hostile || distance(b, field) > field.radius,
-        );
+      if (field.kind === "orbit" && field.blocks > 0)
+        this.bullets = this.bullets.filter((b) => {
+          if (
+            b.hostile &&
+            field.blocks > 0 &&
+            distance(b, field) < field.radius
+          ) {
+            field.blocks--;
+            return false;
+          }
+          return true;
+        });
       if (field.timer > 0) continue;
       if (field.kind === "turret") {
         const target = this.enemies
           .filter((e) => e.hp > 0)
-          .sort((a, b) => distance(a, field) - distance(b, field))[0];
+          .sort(
+            (a, b) =>
+              (this.run.rewards.rod ? b.shock - a.shock : 0) ||
+              distance(a, field) - distance(b, field),
+          )[0];
         if (target)
           this.projectile(
             field,
             Math.atan2(target.y - field.y, target.x - field.x),
-            field.power * 0.8,
+            field.power * 0.55,
             false,
           );
-        field.timer = 0.3;
+        if (target) this.bullets[this.bullets.length - 1].origin = "turret";
+        field.timer = 0.45;
       } else if (field.kind === "mine" || field.kind === "decoy") {
         const triggered =
           field.kind === "mine"
@@ -435,8 +468,15 @@ export class Game {
             : field.life <= 0;
         if (triggered) {
           for (const enemy of this.enemies)
-            if (distance(enemy, field) < field.radius + enemy.radius)
-              this.hitEnemy(enemy, field.power * 4, !!this.run.rewards.poison);
+            if (distance(enemy, field) < field.radius + enemy.radius) {
+              this.hitEnemy(
+                enemy,
+                field.power * 2.5,
+                !!this.run.rewards.poison,
+                "neutral",
+              );
+              this.catalyse(enemy);
+            }
           this.onFeedback({
             type: "skill",
             x: field.x,
@@ -449,18 +489,45 @@ export class Game {
         }
       } else {
         for (const enemy of this.enemies)
-          if (distance(enemy, field) < field.radius + enemy.radius)
+          if (distance(enemy, field) < field.radius + enemy.radius) {
+            const power =
+              field.kind === "storm"
+                ? 0.55
+                : field.kind === "orbit"
+                  ? 0.45
+                  : field.kind === "toxin"
+                    ? 0.1
+                    : 0.15;
             this.hitEnemy(
               enemy,
-              field.power *
-                (field.kind === "storm"
-                  ? 0.85
-                  : field.kind === "orbit"
-                    ? 0.65
-                    : 0.35),
+              field.power * power,
+              field.kind === "toxin" || !!this.run.rewards.poison,
+              field.kind === "storm"
+                ? "storm"
+                : field.kind === "toxin"
+                  ? undefined
+                  : "neutral",
             );
-        if (field.kind === "storm") this.burst(field, "#85d8ef", 8, 145);
-        field.timer = field.kind === "storm" ? 0.4 : 0.35;
+            if (
+              field.kind === "storm" &&
+              this.run.rewards.faraday &&
+              enemy.shock > 0 &&
+              this.fields.some(
+                (f) => f.kind === "vortex" && distance(f, enemy) < f.radius,
+              )
+            ) {
+              const other = this.enemies.find(
+                (e) => e !== enemy && e.hp > 0 && distance(e, enemy) < 170,
+              );
+              if (other && enemy.hp > 0) {
+                enemy.shock--;
+                this.arcHit(enemy, other, field.power * 0.45);
+                this.reaction("conduction", enemy, "CIRCUITO");
+              }
+            }
+          }
+        if (field.kind === "storm") this.burst(field, "#85d8ef", 5, 120);
+        field.timer = field.kind === "toxin" ? 0.6 : 0.5;
       }
     }
     this.fields = this.fields.filter((f) => f.life > 0);
@@ -480,9 +547,19 @@ export class Game {
     if (this.run.rewards.dashload) {
       p.charge = this.fireInterval;
       const angle = Math.atan2(-p.dashY, -p.dashX);
-      for (const offset of [-0.2, 0, 0.2])
-        this.projectile(p, angle + offset, p.damage, false);
+      for (const offset of [-0.12, 0.12])
+        this.projectile(p, angle + offset, p.damage * 0.55, false);
     }
+    if (this.run.rewards.groundwire)
+      for (const enemy of this.enemies
+        .filter((e) => e.hp > 0 && e.shock > 0 && distance(e, p) < 165)
+        .slice(0, 8)) {
+        const charges = enemy.shock;
+        enemy.shock = 0;
+        enemy.slowed = Math.max(enemy.slowed, 0.8);
+        this.arcHit(p, enemy, p.damage * 0.4 * charges);
+        this.reaction("conduction", enemy, "ATERRAMENTO");
+      }
     this.onFeedback({
       type: "dash",
       x: p.x,
@@ -515,11 +592,11 @@ export class Game {
   private spawn(kind: EnemyKind, x: number, y: number) {
     const act = this.run.act;
     const stats = {
-      chaser: [14, 88, 10, 14],
-      runner: [10, 145, 8, 11],
-      shooter: [30, 65, 12, 19],
-      guard: [70, 57, 19, 27],
-      boss: [1800 + (act - 1) * 1800, 42, 23, 66],
+      chaser: [26, 105, 11, 14],
+      runner: [21, 165, 12, 11],
+      shooter: [48, 72, 13, 19],
+      guard: [105, 67, 19, 27],
+      boss: [2700 + (act - 1) * 3000, 50, 26, 66],
     }[kind];
     const hp = stats[0] * (kind === "boss" ? 1 : 1 + (act - 1) * 0.38);
     this.enemies.push({
@@ -541,6 +618,13 @@ export class Game {
       phase: 1,
       transition: 0,
       slowed: 0,
+      venom: 0,
+      shock: 0,
+      markCd: 0,
+      windup: 0,
+      dashLeft: 0,
+      dashVX: 0,
+      dashVY: 0,
     });
     this.burst({ x, y }, "#8295a8", 12, 45);
   }
@@ -584,12 +668,15 @@ export class Game {
     this.shotCount++;
     if (weapon.pattern === "circle") {
       for (const enemy of this.enemies)
-        if (distance(enemy, p) <= weapon.range + enemy.radius)
+        if (distance(enemy, p) <= weapon.range + enemy.radius) {
           this.hitEnemy(
             enemy,
             p.damage * weapon.power,
             !!this.run.rewards.poison,
+            "neutral",
           );
+          this.catalyse(enemy);
+        }
       this.onFeedback({
         type: "skill",
         x: p.x,
@@ -616,6 +703,7 @@ export class Game {
           next,
           p.damage * weapon.power * (i ? 0.8 : 1),
           !!this.run.rewards.poison,
+          "storm",
         );
         from = next;
         next = this.enemies
@@ -638,22 +726,26 @@ export class Game {
         this.projectile(
           p,
           angle + offset,
-          p.damage * weapon.power * (double ? 0.75 : 1) * (anchored ? 3 : 1),
+          p.damage * weapon.power * (double ? 0.6 : 1) * (anchored ? 2 : 1),
           false,
           anchored
             ? 6
-            : (this.run.weapon === "rail" ? 4 : 0) +
-                (this.run.rewards.pierce ? 2 : 0),
+            : (this.run.weapon === "rail"
+                ? 4
+                : this.run.weapon === "needle"
+                  ? 1
+                  : 0) + (this.run.rewards.pierce ? 2 : 0),
           speed,
         );
         const bullet = this.bullets[this.bullets.length - 1];
         bullet.life = weapon.range / speed;
         bullet.color = weapon.color;
+        bullet.element = this.run.weapon === "needle" ? "toxin" : "neutral";
         bullet.ricochets = this.run.weapon !== "shotgun";
       }
       if (this.run.rewards.crossfire)
         for (const offset of [Math.PI / 2, Math.PI, -Math.PI / 2]) {
-          this.projectile(p, angle + offset, p.damage, false, 0, 820);
+          this.projectile(p, angle + offset, p.damage * 0.45, false, 0, 820);
           const bullet = this.bullets[this.bullets.length - 1];
           bullet.life = weapon.range / 820;
           bullet.color = weapon.color;
@@ -670,7 +762,12 @@ export class Game {
     );
     return true;
   }
-  private hitEnemy(enemy: Enemy, damage: number, poison = false) {
+  private hitEnemy(
+    enemy: Enemy,
+    damage: number,
+    poison = false,
+    element?: Element,
+  ) {
     if (enemy.hp <= 0) return;
     if (enemy.kind === "boss") {
       if (enemy.transition > 0) return;
@@ -682,6 +779,7 @@ export class Game {
         enemy.enraged = true;
         enemy.transition = 1.2;
         enemy.timer = 1.3;
+        enemy.windup = enemy.dashLeft = 0;
         this.bullets = this.bullets.filter((b) => !b.hostile);
         this.notice = `FASE ${["", "I", "II", "III", "IV"][enemy.phase]} · ${["", "", "CERCO", "RUPTURA", "COLAPSO"][enemy.phase]}`;
         this.noticeTime = 2.5;
@@ -715,12 +813,86 @@ export class Game {
       });
       this.burst(enemy, "#ffda8a", 5, 120);
     }
-    enemy.flash = 0.12;
-    if (poison) {
-      enemy.poisoned = 3;
-      enemy.slowed = Math.max(enemy.slowed, 0.6);
-    }
+    if (damage >= 1) enemy.flash = 0.12;
+    if ((poison || element !== undefined) && enemy.transition <= 0)
+      this.mark(enemy, poison, element);
     if (enemy.hp <= 0) this.chainQueue.push(enemy);
+  }
+  private addToxin(enemy: Enemy, doses = 1) {
+    enemy.venom = Math.min(4, enemy.venom + doses);
+    enemy.poisoned = 3;
+    if (this.run.rewards.viscosity && enemy.venom >= 3)
+      enemy.slowed = Math.max(enemy.slowed, 0.7);
+  }
+  private mark(enemy: Enemy, poison: boolean, element?: Element) {
+    // One stack per hit window: a shotgun or a volley cannot trigger seven reactions at once.
+    if (enemy.markCd > 0) return;
+    enemy.markCd = 0.12;
+    if (poison || element === "toxin")
+      this.addToxin(enemy, element === "toxin" ? 2 : 1);
+    if (
+      element === "storm" ||
+      (element !== undefined && this.run.rewards.capacitor)
+    ) {
+      enemy.shock = Math.min(4, enemy.shock + 1);
+      if (enemy.shock >= 4 && enemy.hp > 0) {
+        enemy.shock = 0;
+        const neighbors = this.enemies
+          .filter((e) => e !== enemy && e.hp > 0 && distance(e, enemy) < 150)
+          .sort((a, b) => distance(a, enemy) - distance(b, enemy))
+          .slice(0, this.run.rewards.electrolysis ? 2 : 1);
+        this.hitEnemy(enemy, this.player.damage * 0.35);
+        for (const other of neighbors) {
+          this.arcHit(enemy, other, this.player.damage * 0.45);
+          if (this.run.rewards.electrolysis && enemy.venom > 0) {
+            enemy.venom--;
+            this.addToxin(other);
+            if (!enemy.venom) enemy.poisoned = 0;
+          }
+        }
+        this.reaction("overload", enemy, "SOBRECARGA");
+      }
+    }
+  }
+  private arcHit(from: Point, to: Enemy, damage: number) {
+    this.onFeedback({
+      type: "beam",
+      x: from.x,
+      y: from.y,
+      toX: to.x,
+      toY: to.y,
+      color: "#85d8ef",
+    });
+    // Secondary damage never applies marks or triggers itself recursively.
+    this.hitEnemy(to, damage);
+  }
+  private catalyse(enemy: Enemy) {
+    if (
+      !this.run.rewards.catalyst ||
+      enemy.venom < 3 ||
+      enemy.hp <= 0 ||
+      enemy.transition > 0
+    )
+      return;
+    const doses = enemy.venom;
+    enemy.venom = 0;
+    enemy.poisoned = 0;
+    this.hitEnemy(enemy, this.player.damage * 0.32 * doses);
+    this.burst(enemy, "#b8ff62", 12, 130);
+    this.reaction("catalysis", enemy, "CATÁLISE");
+  }
+  private reaction(kind: keyof Run["reactions"], at: Point, label: string) {
+    this.run.reactions[kind]++;
+    if (this.reactionCd <= 0) {
+      this.onFeedback({
+        type: "reaction",
+        x: at.x,
+        y: at.y,
+        label,
+        color: kind === "catalysis" ? "#b8ff62" : "#85d8ef",
+      });
+      this.reactionCd = 0.3;
+    }
   }
   private resolveDeaths() {
     // Iterative queue avoids recursion and duplicate rewards in explosion chains.
@@ -729,6 +901,22 @@ export class Game {
       if (!this.enemies.includes(enemy)) continue;
       this.enemies = this.enemies.filter((e) => e !== enemy);
       this.run.kills++;
+      if (this.run.rewards.capacitor && enemy.shock > 0) {
+        const next = this.enemies
+          .filter((e) => e.hp > 0 && distance(e, enemy) < 130)
+          .sort((a, b) => distance(a, enemy) - distance(b, enemy))[0];
+        if (next) {
+          next.shock = Math.min(3, next.shock + Math.min(2, enemy.shock));
+          this.onFeedback({
+            type: "beam",
+            x: enemy.x,
+            y: enemy.y,
+            toX: next.x,
+            toY: next.y,
+            color: "#85d8ef",
+          });
+        }
+      }
       this.combo = this.comboTimer > 0 ? this.combo + 1 : 1;
       this.comboTimer = 3.5;
       this.peakCombo = Math.max(this.peakCombo, this.combo);
@@ -765,24 +953,25 @@ export class Game {
       const bonus =
         this.lootRandom() < comboLootChance(this.combo)
           ? this.run.rewards.gambit
-            ? 3
+            ? 2
             : 1
           : 0;
       const value =
         (enemy.kind === "boss" ? 35 : enemy.kind === "guard" ? 3 : 1) + bonus;
       if (bonus) this.burst(enemy, "#ffda8a", 8, 90);
-      if (this.run.rewards.battery) {
-        this.player.skillCd = Math.max(0, this.player.skillCd - 0.18);
-        this.player.secondCd = Math.max(0, this.player.secondCd - 0.18);
+      if (this.run.rewards.battery && this.batteryCd <= 0) {
+        this.batteryCd = 0.12;
+        this.player.skillCd = Math.max(0, this.player.skillCd - 0.16);
+        this.player.secondCd = Math.max(0, this.player.secondCd - 0.16);
       }
       this.pickups.push({ x: enemy.x, y: enemy.y, value, life: 0 });
       this.player.hp = Math.min(
         this.player.maxHp,
         this.player.hp +
-          (this.run.rewards.vampire && distance(enemy, this.player) < 190
+          (this.run.rewards.vampire && distance(enemy, this.player) < 140
             ? 1
             : 0) *
-            (enemy.kind === "boss" ? 10 : 2),
+            (enemy.kind === "boss" ? 8 : 1),
       );
       this.burst(
         enemy,
@@ -790,15 +979,24 @@ export class Game {
         enemy.kind === "boss" ? 130 : 18,
         enemy.kind === "boss" ? 360 : 200,
       );
-      if (this.run.rewards.explosion) {
-        this.burst(enemy, "#c5afff", 22, 130);
-        for (const other of this.enemies)
-          if (distance(enemy, other) < 130)
-            this.hitEnemy(
-              other,
-              this.player.damage * 0.7,
-              !!this.run.rewards.poison,
-            );
+      if (
+        this.run.rewards.mycelium &&
+        enemy.venom >= 2 &&
+        this.fields.filter((f) => f.kind === "toxin").length < 3
+      ) {
+        this.addField("toxin", enemy);
+        const cloud = this.fields[this.fields.length - 1];
+        cloud.radius = 90;
+        cloud.life = 2.2;
+      }
+      if (this.run.rewards.explosion && enemy.venom >= 3) {
+        this.burst(enemy, "#b8ff62", 18, 130);
+        for (const other of this.enemies
+          .filter((e) => e.hp > 0 && distance(e, enemy) < 130)
+          .slice(0, 5)) {
+          this.addToxin(other);
+          this.hitEnemy(other, this.player.damage * 0.65);
+        }
       }
     }
   }
@@ -807,7 +1005,7 @@ export class Game {
     if (p.invulnerable > 0 || this.phase !== "combat") return;
     if (this.labGod) return;
     if (this.run.rewards.armor && p.shieldCd <= 0) {
-      p.shieldCd = 6;
+      p.shieldCd = 8;
       p.invulnerable = 0.5;
       for (const enemy of this.enemies)
         if (distance(enemy, p) < 180 && enemy.kind !== "boss") {
@@ -923,7 +1121,13 @@ export class Game {
           damage: boss.damage,
           fired: false,
         });
-    boss.timer = [0, 2.7, 2.2, 1.9, 1.6][phase];
+    if (phase >= 2 && boss.cycle % 3 === 0) {
+      boss.windup = 0.8;
+      boss.dashLeft = 0.3;
+      boss.dashVX = Math.cos(angle) * 680;
+      boss.dashVY = Math.sin(angle) * 680;
+    }
+    boss.timer = [0, 2.4, 2, 1.75, 1.5][phase];
     this.sound(110 + act * 20, 0.15, "sine", 0.035);
   }
   update(dt: number) {
@@ -934,6 +1138,8 @@ export class Game {
       this.comboTimer - dt * comboDrain(this.combo, p.moving),
     );
     this.hitClock = Math.max(0, this.hitClock - dt);
+    this.batteryCd = Math.max(0, this.batteryCd - dt);
+    this.reactionCd = Math.max(0, this.reactionCd - dt);
     if (this.comboTimer === 0) this.combo = 0;
     this.roomTime += dt;
     this.run.elapsed += dt;
@@ -984,10 +1190,20 @@ export class Game {
       enemy.transition = Math.max(0, enemy.transition - dt);
       enemy.slowed = Math.max(0, enemy.slowed - dt);
       enemy.flash = Math.max(0, enemy.flash - dt);
+      enemy.markCd = Math.max(0, enemy.markCd - dt);
       if (enemy.hp <= 0) continue;
       if (enemy.poisoned > 0) {
-        enemy.poisoned -= dt;
-        this.hitEnemy(enemy, (this.run.rewards.poison ?? 1) * 4 * dt);
+        enemy.poisoned = Math.max(0, enemy.poisoned - dt);
+        this.hitEnemy(
+          enemy,
+          Math.max(1, enemy.venom) *
+            2.2 *
+            dt *
+            (enemy.kind === "boss" ? 0.75 : 1),
+        );
+        if (this.run.rewards.viscosity && enemy.venom >= 3)
+          enemy.slowed = Math.max(enemy.slowed, 0.2);
+        if (enemy.poisoned === 0) enemy.venom = 0;
       }
       const lure =
         enemy.kind !== "boss"
@@ -999,19 +1215,63 @@ export class Game {
       const dy = (destination.y - enemy.y) / dist;
       const stop =
         enemy.kind === "shooter" ? 310 : enemy.kind === "boss" ? 240 : 0;
-      if (dist > stop && enemy.transition <= 0) {
+      if (enemy.windup > 0) enemy.windup = Math.max(0, enemy.windup - dt);
+      else if (enemy.dashLeft > 0 && enemy.transition <= 0) {
+        enemy.x = clamp(
+          enemy.x + enemy.dashVX * dt,
+          enemy.radius + 25,
+          this.width - enemy.radius - 25,
+        );
+        enemy.y = clamp(
+          enemy.y + enemy.dashVY * dt,
+          enemy.radius + 25,
+          this.height - enemy.radius - 25,
+        );
+        enemy.dashLeft = Math.max(0, enemy.dashLeft - dt);
+      } else if (dist > stop && enemy.transition <= 0) {
         const slow = enemy.slowed > 0 ? 0.35 : 1;
         enemy.x += dx * enemy.speed * dt * slow;
         enemy.y += dy * enemy.speed * dt * slow;
       }
       enemy.timer -= dt;
       if (enemy.kind === "shooter" && enemy.timer <= 0) {
-        this.projectile(enemy, Math.atan2(dy, dx), enemy.damage, true, 0, 215);
-        enemy.timer = 2.3;
+        const count = this.run.act >= 2 ? 3 : 2;
+        for (let i = 0; i < count; i++)
+          this.projectile(
+            enemy,
+            Math.atan2(dy, dx) + (i - (count - 1) / 2) * 0.15,
+            enemy.damage,
+            true,
+            0,
+            210 + this.run.act * 10,
+          );
+        enemy.timer = 2.6;
       }
-      if (enemy.kind === "boss" && enemy.timer <= 0 && enemy.transition <= 0)
+      if (enemy.kind === "guard" && enemy.timer <= 0) {
+        for (const offset of [-0.28, 0, 0.28])
+          this.projectile(
+            enemy,
+            Math.atan2(dy, dx) + offset,
+            enemy.damage,
+            true,
+            0,
+            155,
+          );
+        enemy.timer = 3.8;
+      }
+      if (
+        enemy.kind === "boss" &&
+        enemy.timer <= 0 &&
+        enemy.transition <= 0 &&
+        enemy.windup <= 0 &&
+        enemy.dashLeft <= 0
+      )
         this.bossAttack(enemy);
-      if (!this.engineCollisions && distance(enemy, p) < enemy.radius + 14)
+      if (
+        !this.engineCollisions &&
+        enemy.transition <= 0 &&
+        distance(enemy, p) < enemy.radius + 14
+      )
         this.hurt(enemy.damage);
       if (this.phase !== "combat") return;
     }
@@ -1124,7 +1384,12 @@ export class Game {
       this.clearRoom();
   }
   contactEnemy(enemy: Enemy) {
-    if (this.phase === "combat" && enemy.hp > 0 && this.enemies.includes(enemy))
+    if (
+      this.phase === "combat" &&
+      enemy.hp > 0 &&
+      enemy.transition <= 0 &&
+      this.enemies.includes(enemy)
+    )
       this.hurt(enemy.damage);
   }
   contactBullet(bullet: Bullet, enemy?: Enemy) {
@@ -1147,7 +1412,27 @@ export class Game {
     )
       return;
     bullet.hit.add(enemy.id);
-    this.hitEnemy(enemy, bullet.damage, !!this.run.rewards.poison);
+    this.hitEnemy(
+      enemy,
+      bullet.damage,
+      !!this.run.rewards.poison,
+      bullet.element ?? "neutral",
+    );
+    if (
+      bullet.origin === "turret" &&
+      this.run.rewards.rod &&
+      enemy.shock > 0 &&
+      enemy.hp > 0 &&
+      enemy.transition <= 0
+    ) {
+      const charges = enemy.shock;
+      enemy.shock = 0;
+      for (const other of this.enemies
+        .filter((e) => e !== enemy && e.hp > 0 && distance(e, enemy) < 180)
+        .slice(0, 2))
+        this.arcHit(enemy, other, this.player.damage * 0.25 * charges);
+      this.reaction("conduction", enemy, "PARA-RAIOS");
+    }
     if (
       this.run.rewards.ricochet &&
       bullet.ricochets !== false &&
@@ -1280,6 +1565,18 @@ export class Game {
         skills: ["decoy", "mine"],
         perks: ["speed", "dashload", "gambit"],
       },
+      lightning: {
+        skills: ["storm", "turret"],
+        perks: ["capacitor", "rod", "groundwire"],
+      },
+      toxin: {
+        skills: ["venom", "quake"],
+        perks: ["poison", "catalyst", "mycelium"],
+      },
+      hybrid: {
+        skills: ["vortex", "storm"],
+        perks: ["capacitor", "poison", "electrolysis", "faraday"],
+      },
       fresh: { skills: [null, null], perks: [] },
     };
     const preset = builds[build] ?? builds.control;
@@ -1289,7 +1586,11 @@ export class Game {
         ? "seismic"
         : build === "trickster"
           ? "shotgun"
-          : "pulse";
+          : build === "lightning"
+            ? "arc"
+            : build === "toxin" || build === "hybrid"
+              ? "needle"
+              : "pulse";
     this.run.weapons = [...new Set<WeaponId>(["pulse", this.run.weapon])];
     for (const id of preset.perks) applyReward(this.run, this.player, id);
     this.beginRoom();

@@ -85,12 +85,12 @@ describe("playstyle mechanics", () => {
     expect(enemy.hp).toBe(hp);
     expect(bullet.life).toBeGreaterThan(0);
     expect(enemy.poisoned).toBe(3);
-    expect(enemy.slowed).toBeGreaterThan(0);
+    expect(enemy.venom).toBe(1);
     g.contactBullet(bullet, other);
     expect(bullet.hit.size).toBe(2);
     const shots = g.bullets.length;
     g.dash();
-    expect(g.bullets.length).toBe(shots + 3);
+    expect(g.bullets.length).toBe(shots + 2);
     expect(g.fields[0].kind).toBe("mine");
     expect(g.player.charge).toBe(g.player.reload);
   });
@@ -103,12 +103,13 @@ describe("playstyle mechanics", () => {
     g.skill(1);
     const before = g.player.secondCd;
     g.skill(0);
-    expect(g.player.secondCd).toBeCloseTo(before - 1.3);
+    expect(g.player.secondCd).toBeCloseTo(before - 0.8);
     const cd = g.player.skillCd;
+    enemy.x = g.player.x + 100;
     (g as any).hitEnemy(enemy, 100000);
     (g as any).resolveDeaths();
     expect(g.player.skillCd).toBeLessThan(cd);
-    expect(g.player.hp).toBe(52);
+    expect(g.player.hp).toBe(51);
   });
   it("shield blocks once, then needs to reconstruct; damage breaks a gold gamble", () => {
     const { g, enemy } = arena();
@@ -117,7 +118,7 @@ describe("playstyle mechanics", () => {
     const hp = g.player.hp;
     g.contactEnemy(enemy);
     expect(g.player.hp).toBe(hp);
-    expect(g.player.shieldCd).toBe(6);
+    expect(g.player.shieldCd).toBe(8);
     g.player.invulnerable = 0;
     g.contactEnemy(enemy);
     expect(g.player.hp).toBeLessThan(hp);
@@ -133,7 +134,7 @@ describe("playstyle mechanics", () => {
     expect(comboDrain(40, true)).toBeGreaterThan(comboDrain(40, false));
     expect(comboLootChance(0)).toBe(0);
     expect(comboLootChance(40)).toBeGreaterThan(comboLootChance(4));
-    expect(comboLootChance(10000)).toBe(0.65);
+    expect(comboLootChance(10000)).toBe(0.4);
     const drops = (combo: number) => {
       const { g } = arena();
       g.enemies = [];
