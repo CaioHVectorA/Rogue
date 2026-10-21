@@ -2286,3 +2286,260 @@ body {
 :root[data-ui="mobile"] .power-card .loot-pips {
   display: none;
 }
+
+/* The movement surface floats over empty arena space; actions retain their own dock. */
+:root[data-ui="mobile"] {
+  --field-bottom: max(124px, calc(var(--control-size, 96px) + 20px));
+}
+:root[data-ui="mobile"][data-controls="dpad"] {
+  --field-bottom: 152px;
+}
+:root[data-ui="mobile"] .movement-zone {
+  position: fixed;
+  left: 0;
+  top: calc(var(--field-top) + var(--safe-top));
+  bottom: 0;
+  width: 46vw;
+  pointer-events: none;
+  touch-action: none;
+}
+:root[data-ui="mobile"][data-controls="floating"] .movement-zone {
+  pointer-events: auto;
+}
+:root[data-ui="mobile"] .movement-control {
+  position: fixed;
+  left: calc(10px + var(--safe-left));
+  bottom: calc(14px + var(--safe-bottom));
+}
+:root[data-ui="mobile"] .joystick {
+  width: var(--control-size, 96px);
+  height: var(--control-size, 96px);
+  border-radius: 50%;
+  touch-action: none;
+}
+:root[data-ui="mobile"] .joystick.is-dragging {
+  position: fixed;
+  box-shadow:
+    0 0 24px #a4f6c135,
+    inset 0 0 0 12px #a4f6c108;
+  border-color: #a4f6c1;
+}
+:root[data-ui="mobile"] .joystick > span {
+  width: 38%;
+  height: 38%;
+  left: 31%;
+  top: 31%;
+  border-radius: 50%;
+}
+.direction-pad {
+  display: none;
+}
+:root[data-ui="mobile"][data-controls="dpad"] .movement-zone {
+  display: none;
+}
+:root[data-ui="mobile"][data-controls="dpad"] .direction-pad {
+  display: grid;
+  position: fixed;
+  left: calc(8px + var(--safe-left));
+  bottom: calc(8px + var(--safe-bottom));
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+  pointer-events: auto;
+  touch-action: none;
+  gap: 0;
+}
+.direction-pad button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 1px solid #85d8ef55;
+  background: #182a3d;
+  color: #a4f6c1;
+  font: 23px monospace;
+  touch-action: none;
+  border-radius: 9px;
+}
+.direction-pad button[aria-pressed="true"] {
+  color: #fff;
+  background: #31645a;
+  box-shadow: 0 0 12px #a4f6c144;
+}
+.control-preferences {
+  border: 1px solid #7892b544;
+  margin: 18px 0;
+  padding: 14px;
+  text-align: left;
+  display: grid;
+  gap: 14px;
+}
+.control-preferences legend {
+  color: #85d8ef;
+  font: 11px monospace;
+  padding: 0 6px;
+}
+.control-preferences label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  color: #c5d4eb;
+  font: 12px monospace;
+}
+.control-preferences select,
+.control-preferences input {
+  grid-column: 1/-1;
+  width: 100%;
+  min-height: 44px;
+}
+.control-preferences input {
+  accent-color: #a4f6c1;
+}
+.control-preferences output {
+  color: #a4f6c1;
+}
+.control-preferences small {
+  color: #97acc6;
+  font: 11px/1.5 monospace;
+}
+@media (orientation: landscape) {
+  :root[data-ui="mobile"] {
+    --field-bottom: 6px;
+    --field-side: max(104px, calc(var(--control-size, 96px) + 12px));
+  }
+  :root[data-ui="mobile"][data-controls="dpad"] {
+    --field-bottom: 6px;
+    --field-side: 148px;
+  }
+}
+.run-kit {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+.run-kit > span {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 6px;
+  padding: 10px;
+  background: #0b142188;
+  border: 1px solid #7892b533;
+  font: 11px monospace;
+  align-items: center;
+}
+.run-kit .icon {
+  grid-row: 1/3;
+  color: #a4f6c1;
+  width: 22px;
+  height: 22px;
+}
+.run-kit small {
+  color: #8ca6c4;
+  font-size: 9px;
+}
+.run-kit b {
+  font-size: 11px;
+  color: #d1e5ee;
+}
+.rack-heading {
+  display: block;
+  color: #8ca6c4;
+  font: 10px monospace;
+  margin-top: 20px;
+}
+.skill-workbench {
+  margin: 20px 0;
+  border: 1px solid #a4f6c144;
+  background: #132b2744;
+  padding: 16px;
+}
+.skill-rack {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.skill-rack .secondary {
+  padding: 8px;
+  font-size: 11px;
+}
+.skill-rack small {
+  color: #a4f6c1;
+  margin-left: 5px;
+}
+.skill-forge {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  margin-top: 14px;
+}
+.skill-forge-symbol {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  color: #a4f6c1;
+}
+.skill-forge-symbol .icon {
+  width: 34px;
+  height: 34px;
+}
+.skill-forge strong {
+  font: 700 15px monospace;
+  color: #d1e5ee;
+}
+.skill-forge strong small {
+  font-size: 11px;
+  color: #ffda8a;
+}
+.skill-forge p {
+  color: #a4f6c1;
+  font: 12px/1.5 monospace;
+  margin: 8px 0;
+}
+.skill-forge div > small {
+  font: 10px/1.5 monospace;
+  color: #8ca6c4;
+}
+.skill-forge-actions {
+  display: grid;
+  gap: 10px;
+}
+.skill-forge-actions .primary {
+  padding: 12px;
+  min-height: 44px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.skill-forge-actions .primary small {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-size: 12px;
+}
+.skill-forge-actions .primary small .icon {
+  width: 15px;
+  height: 15px;
+}
+.power-evolution {
+  text-align: left;
+  color: #a4f6c1;
+  font: 12px/1.6 monospace;
+  padding-left: 18px;
+}
+:root[data-ui="mobile"] .run-kit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+:root[data-ui="mobile"] .skill-forge {
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+}
+:root[data-ui="mobile"] .skill-forge-actions {
+  grid-column: 1/-1;
+}
+:root[data-ui="mobile"] .touch-controls .touch-actions {
+  position: fixed;
+  right: calc(10px + var(--safe-right));
+  bottom: calc(14px + var(--safe-bottom));
+}

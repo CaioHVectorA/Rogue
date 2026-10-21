@@ -61,3 +61,9 @@ O balanceamento inicial é coberto por simulações e testes de fluxo, mas preci
 ## Ultimate e evolução geral do herói
 
 Q é obtido após a wave 2; E fica reservado à ultimate, escolhida após o segundo boss na wave 8. Três ultimates usam carga por dano acertado com orçamento limitado, sem carga passiva e sem se alimentarem do próprio dano. O laboratório permite escolher qualquer Q e ultimate carregada. O arsenal oferece oito atributos, com três níveis e duas compras por checkpoint; substitui cura e calibre. Prévias instrucionais usam o modelo real em cenas isoladas e Canvas 2D, com animação apenas para cards visíveis; a arena jogável permanece em Kaplay/WebGL.
+
+## Controle flutuante e kit expandido
+
+`control-settings.ts` valida/persiste modo, tamanho, sensibilidade e zona morta; `touch.ts` controla captura exclusiva do movimento e dedos independentes para ações. O modo flutuante responde a uma área livre à esquerda, o fixo ao círculo e o direcional a oito botões de pelo menos 44px. Tamanho altera os espaços reservados de modo a manter as ações fora do campo.
+
+Q tem níveis de 1–5 por habilidade, compra limitada a uma por checkpoint e troca livre entre habilidades já aprendidas somente no arsenal. Há 15 Q, dez tiros e 28 passivas. Campos defensivos usam o mesmo modelo renderizado em Kaplay; parede resolve corpo/segmento sem barrar balas, stasis escala deslocamento sem alterar velocidade armazenada e reflexão cria tiros amigáveis limitados. Disco limpa seu conjunto de acertos apenas uma vez, ao retornar. Cristais não fragmentam recursivamente e casulos têm orçamento de três nuvens. Novas interações e presets se chamam Bastião sísmico, Patinador tóxico e Reciclador.

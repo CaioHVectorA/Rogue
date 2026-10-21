@@ -27,21 +27,21 @@ Apresentação visual da run, melhorias por ícones/atributos e arsenal substitu
 
 - Aperte Jogar: todas as runs normais começam com o mesmo kit básico, com pistola rápida e sem habilidades. A identidade da build surge nas escolhas durante o combate, sem seleção inicial de classe.
 - Atravesse três atos de quatro encontros. Cada ato termina com um guardião.
-- Na wave 1, escolha uma relíquia inicial. Após a wave 2, escolha Q entre dez habilidades de recarga curta. A primeira arma alternativa chega após o boss da wave 4. Após o segundo boss (wave 8), escolha uma de três ultimates para E, carregadas por dano direto acertado. Nas waves 5, 7 e 10 podem aparecer substituições para Q.
-- Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 24 perks; o coração pode repetir, os demais são únicos.
+- Na wave 1, escolha uma relíquia inicial. Após a wave 2, escolha Q entre quinze habilidades de recarga curta. A primeira arma alternativa chega após o boss da wave 4. Após o segundo boss (wave 8), escolha uma de três ultimates para E, carregadas por dano direto acertado. Nas waves 5, 7 e 10 podem aparecer substituições para Q.
+- Nas waves seguintes, escolha entre perks que alteram comportamentos: ricochete, arpão ao permanecer parado, esquiva com contrafogo, minas de plasma, escudo reativo e explosões em cadeia. Há 28 perks; o coração pode repetir, os demais são únicos.
 - No descanso, treine atributos gerais do herói com o ouro coletado. A coleta restante é automática ao limpar a sala.
 - Chefes têm 2700/5700/8700 de vida e quatro fases, separadas nos marcos de 75/50/25%. Transições de 1,2s apagam tiros hostis e anunciam a próxima fase. Padrões ficam mais rápidos, ganham anéis cruzados, reforços e uma cruz de perigos no colapso final. Vencer o terceiro encerra a run.
 - A derrota encerra a run. Só recordes ficam no navegador; não há poder permanente nem retomada após recarregar.
 
 No desktop: WASD/setas para movimento, Espaço para esquiva, Q e E para habilidades e Esc para pausa. No celular: arraste o controle esquerdo e solte para atirar; use os botões da direita sem soltar o outro dedo. As recargas aparecem nos botões.
 
-A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop nas configurações e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado e áreas de controle fora do campo de batalha. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
+A interface detecta tamanho de tela e ponteiro de toque, com seletor Auto/Celular/Desktop nas configurações e preferência salva neste navegador. O celular tem menu e HUD próprios, arena adaptada em pé ou deitado com ações em uma área própria e movimento por joystick flutuante, fixo ou direcionais. Girar a tela pausa a run e preserva o progresso. Saída da aba também pausa. Som pode ser desligado; a preferência de redução de movimento do sistema é respeitada.
 
 O código da run reproduz posições de spawn e sorteios de recompensa para as mesmas escolhas de build e de troca. Cada encontro usa sua própria sequência, independente do tempo de combate. A diária usa a data UTC. Não há placar online nem promessa de igualdade entre caminhos diferentes.
 
 ## Ataques e habilidades
 
-O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, conquiste formas alternativas como metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia, agulhas tóxicas ou disparo pesado perfurante. Cada arma troca vantagens por limites; não é um salto automático de dano. O arsenal preserva os modelos adquiridos para trocar entre encontros.
+O tiro inicial é mais rápido e forte: 22 de dano a cada 0,20s. Durante a run, conquiste formas alternativas como metralhadora, escopeta de sete chumbos, emissor sísmico que só acerta quem está perto, arco elétrico em cadeia, agulhas tóxicas disparo pesado perfurante, discos de retorno, cristais que se fragmentam ou casulos que contaminam o terreno. Cada arma troca vantagens por limites; não é um salto automático de dano. O arsenal preserva os modelos adquiridos para trocar entre encontros.
 
 Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque equipado pode ser consultado pelo HUD; o livro reúne explicações dos poderes da build. Cenas animadas com o jogador verde e alvos vermelhos demonstram movimento, alcance e efeitos dos ataques.
 
@@ -49,7 +49,7 @@ Os cards de armas e habilidades mostram onde o poder age e como ativar. O ataque
 
 Raio acumula cargas e provoca sobrecargas; torres e esquivas podem consumir essas cargas. Veneno prepara doses para contágio, controle ou catálise com impactos sísmicos. A Eletrólise liga os dois: descargas transportam doses já aplicadas. O draft favorece combinações utilizáveis e os cards mostram o vínculo entre arma, habilidade e perk.
 
-A dificuldade das waves também cresce: ameaças mistas chegam em grupos sucessivos, inimigos comuns não caem todos com um tiro e os bosses podem investir após anunciar a direção. O celular ganhou arena maior e personagens mais legíveis, com os controles preservados fora do campo.
+A dificuldade das waves também cresce: ameaças mistas chegam em grupos sucessivos, inimigos comuns não caem todos com um tiro e os bosses podem investir após anunciar a direção. O celular ganhou arena maior e personagens mais legíveis, com botões de ação preservados fora do campo.
 
 ## Laboratório de gameplay
 
@@ -97,3 +97,13 @@ O jogo usa Kaplay.js 3001 como runtime: cenas, entidades, renderização WebGL, 
 O ouro compra níveis de Vitalidade, Cadência, Agilidade, Resistência, Regeneração, Sintonia, Reflexos e Magnetismo. Cada atributo aceita três níveis; são até duas compras por checkpoint. O preço começa em 22, sobe 18 por nível comprado do atributo e 5 por ato. Não há consumível de cura nem compra de dano bruto. Tudo reinicia com a run.
 
 As prévias dos poderes usam cenas isoladas do mesmo modelo de combate. Canvas 2D apresenta essas demonstrações; o jogo continua em Kaplay/WebGL. Um único loop a até 24 quadros/s anima apenas cards visíveis, para ao sair da aba/tela e mostra um quadro estático com efeitos reduzidos. As cenas não alteram a run nem os recordes.
+
+### Controle móvel e kit criativo
+
+O padrão é joystick flutuante: toque na metade esquerda da arena e arraste. Soltar para o movimento; outro dedo pode usar Q, esquiva ou ultimate. O joystick acompanha arrastos longos. Configurações permitem escolher joystick fixo ou oito direcionais, tamanho de 72–136px, sensibilidade de 60–160% e zona morta de 5–30%. As preferências ficam no aparelho; pausa, rotação e cancelamento de gesto limpam as entradas. Tamanhos maiores reservam mais espaço no descanso dos controles; direcionais mantêm alvos de pelo menos 44px.
+
+A run combina passivas → tiro opcional → Q → ultimate. Q possui cinco níveis por habilidade e pode evoluir uma vez por checkpoint com ouro: `20 + 12 × nível atual + 6 × (ato − 1)`. Evoluções acrescentam cobertura, comportamentos e maestria; nível 4 também reduz a recarga. Habilidades já aprendidas continuam no arsenal para troca, preservando seus níveis durante a run. Nova run zera tudo.
+
+Cinco Q novos: Muralha espectral (retém corpos, tiros atravessam; bosses rompem), Égide de retorno (bloqueio e depois reflexão), Motor de assalto (disparo em movimento), Bolha temporal (lentidão de projéteis) e Âncora de retorno (recuo programado). O primeiro draft contrasta ataque, defesa e utilidade, sem escolher uma classe.
+
+O laboratório inclui Bastião sísmico (muralha transmite ondas), Patinador tóxico (motor deixa esporos) e Reciclador (discos/bloqueios realimentam Q), além de seletor de nível 1–5. Discos podem acertar uma vez em cada sentido; estilhaços não se dividem novamente; casulos mantêm até três nuvens próprias. Essas restrições preservam o ritmo mesmo com perks combinados.

@@ -19,6 +19,30 @@ export const ITEM_VISUALS: Record<
   string,
   { glyph: string; value: string; stat: string; hint: string }
 > = {
+  refract: {
+    glyph: "pierce",
+    value: "▥→",
+    stat: "MEMBRANA",
+    hint: "Tiros atravessam mais um alvo após a parede",
+  },
+  returnflux: {
+    glyph: "repeat",
+    value: "↶ϟ",
+    stat: "RECICLAR",
+    hint: "Recupere discos e bloqueie tiros para rearmar",
+  },
+  resonance: {
+    glyph: "seismic",
+    value: "◖▥◗",
+    stat: "BASTIÃO",
+    hint: "Muralha transmite ondas sísmicas",
+  },
+  slipstream: {
+    glyph: "toxin",
+    value: "↝●",
+    stat: "RASTRO",
+    hint: "Motor em movimento planta veneno",
+  },
   anchor: {
     glyph: "target",
     value: "⚓",
@@ -182,7 +206,7 @@ export const ITEM_VISUALS: Record<
         glyph: s.glyph,
         value: `${s.cooldown}s`,
         stat: "HABILIDADE",
-        hint: SKILL_HINTS[s.id],
+        hint: SKILL_HINTS[s.id] ?? s.desc,
       },
     ]),
   ),

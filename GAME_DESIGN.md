@@ -1,11 +1,11 @@
 # Builds que mudam decisões
 
-Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habilidade equipada. As escolhas da run definem o estilo. Tiro básico continua exigindo parar. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
+Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habilidade equipada. As escolhas da run definem o estilo. Tiro básico exige parar, salvo durante o Motor de assalto. As habilidades funcionam em movimento para criar janelas de ataque, armadilhas ou uma alternativa de combate próximo.
 
 ## Ritmo da progressão
 
 - Wave 1: um fragmento inicial de cargas, toxina ou fuga; sem troca de arma e sem explosão imediata de poder.
-- Wave 2: primeira habilidade Q, com recarga curta. Wave 3 entrega uma melhoria da build e mantém E bloqueado.
+- Wave 2: primeira habilidade Q, com três ofertas contrastando ataque, defesa e utilidade. Wave 3 entrega uma melhoria da build e mantém E bloqueado.
 - Wave 4: primeira forma alternativa de disparo, após vencer o boss.
 - Wave 8: primeira ultimate E, após vencer o segundo boss.
 - Waves 5–11: perks de comportamento, sinergias condicionais e novas formas de disparo. Nas waves 5, 7 e 10, habilidades novas também podem aparecer para substituir Q. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
@@ -13,7 +13,7 @@ Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habil
 
 ## Formas de ataque automático
 
-Pare para atacar. A wave 4 oferece três armas; novos modelos podem aparecer depois. O arsenal permite alternar livremente entre modelos já adquiridos, fora de combate. Armas e habilidades são sistemas separados.
+Pare para atacar. A wave 4 oferece três armas do conjunto de nove alternativas; novos modelos podem aparecer depois. O arsenal permite alternar livremente entre modelos já adquiridos, fora de combate. Armas e habilidades são sistemas separados.
 
 | Ataque           | Intervalo base | Alcance              | Comportamento                                               |
 | ---------------- | -------------- | -------------------- | ----------------------------------------------------------- |
@@ -131,3 +131,25 @@ A arena usa mais altura em retrato e mais largura em paisagem. Cabeçalho compac
 ### Referência de validação
 
 Antes da introdução das ultimates e do novo arsenal, em simulações com invencibilidade e uso automático das habilidades, os quatro presets anteriores derrotavam o primeiro boss em 11–22s. Com os ajustes, ficaram em 18–51s; os novos presets de raio, veneno e híbrido em 35–45s. No mesmo cenário parado e sem habilidades da wave 3, a versão anterior completava o encontro com vida; a nova foi derrotada. Isso verifica pressão maior e duração relativa, sem substituir playtests humanos de esquiva, posicionamento e dificuldade.
+
+## Kit, maestrias e controle de toque
+
+O kit mantém quatro papéis: passivas modificam regras; tiro opcional determina geometria e alcance; Q cria uma janela frequente de ataque, defesa ou mobilidade; ultimate E guarda o grande momento. A pistola permanece disponível no arsenal. Há 15 Q, dez formas de tiro (incluindo a pistola), três ultimates e 28 passivas. Novas habilidades entram nas escolhas sem repetir as já adquiridas, e o primeiro draft garante três papéis diferentes.
+
+Q evolui de 1 a 5 com ouro, uma compra por checkpoint, separada das duas compras de atributos. Custo: `20 + 12 × nível atual + 6 × (ato − 1)`. Nível 2 aumenta cobertura/duração; 3 acrescenta uma interação; 4 reduz a recarga em 10%; 5 libera a maestria descrita no arsenal. Níveis são guardados por habilidade durante a run. Trocar Q entre habilidades aprendidas no arsenal preserva o investimento, sem permitir trocas em combate.
+
+| Q novo            | Janela inicial                                                                                                           | Evolução de comportamento                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Muralha espectral | Parede na direção de maior concentração, com vida de 3s. Corpos são retidos, projéteis e herói atravessam; boss a rompe. | N3 transmite marcas da build no contato; N5 empurra a horda ao expirar.             |
+| Égide de retorno  | Até três tiros interceptados em 3s; contato e chão ainda causam dano.                                                    | N3 devolve tiros contra um alvo; N5 converte bloqueios restantes em um breve motor. |
+| Motor de assalto  | 2,2s de tiro em movimento, preservando geometria e intervalo da arma.                                                    | N3 prepara esquiva; N5 reduz pressão do combo durante o movimento com o buff.       |
+| Bolha temporal    | Tiros hostis dentro da área viajam a 22% da velocidade; sair restaura a velocidade.                                      | N3 também desacelera corpos; N5 devolve até três tiros ao encerrar.                 |
+| Âncora de retorno | Volta ao ponto após 2,2s, limpa tiros próximos e prepara a arma.                                                         | N3 empurra no retorno; N5 deixa isca explosiva no local de saída.                   |
+
+As dez habilidades anteriores também têm maestrias: rajada ganha lâminas de retorno; nova deixa controle temporal; pisada detona doses; poço suga tiros e converte capturas em explosão; temporal ganha saltos; torre cobre dois alvos e busca novos alvos; mina deixa resíduo elemental; órbita devolve tiros; isca ganha uma segunda cópia; frasco espalha nuvens menores por mortes na nuvem principal. Esses efeitos respeitam o orçamento de seis campos.
+
+Três tiros novos mudam a geometria: disco atravessa e volta à posição atual do herói, com um acerto por alvo em cada trecho; cristal gera três estilhaços que ignoram o alvo original e nunca voltam a se fragmentar; casulo planta uma nuvem curta por impacto, com máximo de três próprias. Não são multiplicadores universais de dano.
+
+Quatro passivas ligam peças do kit: Membrana prismática faz cada projétil que cruza a muralha perfurar um alvo extra, só uma vez; Retorno energético prepara a arma e adianta Q em 0,2s ao recuperar disco ou bloquear tiros (intervalo mínimo de 0,2s); Bastião sísmico cria impacto no outro lado da muralha ao usar o emissor perto dela, atingindo até seis alvos; Patins de esporos deixa nuvem ao disparar em movimento com motor, a cada 1,2s e até três nuvens tóxicas simultâneas. As ofertas exigem os componentes ativos correspondentes. Os três estilos têm presets de laboratório, sem seleção inicial de classe.
+
+No toque, movimento flutuante possui sua própria captura de ponteiro e aceita começar na metade esquerda do campo. Tamanho, sensibilidade e zona morta são limitados e persistidos; sensibilidade baixa ainda alcança a velocidade máxima ao arrastar mais. Modo fixo mantém o centro no dock; direcionais oferecem oito direções e alvos de 44px, com suporte a deslizar entre botões e combinar dedos. Ações ficam ancoradas à direita. Pausa, rotação, mudança de preferência e cancelamento removem qualquer entrada pendente.

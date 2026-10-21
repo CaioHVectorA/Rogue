@@ -3,7 +3,7 @@
 ## Implementado
 
 - [x] Ciclo completo de run com início, escolha, descanso, derrota e vitória.
-- [x] Três pilotos no laboratório, dez habilidades para Q, três ultimates tardias para E e 24 perks de comportamento.
+- [x] Três pilotos no laboratório, quinze habilidades para Q, três ultimates tardias para E e 28 perks de comportamento.
 - [x] Três atos, 12 encontros e três guardiões com quatro fases e transições.
 - [x] Interface HTML responsiva, HUD, teclado e controles de toque.
 - [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
@@ -30,3 +30,7 @@ Adicionar conteúdo depois de confirmar que o ciclo curto sustenta partidas repe
 
 - [x] Arsenal com oito atributos gerais, limites por checkpoint e níveis reiniciados por run.
 - [x] Prévias animadas com o modelo real de combate e respeito a efeitos reduzidos.
+
+- [x] Joystick flutuante/fixo e direcionais, com tamanho, sensibilidade e zona morta persistidos.
+- [x] Maestrias de Q em cinco níveis, evolução por ouro e troca entre habilidades aprendidas no arsenal.
+- [x] Disco de retorno, cristal fragmentável e casulos tóxicos; três estilos de sinergia no laboratório.

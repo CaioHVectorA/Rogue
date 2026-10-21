@@ -10,6 +10,9 @@ import {
   HERO_STATS,
   TRAINING_CAP,
   trainingCost,
+  skillLevel,
+  skillUpgradeCost,
+  SKILL_LEVEL_CAP,
   REWARDS,
   skillById,
   comboDrain,
@@ -82,6 +85,9 @@ export class Game {
   hazards: Hazard[] = [];
   pickups: Pickup[] = [];
   fields: Field[] = [];
+  overdrive = 0;
+  private returnCd = 0;
+  private trailCd = 0;
   labGod = false;
   labSpeed = 1;
   private lootRandom = randomFromSeed("loot");
@@ -199,6 +205,7 @@ export class Game {
     this.pickups = [];
     this.chainQueue = [];
     this.fields = [];
+    this.overdrive = this.returnCd = this.trailCd = 0;
     this.ultimatePulses = [];
     this.energyBudget = 6;
     this.regenerationTime = 0;
@@ -305,6 +312,173 @@ export class Game {
     if (id === "agility") p.speed += 10;
     this.sound(520, 0.1, "sine", 0.04);
     this.onChange();
+  }
+  get qLevel() {
+    return skillLevel(this.run);
+  }
+  get skillCost() {
+    return skillUpgradeCost(this.run);
+  }
+  upgradeSkill() {
+    const id = this.run.skills[0];
+    if (
+      this.phase !== "camp" ||
+      !id ||
+      this.qLevel >= SKILL_LEVEL_CAP ||
+      this.run.skillPurchase ||
+      this.run.gold < this.skillCost
+    )
+      return;
+    this.run.gold -= this.skillCost;
+    this.run.skillLevels[id] = this.qLevel + 1;
+    this.run.skillPurchase = true;
+    this.sound(720, 0.15, "sine", 0.05);
+    this.onChange();
+  }
+  equipSkill(id: string) {
+    if (this.phase !== "camp" || !this.run.learnedSkills.includes(id)) return;
+    this.run.skills[0] = id;
+    this.overdrive = 0;
+    this.player.skillCd = 0;
+    this.onChange();
+  }
+  labSkillLevel(level: number) {
+    const id = this.run.skills[0];
+    if (
+      !this.run.practice ||
+      !id ||
+      !Number.isInteger(level) ||
+      level < 1 ||
+      level > SKILL_LEVEL_CAP
+    )
+      return;
+    this.run.skillLevels[id] = level;
+    this.onChange();
+  }
+  private recycle(at: Point) {
+    if (!this.run.rewards.returnflux || this.returnCd > 0) return;
+    this.returnCd = 0.2;
+    this.player.charge = this.fireInterval;
+    this.player.skillCd = Math.max(0, this.player.skillCd - 0.2);
+    this.onFeedback({
+      type: "reaction",
+      x: at.x,
+      y: at.y,
+      label: "RECICLAR",
+      color: "#85d8ef",
+    });
+  }
+  private repel(at: Point, radius: number, amount: number) {
+    for (const enemy of this.enemies)
+      if (
+        enemy.hp > 0 &&
+        distance(enemy, at) < radius &&
+        enemy.kind !== "boss"
+      ) {
+        const d = distance(enemy, at) || 1;
+        enemy.x = clamp(
+          enemy.x + ((enemy.x - at.x) / d) * amount,
+          45,
+          this.width - 45,
+        );
+        enemy.y = clamp(
+          enemy.y + ((enemy.y - at.y) / d) * amount,
+          45,
+          this.height - 45,
+        );
+        enemy.slowed = Math.max(enemy.slowed, 1);
+      }
+  }
+  /** A reflected bullet is a new, bounded friendly shot, not a recursively reflecting object. */
+  private reflect(bullet: Bullet) {
+    const target = this.enemies
+      .filter((e) => e.hp > 0)
+      .sort((a, b) => distance(a, bullet) - distance(b, bullet))[0];
+    if (!target) return;
+    this.projectile(
+      bullet,
+      Math.atan2(target.y - bullet.y, target.x - bullet.x),
+      this.player.damage * 0.65,
+      false,
+      0,
+      720,
+    );
+    const shot = this.bullets.at(-1)!;
+    shot.color = "#85d8ef";
+    shot.element = "neutral";
+    this.onFeedback({
+      type: "beam",
+      x: bullet.x,
+      y: bullet.y,
+      toX: target.x,
+      toY: target.y,
+      color: "#85d8ef",
+    });
+  }
+  wallContact(wall: Field, at: Point) {
+    const angle = wall.angle ?? 0,
+      nx = Math.cos(angle),
+      ny = Math.sin(angle);
+    const tangent = clamp(
+      -(at.x - wall.x) * ny + (at.y - wall.y) * nx,
+      -wall.radius,
+      wall.radius,
+    );
+    const x = wall.x - ny * tangent,
+      y = wall.y + nx * tangent;
+    return {
+      x,
+      y,
+      distance: Math.hypot(at.x - x, at.y - y),
+      side: (at.x - wall.x) * nx + (at.y - wall.y) * ny >= 0 ? 1 : -1,
+      nx,
+      ny,
+    };
+  }
+  private crossesWall(wall: Field, bullet: Bullet, dt: number) {
+    if (this.wallContact(wall, bullet).distance < 18) return true;
+    const nx = Math.cos(wall.angle ?? 0),
+      ny = Math.sin(wall.angle ?? 0);
+    const start = (bullet.x - wall.x) * nx + (bullet.y - wall.y) * ny;
+    const end = start + (bullet.vx * nx + bullet.vy * ny) * dt;
+    if (start * end > 0 || start === end) return false;
+    const t = start / (start - end);
+    return (
+      this.wallContact(wall, {
+        x: bullet.x + bullet.vx * dt * t,
+        y: bullet.y + bullet.vy * dt * t,
+      }).distance < 18
+    );
+  }
+  private resolveWalls() {
+    for (const wall of this.fields.filter(
+      (f) => f.kind === "wall" && f.life > 0,
+    ))
+      for (const enemy of this.enemies) {
+        if (enemy.hp <= 0) continue;
+        const contact = this.wallContact(wall, enemy),
+          thickness = enemy.radius + 12;
+        if (contact.distance >= thickness) continue;
+        if (enemy.kind === "boss") {
+          wall.life = 0;
+          this.burst(wall, "#85d8ef", 20, 180);
+          break;
+        }
+        enemy.x = clamp(
+          contact.x + contact.nx * contact.side * thickness,
+          enemy.radius + 25,
+          this.width - enemy.radius - 25,
+        );
+        enemy.y = clamp(
+          contact.y + contact.ny * contact.side * thickness,
+          enemy.radius + 25,
+          this.height - enemy.radius - 25,
+        );
+        if ((wall.level ?? 1) >= 3 && enemy.markCd <= 0) {
+          this.mark(enemy, !!this.run.rewards.poison, "neutral");
+          enemy.markCd = 0.75;
+        }
+      }
   }
   /** Only actual direct damage charges E; proc chains and ultimates cannot feed themselves. */
   private gainUltimate(damage: number) {
@@ -460,18 +634,38 @@ export class Game {
       return;
     }
     const definition = skillById(id);
-    p.skillCd = definition.cooldown * 0.94 ** (this.run.training.focus ?? 0);
+    const level = this.qLevel;
+    p.skillCd =
+      definition.cooldown *
+      0.94 ** (this.run.training.focus ?? 0) *
+      (level >= 4 ? 0.9 : 1);
     const target = this.nearest() ?? {
       x: p.x + this.aim.x * 180,
       y: p.y + this.aim.y * 180,
     };
     const angle = Math.atan2(target.y - p.y, target.x - p.x);
     if (id === "volley") {
-      for (let i = -3; i <= 3; i++)
-        this.projectile(p, angle + i * 0.13, p.damage * 1.35, false, 2, 720);
+      const spread = level >= 2 ? 4 : 3;
+      for (let i = -spread; i <= spread; i++) {
+        this.projectile(
+          p,
+          angle + i * 0.13,
+          p.damage * 1.35,
+          false,
+          level >= 3 ? 3 : 2,
+          720,
+        );
+        if (level >= 5 && Math.abs(i) === spread)
+          Object.assign(this.bullets.at(-1)!, {
+            origin: "disc",
+            returnIn: 0.35,
+            life: 1.5,
+            ricochets: false,
+          });
+      }
     } else if (id === "nova" || id === "quake") {
       let hits = 0;
-      const radius = id === "nova" ? 205 : 170;
+      const radius = (id === "nova" ? 205 : 170) * (level >= 2 ? 1.12 : 1);
       for (const enemy of [...this.enemies]) {
         if (distance(p, enemy) > radius + enemy.radius) continue;
         hits++;
@@ -487,7 +681,11 @@ export class Game {
           !!this.run.rewards.poison,
           "neutral",
         );
-        if (id === "quake") this.catalyse(enemy);
+        if (id === "quake") this.catalyse(enemy, level >= 3);
+      }
+      if ((id === "nova" && level >= 3) || (id === "quake" && level >= 5)) {
+        this.addField("stasis", p, level >= 5 ? 3 : 1);
+        Object.assign(this.fields.at(-1)!, { radius, life: 1.5 });
       }
       if (id === "quake")
         p.hp = Math.min(p.maxHp, p.hp + Math.min(8, hits * 2));
@@ -495,10 +693,48 @@ export class Game {
         this.bullets = this.bullets.filter(
           (b) => !b.hostile || distance(b, p) > radius,
         );
+    } else if (id === "overdrive") {
+      this.overdrive = 2.2 + (level - 1) * 0.35;
+      p.charge = this.fireInterval;
+      if (level >= 3) p.dashCd = 0;
+    } else if (id === "wall") {
+      const directions = Array.from(
+        { length: 12 },
+        (_, i) => (i * Math.PI) / 6,
+      );
+      const direction = directions.reduce((best, a) => {
+        const count = (v: number) =>
+          this.enemies.filter(
+            (e) =>
+              e.hp > 0 &&
+              distance(e, p) < 550 &&
+              Math.cos(Math.atan2(e.y - p.y, e.x - p.x) - v) > 0.75,
+          ).length;
+        return count(a) > count(best) ? a : best;
+      }, angle);
+      this.addField(
+        "wall",
+        {
+          x: p.x + Math.cos(direction) * 95,
+          y: p.y + Math.sin(direction) * 95,
+        },
+        level,
+      );
+      this.fields.at(-1)!.angle = direction;
     } else {
       const at =
         id === "vortex" || id === "storm" || id === "venom" ? target : p;
-      this.addField(id === "venom" ? "toxin" : (id as Field["kind"]), at);
+      this.addField(
+        id === "venom" ? "toxin" : (id as Field["kind"]),
+        at,
+        level,
+      );
+      if (id === "decoy" && level >= 3) {
+        this.addField("stasis", p);
+        this.fields.at(-1)!.life = 1.3;
+      }
+      if (id === "decoy" && level >= 5)
+        this.addField("decoy", { x: p.x + 70, y: p.y }, level);
       if (id === "decoy") p.invulnerable = Math.max(p.invulnerable, 0.5);
     }
     this.onFeedback({
@@ -520,7 +756,7 @@ export class Game {
     this.shake = 4;
     this.sound(160, 0.22, "triangle", 0.06);
   }
-  private addField(kind: Field["kind"], at: Point) {
+  private addField(kind: Field["kind"], at: Point, level = 1) {
     // One build cannot flood the scene with persistent objects.
     if (this.fields.length >= 6) this.fields.shift();
     const radii = {
@@ -531,6 +767,10 @@ export class Game {
       orbit: 100,
       decoy: 120,
       toxin: 115,
+      wall: 100,
+      aegis: 75,
+      stasis: 170,
+      recall: 110,
     };
     const lives = {
       vortex: 3,
@@ -540,16 +780,31 @@ export class Game {
       orbit: 3.2,
       decoy: 2.5,
       toxin: 3,
+      wall: 3,
+      aegis: 3,
+      stasis: 2.6,
+      recall: 2.2,
     };
     this.fields.push({
       kind,
       x: clamp(at.x, 45, this.width - 45),
       y: clamp(at.y, 45, this.height - 45),
-      radius: radii[kind],
-      life: lives[kind],
+      radius:
+        radii[kind] * (level >= 2 ? 1.12 : 1) +
+        (kind === "wall" ? (level - 1) * 10 : 0),
+      life:
+        lives[kind] + (level >= 2 && kind !== "recall" ? (level - 1) * 0.2 : 0),
       timer: kind === "mine" ? 0.45 : 0,
       power: this.player.damage,
-      blocks: 6,
+      blocks:
+        kind === "aegis"
+          ? 2 + level
+          : kind === "vortex"
+            ? 3
+            : level >= 3
+              ? 9
+              : 6,
+      level,
     });
   }
   private updateFields(dt: number) {
@@ -557,6 +812,94 @@ export class Game {
       this.ultimateDamage = !!field.ultimate;
       field.life -= dt;
       field.timer -= dt;
+      const level = field.level ?? 1;
+      if (field.life <= 0 && field.kind !== "mine" && field.kind !== "decoy") {
+        if (field.kind === "recall") {
+          const departure = { x: this.player.x, y: this.player.y };
+          this.player.x = field.x;
+          this.player.y = field.y;
+          this.player.invulnerable = Math.max(this.player.invulnerable, 0.35);
+          this.player.charge = this.fireInterval;
+          this.bullets = this.bullets.filter(
+            (b) => !b.hostile || distance(b, field) > field.radius,
+          );
+          if (level >= 3) this.repel(field, field.radius, 85);
+          if (level >= 5) {
+            this.addField("decoy", departure);
+            this.fields.at(-1)!.life = 1;
+          }
+          this.onFeedback({
+            type: "skill",
+            x: field.x,
+            y: field.y,
+            radius: field.radius,
+            color: "#85d8ef",
+          });
+        }
+        if (field.kind === "wall" && level >= 5) {
+          this.repel(field, 220, 70);
+          this.burst(field, "#85d8ef", 20, 150);
+        }
+        if (field.kind === "aegis" && level >= 5)
+          this.overdrive = Math.max(this.overdrive, field.blocks * 0.25);
+        if (field.kind === "vortex" && level >= 5 && field.blocks < 3) {
+          for (const e of [...this.enemies])
+            if (distance(e, field) < field.radius)
+              this.hitEnemy(e, field.power * (3 - field.blocks) * 0.4);
+          this.burst(field, "#c5afff", 25, 180);
+        }
+        if (field.kind === "stasis" && level >= 5) {
+          for (const b of this.bullets
+            .filter(
+              (b) =>
+                b.hostile && b.life > 0 && distance(b, field) < field.radius,
+            )
+            .slice(0, 3)) {
+            b.life = 0;
+            this.reflect(b);
+          }
+        }
+        continue;
+      }
+      if (["aegis", "stasis"].includes(field.kind)) {
+        field.x = this.player.x;
+        field.y = this.player.y;
+      }
+      if (field.kind === "wall" || field.kind === "recall") continue;
+      if (field.kind === "stasis") {
+        if (level >= 3)
+          for (const e of this.enemies)
+            if (distance(e, field) < field.radius)
+              e.slowed = Math.max(e.slowed, 0.2);
+        continue;
+      }
+      if (field.kind === "aegis") {
+        for (const b of [...this.bullets])
+          if (
+            b.hostile &&
+            b.life > 0 &&
+            field.blocks > 0 &&
+            distance(b, field) < field.radius
+          ) {
+            field.blocks--;
+            b.life = 0;
+            if (level >= 3) this.reflect(b);
+            this.recycle(field);
+            this.burst(b, "#a4f6c1", 4, 70);
+          }
+        continue;
+      }
+      if (field.kind === "vortex" && level >= 3)
+        for (const b of this.bullets)
+          if (
+            b.hostile &&
+            b.life > 0 &&
+            field.blocks > 0 &&
+            distance(b, field) < field.radius
+          ) {
+            b.life = 0;
+            field.blocks--;
+          }
       if (
         field.kind === "orbit" ||
         (field.kind === "storm" && field.ultimate)
@@ -575,17 +918,18 @@ export class Game {
         }
       }
       if (field.kind === "orbit" && field.blocks > 0)
-        this.bullets = this.bullets.filter((b) => {
+        for (const b of [...this.bullets])
           if (
             b.hostile &&
+            b.life > 0 &&
             field.blocks > 0 &&
             distance(b, field) < field.radius
           ) {
             field.blocks--;
-            return false;
+            b.life = 0;
+            if (level >= 5) this.reflect(b);
+            this.recycle(field);
           }
-          return true;
-        });
       if (field.timer > 0) continue;
       if (field.kind === "turret") {
         const target = this.enemies
@@ -603,6 +947,24 @@ export class Game {
             false,
           );
         if (target) this.bullets[this.bullets.length - 1].origin = "turret";
+        if (target) {
+          this.bullets.at(-1)!.seeks = level >= 5;
+        }
+        if (level >= 3) {
+          const second = this.enemies.find((e) => e.hp > 0 && e !== target);
+          if (second) {
+            this.projectile(
+              field,
+              Math.atan2(second.y - field.y, second.x - field.x),
+              field.power * 0.45,
+              false,
+            );
+            Object.assign(this.bullets.at(-1)!, {
+              origin: "turret",
+              seeks: level >= 5,
+            });
+          }
+        }
         field.timer = 0.45;
       } else if (field.kind === "mine" || field.kind === "decoy") {
         const triggered =
@@ -612,6 +974,12 @@ export class Game {
               ) || field.life <= 0
             : field.life <= 0;
         if (triggered) {
+          if (field.kind === "mine" && level >= 3)
+            for (const e of this.enemies)
+              if (e.kind !== "boss" && distance(e, field) < field.radius) {
+                e.x += (field.x - e.x) * 0.3;
+                e.y += (field.y - e.y) * 0.3;
+              }
           for (const enemy of this.enemies)
             if (distance(enemy, field) < field.radius + enemy.radius) {
               this.hitEnemy(
@@ -631,10 +999,28 @@ export class Game {
           });
           this.burst(field, "#ffbc8a", 35, 180);
           field.life = 0;
+          if (field.kind === "mine" && level >= 5) {
+            const residue: Field["kind"] = this.run.rewards.poison
+              ? "toxin"
+              : this.run.rewards.capacitor
+                ? "storm"
+                : "stasis";
+            this.addField(residue, field, residue === "stasis" ? 3 : 1);
+            this.fields.at(-1)!.life = 1.6;
+          }
         }
       } else {
         for (const enemy of this.enemies)
           if (distance(enemy, field) < field.radius + enemy.radius) {
+            if (field.kind === "toxin" && level >= 3 && enemy.venom >= 2)
+              enemy.slowed = Math.max(enemy.slowed, 0.7);
+            if (
+              field.kind === "storm" &&
+              level >= 3 &&
+              !field.ultimate &&
+              enemy.markCd <= 0
+            )
+              enemy.shock = Math.min(3, enemy.shock + 1);
             const power =
               field.kind === "storm"
                 ? 0.55
@@ -671,6 +1057,17 @@ export class Game {
               }
             }
           }
+        if (field.kind === "storm" && level >= 5 && !field.ultimate) {
+          const origin = this.enemies.find(
+            (e) => e.hp > 0 && distance(e, field) < field.radius,
+          );
+          const next =
+            origin &&
+            this.enemies.find(
+              (e) => e !== origin && e.hp > 0 && distance(e, origin) < 190,
+            );
+          if (origin && next) this.arcHit(origin, next, field.power * 0.4);
+        }
         if (field.kind === "storm") {
           this.burst(field, "#85d8ef", field.ultimate ? 12 : 5, 120);
           if (field.ultimate)
@@ -840,6 +1237,29 @@ export class Game {
         radius: weapon.range,
         color: weapon.color,
       });
+      if (this.run.rewards.resonance)
+        for (const wall of this.fields.filter(
+          (f) =>
+            f.kind === "wall" &&
+            f.life > 0 &&
+            distance(f, p) < weapon.range + 20,
+        )) {
+          const at = {
+            x: wall.x + Math.cos(wall.angle ?? 0) * 70,
+            y: wall.y + Math.sin(wall.angle ?? 0) * 70,
+          };
+          for (const e of this.enemies
+            .filter((e) => e.hp > 0 && distance(e, at) < 115)
+            .slice(0, 6))
+            this.hitEnemy(e, p.damage * 0.35);
+          this.onFeedback({
+            type: "skill",
+            x: at.x,
+            y: at.y,
+            radius: 115,
+            color: "#ffbc8a",
+          });
+        }
       this.shake = Math.max(this.shake, 2);
     } else if (weapon.pattern === "chain") {
       const hit = new Set<number>();
@@ -898,6 +1318,17 @@ export class Game {
         bullet.color = weapon.color;
         bullet.element = this.run.weapon === "needle" ? "toxin" : "neutral";
         bullet.ricochets = this.run.weapon !== "shotgun";
+        if (this.run.weapon === "disc")
+          Object.assign(bullet, {
+            origin: "disc",
+            returnIn: weapon.range / speed,
+            life: 1.6,
+            pierce: 99,
+            ricochets: false,
+            radius: 8,
+          });
+        if (this.run.weapon === "prism") bullet.origin = "prism";
+        if (this.run.weapon === "spore") bullet.origin = "seed";
       }
       if (this.run.rewards.crossfire)
         for (const offset of [Math.PI / 2, Math.PI, -Math.PI / 2]) {
@@ -907,6 +1338,17 @@ export class Game {
           bullet.color = weapon.color;
           bullet.ricochets = this.run.weapon !== "shotgun";
         }
+      if (
+        this.run.rewards.slipstream &&
+        this.overdrive > 0 &&
+        p.moving &&
+        this.trailCd <= 0 &&
+        this.fields.filter((f) => f.kind === "toxin").length < 3
+      ) {
+        this.trailCd = 1.2;
+        this.addField("toxin", p);
+        Object.assign(this.fields.at(-1)!, { life: 1.5, radius: 55 });
+      }
       this.onFeedback({ type: "shot", x: p.x, y: p.y, color: weapon.color });
     }
     this.burst(p, weapon.color, weapon.pattern === "cone" ? 10 : 3, 100);
@@ -1025,9 +1467,9 @@ export class Game {
     // Secondary damage never applies marks or triggers itself recursively.
     this.hitEnemy(to, damage);
   }
-  private catalyse(enemy: Enemy) {
+  private catalyse(enemy: Enemy, force = false) {
     if (
-      !this.run.rewards.catalyst ||
+      (!this.run.rewards.catalyst && !force) ||
       enemy.venom < 3 ||
       enemy.hp <= 0 ||
       enemy.transition > 0
@@ -1138,7 +1580,13 @@ export class Game {
         enemy.kind === "boss" ? 360 : 200,
       );
       if (
-        this.run.rewards.mycelium &&
+        (this.run.rewards.mycelium ||
+          this.fields.some(
+            (f) =>
+              f.kind === "toxin" &&
+              (f.level ?? 1) >= 5 &&
+              distance(f, enemy) < f.radius,
+          )) &&
         enemy.venom >= 2 &&
         this.fields.filter((f) => f.kind === "toxin").length < 3
       ) {
@@ -1294,9 +1742,17 @@ export class Game {
   update(dt: number) {
     if (this.phase !== "combat") return;
     const p = this.player;
+    this.overdrive = Math.max(0, this.overdrive - dt);
+    this.returnCd = Math.max(0, this.returnCd - dt);
+    this.trailCd = Math.max(0, this.trailCd - dt);
     this.comboTimer = Math.max(
       0,
-      this.comboTimer - dt * comboDrain(this.combo, p.moving),
+      this.comboTimer -
+        dt *
+          comboDrain(
+            this.combo,
+            p.moving && !(this.overdrive > 0 && this.qLevel >= 5),
+          ),
     );
     this.hitClock = Math.max(0, this.hitClock - dt);
     this.batteryCd = Math.max(0, this.batteryCd - dt);
@@ -1315,16 +1771,16 @@ export class Game {
     p.dashCd = Math.max(0, p.dashCd - dt);
     const direction = this.direction();
     const magnitude = Math.hypot(direction.x, direction.y);
-    p.moving = magnitude > 0.12 || p.dashTime > 0;
+    p.moving = magnitude > 0.01 || p.dashTime > 0;
     p.stationary = p.moving ? 0 : p.stationary + dt;
-    if (magnitude > 0.12)
+    if (magnitude > 0.01)
       this.aim = { x: direction.x / magnitude, y: direction.y / magnitude };
     if (p.dashTime > 0) {
       p.x += p.dashX * 850 * dt;
       p.y += p.dashY * 850 * dt;
       p.dashTime = Math.max(0, p.dashTime - dt);
       this.burst(p, CLASSES[this.run.classId].color, 1, 5);
-    } else if (magnitude > 0.12) {
+    } else if (magnitude > 0.01) {
       p.x += (direction.x / Math.max(1, magnitude)) * p.speed * dt;
       p.y += (direction.y / Math.max(1, magnitude)) * p.speed * dt;
     }
@@ -1332,10 +1788,10 @@ export class Game {
     p.y = clamp(p.y, 40, this.height - 40);
     p.charge = Math.min(
       this.fireInterval,
-      p.charge + dt * (p.moving ? 0.65 : 1),
+      p.charge + dt * (p.moving && this.overdrive <= 0 ? 0.65 : 1),
     );
     if (
-      !p.moving &&
+      (!p.moving || this.overdrive > 0) &&
       p.charge >= this.fireInterval &&
       this.enemies.length &&
       this.intro <= 0
@@ -1480,11 +1936,59 @@ export class Game {
         this.height - enemy.radius - 25,
       );
     }
+    this.resolveWalls();
     for (const bullet of this.bullets) {
+      if (bullet.life <= 0) continue;
+      if (bullet.origin === "disc") {
+        bullet.returnIn = (bullet.returnIn ?? 0.35) - dt;
+        if (
+          !bullet.returning &&
+          (bullet.returnIn <= 0 ||
+            bullet.x + bullet.vx * dt < 35 ||
+            bullet.y + bullet.vy * dt < 35 ||
+            bullet.x + bullet.vx * dt > this.width - 35 ||
+            bullet.y + bullet.vy * dt > this.height - 35)
+        ) {
+          bullet.returning = true;
+          bullet.hit.clear();
+        }
+        if (bullet.returning) {
+          const d = distance(bullet, p) || 1;
+          if (d < 23) {
+            bullet.life = 0;
+            this.recycle(p);
+            continue;
+          }
+          bullet.vx = ((p.x - bullet.x) / d) * 900;
+          bullet.vy = ((p.y - bullet.y) / d) * 900;
+        }
+      }
+      if (
+        !bullet.hostile &&
+        this.run.rewards.refract &&
+        !bullet.wallCharged &&
+        this.fields.some(
+          (f) =>
+            f.kind === "wall" && f.life > 0 && this.crossesWall(f, bullet, dt),
+        )
+      ) {
+        bullet.wallCharged = true;
+        bullet.pierce++;
+        bullet.color = "#c5afff";
+        this.burst(bullet, "#c5afff", 3, 80);
+      }
+      const speedFactor =
+        bullet.hostile &&
+        this.fields.some(
+          (f) =>
+            f.kind === "stasis" && f.life > 0 && distance(f, bullet) < f.radius,
+        )
+          ? 0.22
+          : 1;
       const oldX = bullet.x,
         oldY = bullet.y;
-      bullet.x += bullet.vx * dt;
-      bullet.y += bullet.vy * dt;
+      bullet.x += bullet.vx * dt * speedFactor;
+      bullet.y += bullet.vy * dt * speedFactor;
       bullet.life -= dt;
       if (this.engineCollisions) continue;
       // Headless fallback used by simulations without a Kaplay scene.
@@ -1591,6 +2095,44 @@ export class Game {
       !!this.run.rewards.poison,
       bullet.element ?? "neutral",
     );
+    if (bullet.origin === "prism") {
+      const angle = Math.atan2(bullet.vy, bullet.vx);
+      for (const offset of [-1.05, 0, 1.05]) {
+        this.projectile(
+          enemy,
+          angle + offset,
+          this.player.damage * 0.28,
+          false,
+          0,
+          650,
+        );
+        Object.assign(this.bullets.at(-1)!, {
+          origin: "shard",
+          pierce: bullet.wallCharged ? 1 : 0,
+          wallCharged: bullet.wallCharged,
+          life: 0.38,
+          color: "#c5afff",
+          ricochets: false,
+          hit: new Set([enemy.id]),
+        });
+      }
+      this.burst(enemy, "#c5afff", 16, 160);
+      bullet.origin = "shard";
+    }
+    if (bullet.origin === "seed") {
+      if (this.fields.filter((f) => f.source === "seed").length >= 3) {
+        const oldest = this.fields.find((f) => f.source === "seed")!;
+        oldest.life = 0;
+        this.fields = this.fields.filter((f) => f !== oldest);
+      }
+      this.addField("toxin", enemy);
+      Object.assign(this.fields.at(-1)!, {
+        source: "seed",
+        life: 1.6,
+        radius: 70,
+        power: this.player.damage * 0.35,
+      });
+    }
     if (
       bullet.origin === "turret" &&
       this.run.rewards.rod &&
@@ -1607,7 +2149,7 @@ export class Game {
       this.reaction("conduction", enemy, "PARA-RAIOS");
     }
     if (
-      this.run.rewards.ricochet &&
+      (this.run.rewards.ricochet || bullet.seeks) &&
       bullet.ricochets !== false &&
       bullet.hit.size < 3
     ) {
@@ -1664,6 +2206,8 @@ export class Game {
     this.bullets = [];
     this.hazards = [];
     this.fields = [];
+    this.overdrive = 0;
+    this.ultimatePulses = [];
     if (this.run.room === TOTAL_ROOMS) {
       this.finish(true);
       return;
@@ -1749,21 +2293,39 @@ export class Game {
         skills: ["vortex", "tempest"],
         perks: ["capacitor", "poison", "electrolysis", "faraday"],
       },
+      bastion: {
+        skills: ["wall", "cataclysm"],
+        perks: ["resonance", "refract", "capacitor"],
+      },
+      skater: {
+        skills: ["overdrive", "plague"],
+        perks: ["poison", "slipstream", "viscosity"],
+      },
+      recycler: {
+        skills: ["aegis", "tempest"],
+        perks: ["returnflux", "capacitor", "groundwire"],
+      },
       fresh: { skills: [null, null], perks: [] },
     };
     const preset = builds[build] ?? builds.control;
     this.run.skills = [...preset.skills];
+    this.run.learnedSkills = this.run.skills[0] ? [this.run.skills[0]] : [];
+    if (this.run.skills[0]) this.run.skillLevels[this.run.skills[0]] = 1;
     this.run.ultimateCharge = this.run.skills[1] ? 100 : 0;
     this.run.weapon =
-      build === "brawler"
+      build === "brawler" || build === "bastion"
         ? "seismic"
-        : build === "trickster"
-          ? "shotgun"
-          : build === "lightning"
-            ? "arc"
-            : build === "toxin" || build === "hybrid"
-              ? "needle"
-              : "pulse";
+        : build === "skater"
+          ? "spore"
+          : build === "recycler"
+            ? "disc"
+            : build === "trickster"
+              ? "shotgun"
+              : build === "lightning"
+                ? "arc"
+                : build === "toxin" || build === "hybrid"
+                  ? "needle"
+                  : "pulse";
     this.run.weapons = [...new Set<WeaponId>(["pulse", this.run.weapon])];
     for (const id of preset.perks) applyReward(this.run, this.player, id);
     this.beginRoom();
@@ -1813,10 +2375,20 @@ export class Game {
     g.player.hp = 70;
     if (power.startsWith("weapon:")) g.run.weapon = id as WeaponId;
     else {
-      g.player.reload = 1000;
+      g.player.reload = id === "overdrive" ? 0.2 : 1000;
       g.run.skills = isUltimate(id) ? [null, id] : [id, null];
     }
     g.run.ultimateCharge = 100;
+    if (["aegis", "stasis", "nova"].includes(id))
+      for (const offset of [-0.3, 0, 0.3])
+        g.projectile(
+          { x: g.player.x + 330, y: g.player.y + offset * 150 },
+          Math.PI,
+          8,
+          true,
+          0,
+          110,
+        );
     const points = radial
       ? [
           [490, 240],
@@ -1836,7 +2408,7 @@ export class Game {
       g.spawn(i === 4 ? "guard" : "chaser", x, y);
       const e = g.enemies.at(-1)!;
       e.hp = e.maxHp = 85;
-      e.speed = ["mine", "decoy"].includes(id) ? 75 : 8;
+      e.speed = ["mine", "decoy", "wall"].includes(id) ? 75 : 8;
       e.timer = 100;
       if (id === "plague" && i < 3) {
         e.venom = 3;
@@ -1864,6 +2436,11 @@ export class Game {
     )
       return;
     this.run.skills[slot] = id || null;
+    if (slot === 0) this.overdrive = 0;
+    if (slot === 0 && id) {
+      if (!this.run.learnedSkills.includes(id)) this.run.learnedSkills.push(id);
+      this.run.skillLevels[id] ??= 1;
+    }
     if (slot === 1) this.run.ultimateCharge = id ? 100 : 0;
     this.player.skillCd = this.player.secondCd = 0;
     this.fields = [];

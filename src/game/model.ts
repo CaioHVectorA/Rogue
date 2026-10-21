@@ -46,16 +46,34 @@ export interface Bullet extends Point {
   color?: string;
   ricochets?: boolean;
   element?: Element;
-  origin?: "turret";
+  origin?: "turret" | "disc" | "prism" | "shard" | "seed";
+  returning?: boolean;
+  returnIn?: number;
+  wallCharged?: boolean;
+  seeks?: boolean;
 }
 export interface Field extends Point {
-  kind: "vortex" | "storm" | "turret" | "mine" | "orbit" | "decoy" | "toxin";
+  kind:
+    | "vortex"
+    | "storm"
+    | "turret"
+    | "mine"
+    | "orbit"
+    | "decoy"
+    | "toxin"
+    | "wall"
+    | "aegis"
+    | "stasis"
+    | "recall";
   radius: number;
   life: number;
   timer: number;
   power: number;
   blocks: number;
   ultimate?: boolean;
+  level?: number;
+  angle?: number;
+  source?: "seed";
 }
 export interface Hazard extends Point {
   radius: number;
@@ -107,6 +125,9 @@ export interface Run {
   purchases: number;
   training: Partial<Record<HeroStat, number>>;
   ultimateCharge: number;
+  learnedSkills: string[];
+  skillLevels: Record<string, number>;
+  skillPurchase: boolean;
   won: boolean;
   finished: boolean;
 }
@@ -274,6 +295,45 @@ export const WEAPONS = [
     power: 0.8,
     pattern: "line",
   },
+  {
+    id: "disc",
+    name: "Disco de retorno",
+    tag: "IDA E VOLTA",
+    desc: "Uma lâmina atravessa a fila e volta até você. Pode atingir cada alvo uma vez na ida e uma na volta. Mova-se para redesenhar o retorno.",
+    hint: "Reposicione-se para cortar na volta",
+    glyph: "repeat",
+    color: "#ffda8a",
+    interval: 0.42,
+    range: 350,
+    power: 0.8,
+    pattern: "line",
+  },
+  {
+    id: "prism",
+    name: "Cristal estilhaçante",
+    tag: "FRAGMENTAÇÃO",
+    desc: "O primeiro impacto abre três estilhaços em direções diferentes. Eles não atingem o alvo original nem se fragmentam de novo; agrupe inimigos para aproveitar.",
+    hint: "Agrupe a horda para fragmentar",
+    glyph: "double",
+    color: "#c5afff",
+    interval: 0.5,
+    range: 650,
+    power: 0.9,
+    pattern: "line",
+  },
+  {
+    id: "spore",
+    name: "Lançador de casulos",
+    tag: "VENENO · TERRITÓRIO",
+    desc: "Casulos abrem pequenas nuvens no impacto. Até três nuvens de casulo coexistem; atraia a horda para o caminho contaminado.",
+    hint: "Contamine passagens antes de recuar",
+    glyph: "toxin",
+    color: "#b8ff62",
+    interval: 0.46,
+    range: 510,
+    power: 0.35,
+    pattern: "line",
+  },
 ] as const;
 export type WeaponId = (typeof WEAPONS)[number]["id"];
 export const weaponById = (id: WeaponId) => WEAPONS.find((w) => w.id === id)!;
@@ -368,6 +428,51 @@ export const SKILLS = [
     cooldown: 4.6,
     color: "#b8ff62",
     glyph: "toxin",
+  },
+  {
+    id: "wall",
+    name: "Muralha espectral",
+    tag: "DEFESA · TERRENO",
+    desc: "Ergue uma parede diante do maior grupo de inimigos por 3s. Ela segura a horda; herói e todos os tiros atravessam. Chefes rompem a parede.",
+    cooldown: 6,
+    color: "#85d8ef",
+    glyph: "shield",
+  },
+  {
+    id: "aegis",
+    name: "Égide de retorno",
+    tag: "DEFESA · RECICLAR",
+    desc: "Um escudo acompanha você e intercepta até três tiros por 3s. Contato e ataques no chão continuam perigosos. Evolua para devolver os tiros ao inimigo.",
+    cooldown: 6,
+    color: "#a4f6c1",
+    glyph: "shield",
+  },
+  {
+    id: "overdrive",
+    name: "Motor de assalto",
+    tag: "BUFF · MOVIMENTO",
+    desc: "Por 2,2s você dispara enquanto se move. A arma mantém seu padrão e sua cadência; use o impulso para atacar sem entregar o posicionamento.",
+    cooldown: 6.5,
+    color: "#ffda8a",
+    glyph: "charge",
+  },
+  {
+    id: "stasis",
+    name: "Bolha temporal",
+    tag: "DEFESA · TEMPO",
+    desc: "Por 2,6s uma bolha acompanha você e desacelera tiros hostis próximos. Os tiros recuperam a velocidade ao sair. Evolua para também frear inimigos.",
+    cooldown: 6,
+    color: "#c5afff",
+    glyph: "repeat",
+  },
+  {
+    id: "recall",
+    name: "Âncora de retorno",
+    tag: "TRUQUE · REPOSICIONAR",
+    desc: "Marca o chão e, após 2,2s, leva você de volta. O retorno apaga tiros próximos e prepara o disparo. Saia, ataque e deixe a âncora resgatar você.",
+    cooldown: 6.5,
+    color: "#85d8ef",
+    glyph: "dash",
   },
 ] as const;
 export const ULTIMATES = [
@@ -465,7 +570,143 @@ export const TRAINING_CAP = 3;
 export const trainingCost = (run: Run, id: HeroStat) =>
   22 + (run.training[id] ?? 0) * 18 + (run.act - 1) * 5;
 
+export const SKILL_LEVEL_CAP = 5;
+export const skillLevel = (run: Run, id = run.skills[0] ?? "") =>
+  Math.max(1, Math.min(SKILL_LEVEL_CAP, run.skillLevels[id] ?? 1));
+export const skillUpgradeCost = (run: Run) =>
+  20 + skillLevel(run) * 12 + (run.act - 1) * 6;
+export const skillRole = (id: string) =>
+  ["nova", "wall", "aegis", "stasis"].includes(id)
+    ? "defense"
+    : ["overdrive", "recall", "vortex", "decoy"].includes(id)
+      ? "utility"
+      : "attack";
+export const SKILL_EVOLUTION: Record<string, [string, string, string, string]> =
+  {
+    volley: [
+      "Leque ganha dois projéteis.",
+      "Projéteis atravessam mais um alvo.",
+      "Recarga mais curta.",
+      "As duas lâminas laterais voltam até você.",
+    ],
+    nova: [
+      "Onda alcança mais longe.",
+      "Deixa uma bolha que freia projéteis.",
+      "Recarga mais curta.",
+      "A bolha também desacelera inimigos.",
+    ],
+    quake: [
+      "Pisada ganha alcance.",
+      "Detona três doses mesmo sem Catálise.",
+      "Recarga mais curta.",
+      "Deixa um campo temporal no impacto.",
+    ],
+    vortex: [
+      "Poço dura mais e cobre mais chão.",
+      "Passa a sugar até três tiros hostis.",
+      "Recarga mais curta.",
+      "Tiros capturados explodem ao fechar o poço.",
+    ],
+    storm: [
+      "Temporal dura mais e cobre mais chão.",
+      "Raios preparam uma carga extra.",
+      "Recarga mais curta.",
+      "Cada pulso pode saltar a um segundo alvo.",
+    ],
+    turret: [
+      "Torre permanece por mais tempo.",
+      "Passa a cobrir dois alvos diferentes.",
+      "Recarga mais curta.",
+      "Tiros da torre buscam outros alvos ao acertar.",
+    ],
+    mine: [
+      "Explosão ganha alcance e tempo de espera.",
+      "Explosão puxa alvos próximos.",
+      "Recarga mais curta.",
+      "Deixa veneno, raios ou lentidão conforme a build.",
+    ],
+    orbit: [
+      "Lâminas duram mais e cobrem mais chão.",
+      "Podem cortar três tiros adicionais.",
+      "Recarga mais curta.",
+      "Tiros cortados voltam contra a horda.",
+    ],
+    decoy: [
+      "Isca atrai por mais tempo.",
+      "Uma bolha temporal protege a saída.",
+      "Recarga mais curta.",
+      "Planta duas iscas na retirada.",
+    ],
+    venom: [
+      "Nuvem dura mais e cobre mais chão.",
+      "Duas doses já desaceleram dentro da nuvem.",
+      "Recarga mais curta.",
+      "Mortes envenenadas podem plantar nuvens menores.",
+    ],
+    wall: [
+      "Parede fica mais larga e dura mais.",
+      "Contato transmite cargas e doses da build.",
+      "Recarga mais curta.",
+      "Ao expirar, empurra a horda para abrir passagem.",
+    ],
+    aegis: [
+      "Escudo intercepta um tiro adicional.",
+      "Tiros interceptados voltam para o inimigo.",
+      "Recarga mais curta.",
+      "Bloqueios restantes viram um breve Motor de assalto.",
+    ],
+    overdrive: [
+      "Motor dura mais tempo.",
+      "Ativação deixa a esquiva pronta.",
+      "Recarga mais curta.",
+      "Durante o motor, movimento desgasta menos o combo.",
+    ],
+    stasis: [
+      "Bolha alcança mais longe e dura mais.",
+      "Também freia inimigos próximos.",
+      "Recarga mais curta.",
+      "Ao fechar, devolve até três tiros presos na bolha.",
+    ],
+    recall: [
+      "Retorno limpa uma área maior.",
+      "A chegada provoca uma onda de repulsão.",
+      "Recarga mais curta.",
+      "Deixa uma isca explosiva onde você estava.",
+    ],
+  };
 export const REWARDS: Reward[] = [
+  {
+    id: "refract",
+    name: "Membrana prismática",
+    tag: "MURALHA · TIROS",
+    desc: "Tiros que cruzam a sua muralha atravessam um alvo extra. Cada projétil só pode ser alterado uma vez.",
+    max: 1,
+    color: "#c5afff",
+  },
+  {
+    id: "returnflux",
+    name: "Retorno energético",
+    tag: "RECICLAR",
+    desc: "Recuperar discos ou bloquear tiros com Égide/lâminas prepara a arma e adianta Q. Cada retorno tem um breve limite de ativação.",
+    max: 1,
+    color: "#85d8ef",
+  },
+  {
+    id: "resonance",
+    name: "Bastião sísmico",
+    tag: "MURALHA · RESSONÂNCIA",
+    desc: "Ondas do Emissor sísmico próximas à muralha criam outro impacto do lado oposto. Construa uma passagem de dano através da defesa.",
+    max: 1,
+    color: "#ffbc8a",
+  },
+  {
+    id: "slipstream",
+    name: "Patins de esporos",
+    tag: "MOVIMENTO · VENENO",
+    desc: "Atirar em movimento com Motor de assalto deixa pequenas nuvens de veneno no caminho. O rastro tem limite de frequência e de nuvens.",
+    max: 1,
+    color: "#b8ff62",
+  },
   ...ULTIMATES.map((s) => ({
     id: `ultimate:${s.id}`,
     name: s.name,
@@ -721,6 +962,9 @@ export function createRun(seed: string, classId: ClassId): Run {
     purchases: 0,
     training: {},
     ultimateCharge: 0,
+    learnedSkills: [],
+    skillLevels: {},
+    skillPurchase: false,
     won: false,
     finished: false,
   };
@@ -777,7 +1021,8 @@ export function rewardOffers(
       return (
         (kind === "skill" ||
           (kind === "perk" && [5, 7, 10].includes(run.room))) &&
-        !run.skills.includes(r.id.slice(6))
+        !run.skills.includes(r.id.slice(6)) &&
+        !run.learnedSkills.includes(r.id.slice(6))
       );
     if (kind === "ultimate") return false;
     if (r.id.startsWith("weapon:"))
@@ -789,6 +1034,25 @@ export function rewardOffers(
     )
       return false;
     if (r.id === "ricochet" && run.weapon === "shotgun") return false;
+    if (r.id === "refract" && !run.skills.includes("wall")) return false;
+    if (
+      r.id === "resonance" &&
+      !(run.skills.includes("wall") && run.weapon === "seismic")
+    )
+      return false;
+    if (
+      r.id === "returnflux" &&
+      !(
+        run.weapon === "disc" ||
+        run.skills.some((s) => s === "aegis" || s === "orbit")
+      )
+    )
+      return false;
+    if (
+      r.id === "slipstream" &&
+      !(run.skills.includes("overdrive") && elements.toxin)
+    )
+      return false;
     if (r.id === "echo" && !run.skills.every(Boolean)) return false;
     if (r.id === "battery" && !run.skills.some(Boolean)) return false;
     if (
@@ -836,6 +1100,21 @@ export function rewardOffers(
     ...eligible.filter((r) => exclude.includes(r.id)),
   ];
   const result: string[] = [];
+  // The first Q draft contrasts offense, protection and utility without an initial class choice.
+  if (kind === "skill")
+    for (const role of ["attack", "defense", "utility"]) {
+      const options = pool.filter(
+        (r) => skillRole(r.id.slice(6)) === role && !exclude.includes(r.id),
+      );
+      const fallback = options.length
+        ? options
+        : pool.filter((r) => skillRole(r.id.slice(6)) === role);
+      if (fallback.length) {
+        const picked = fallback[Math.floor(random() * fallback.length)];
+        result.push(picked.id);
+        pool.splice(pool.indexOf(picked), 1);
+      }
+    }
   while (result.length < 3 && pool.length) {
     const fresh = pool.filter((r) => !exclude.includes(r.id));
     let choices = fresh.length ? fresh : pool;
@@ -862,6 +1141,8 @@ export function applyReward(run: Run, player: Player, id: string): boolean {
     const skill = id.slice(6);
     if (run.skills.includes(skill)) return false;
     run.skills[0] = skill;
+    if (!run.learnedSkills.includes(skill)) run.learnedSkills.push(skill);
+    run.skillLevels[skill] ??= 1;
     player.skillCd = 0;
   }
   if (id.startsWith("ultimate:")) {
@@ -919,12 +1200,17 @@ export function buildElements(run: Run) {
     toxin:
       !!run.rewards.poison ||
       run.weapon === "needle" ||
+      run.weapon === "spore" ||
       run.skills.includes("venom") ||
       run.skills.includes("plague"),
   };
 }
 export function rewardSynergy(run: Run, id: string): string | null {
   const e = buildElements(run);
+  if (id === "refract") return "MURALHA + PROJÉTEIS → PERFURAÇÃO";
+  if (id === "resonance") return "MURALHA + ONDA → BASTIÃO SÍSMICO";
+  if (id === "returnflux") return "DEFESA / DISCO → RECICLAGEM";
+  if (id === "slipstream") return "MOTOR + VENENO → RASTRO TÓXICO";
   if (id === "electrolysis" && e.storm && e.toxin)
     return "RAIO + DOSES → CONTÁGIO";
   if (id === "faraday") return "ÍMÃ + TEMPESTADE → CIRCUITO";
@@ -962,6 +1248,7 @@ export function advanceRoom(run: Run): boolean {
   run.room++;
   run.act = Math.ceil(run.room / 4);
   run.purchases = 0;
+  run.skillPurchase = false;
   return true;
 }
 export const emptyRecords = (): RecordBook => ({
