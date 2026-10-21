@@ -45,15 +45,15 @@ export const ITEM_VISUALS: Record<
   },
   echo: {
     glyph: "repeat",
-    value: "Q⇄E",
+    value: "E→Q",
     stat: "ECO",
-    hint: "Uma habilidade adianta a outra",
+    hint: "Ultimate deixa Q pronto",
   },
   battery: {
     glyph: "charge",
     value: "↻",
     stat: "BATERIA",
-    hint: "Abates alimentam as recargas",
+    hint: "Abates adiantam a recarga de Q",
   },
   poison: {
     glyph: "toxin",

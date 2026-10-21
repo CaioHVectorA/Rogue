@@ -638,7 +638,7 @@ export const REWARDS: Reward[] = [
     id: "faraday",
     name: "Gaiola de Faraday",
     tag: "RAIO · CIRCUITO",
-    desc: "Chuva de raios dentro do ímã consome cargas para saltar entre inimigos. Agrupe primeiro; conjure a tempestade depois.",
+    desc: "O Olho da tempestade dentro do ímã consome cargas para saltar entre inimigos. Agrupe primeiro; leve a ultimate até a horda.",
     max: 1,
     color: "#85d8ef",
   },

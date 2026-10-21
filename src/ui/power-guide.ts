@@ -345,7 +345,7 @@ export class PowerPreviews {
       root.querySelectorAll<HTMLCanvasElement>("[data-power-preview]"),
     ).map((canvas) => new PreviewScene(canvas));
     for (const scene of this.scenes) {
-      if (reduced) for (let i = 0; i < 150; i++) scene.step(1 / 120);
+      if (reduced) for (let i = 0; i < 120; i++) scene.step(1 / 120);
       scene.draw();
     }
     if (!this.scenes.length || reduced) return;
