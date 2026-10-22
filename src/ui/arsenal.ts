@@ -13,6 +13,9 @@ const SKILL_HINTS: Record<string, string> = {
   orbit: "Entre na horda; lâminas apagam tiros",
   decoy: "Sua cópia atrai a horda e explode",
   venom: "Crie doses antes de detonar",
+  recall: "Q planta a runa · outro Q retorna · até 15s",
+  soulstep: "Avance, marque com dano e volte liberando ecos",
+  relay: "Lance o selo e escolha quando atravessar",
 };
 
 export const ITEM_VISUALS: Record<

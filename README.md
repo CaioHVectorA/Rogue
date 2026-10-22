@@ -104,6 +104,16 @@ O padrão é joystick flutuante: toque na metade esquerda da arena e arraste. So
 
 A run combina passivas → tiro opcional → Q → ultimate. Q possui cinco níveis por habilidade e pode evoluir uma vez por checkpoint com ouro: `20 + 12 × nível atual + 6 × (ato − 1)`. Evoluções acrescentam cobertura, comportamentos e maestria; nível 4 também reduz a recarga. Habilidades já aprendidas continuam no arsenal para troca, preservando seus níveis durante a run. Nova run zera tudo.
 
-Cinco Q novos: Muralha espectral (retém corpos, tiros atravessam; bosses rompem), Égide de retorno (bloqueio e depois reflexão), Motor de assalto (disparo em movimento), Bolha temporal (lentidão de projéteis) e Âncora de retorno (recuo programado). O primeiro draft contrasta ataque, defesa e utilidade, sem escolher uma classe.
+Cinco Q novos: Muralha espectral (retém corpos, tiros atravessam; bosses rompem), Égide de retorno (bloqueio e depois reflexão), Motor de assalto (disparo em movimento), Bolha temporal (lentidão de projéteis) e Âncora de retorno (runa reconjurável por até 15s). O primeiro draft contrasta ataque, defesa e utilidade, sem escolher uma classe.
 
 O laboratório inclui Bastião sísmico (muralha transmite ondas), Patinador tóxico (motor deixa esporos) e Reciclador (discos/bloqueios realimentam Q), além de seletor de nível 1–5. Discos podem acertar uma vez em cada sentido; estilhaços não se dividem novamente; casulos mantêm até três nuvens próprias. Essas restrições preservam o ritmo mesmo com perks combinados.
+
+### Reconjuração e encontros especialistas
+
+Q agora tem uma segunda ação em cinco habilidades. O botão muda para a ação armada e mostra o tempo restante; a recarga começa ao encerrar. Âncora de retorno fica até 15s no chão, permite voltar com outro Q e retorna automaticamente ao expirar. Incursão espectral avança, deixa o corpo por 6s (7s a partir do nível 2) e retorna com ecos de 25% do dano direto efetivo, limitados a seis alvos e seis vezes o dano-base no total. Não restaura vida. Selo de travessia dura 5s: reconjurar cruza e corta o caminho; deixar expirar desfaz o selo sem teleportar. Minas podem detonar à distância após armar, e o ímã pode implodir antes do fim.
+
+Há 17 Qs. A primeira escolha continua contrastando três funções. Nas waves 5, 7 e 10, uma carta é garantidamente um Q ainda não aprendido; o sorteio prioriza habilidades ainda não mostradas naquela run, inclusive após rerrolar. O histórico reinicia com a run. Na tela de resultado, **NOVA RUN** é a ação principal e gera outra seed; **MESMA SEED** fica como alternativa explícita para reproduzir código e escolhas.
+
+Waves de horda (1, 3, 6 e 10) alternam com encontros menores de precisão (2, 5, 7, 9 e 11). Duelistas travam a direção, anunciam a investida e têm recuperação; Arautos preparam até cinco corpos para uma investida, cancelada quando o comandante morre; Tecelões antecipam o movimento com áreas anunciadas, canceladas se o conjurador morrer antes de dispará-las. Especialistas rendem três moedas base. Hordas preservam espaço para builds de área; precisão exige esquiva e prioridade de alvo.
+
+Para testar: frasco/F2 → presets **Âncora**, **Incursão** ou **Emboscada**. O seletor de encontro mostra o nome da wave; os novos Qs também têm prévias com primeira e segunda ativação.

@@ -8,7 +8,7 @@ Toda run normal começa com o mesmo kit básico, sem escolher classe e sem habil
 - Wave 2: primeira habilidade Q, com três ofertas contrastando ataque, defesa e utilidade. Wave 3 entrega uma melhoria da build e mantém E bloqueado.
 - Wave 4: primeira forma alternativa de disparo, após vencer o boss.
 - Wave 8: primeira ultimate E, após vencer o segundo boss.
-- Waves 5–11: perks de comportamento, sinergias condicionais e novas formas de disparo. Nas waves 5, 7 e 10, habilidades novas também podem aparecer para substituir Q. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
+- Waves 5–11: perks de comportamento, sinergias condicionais e novas formas de disparo. Nas waves 5, 7 e 10, uma carta de nova habilidade Q é garantida, priorizando as que ainda não apareceram na run. Uma troca inicial, mais uma por chefe. Perks únicos evitam transformar a progressão em acumular percentuais; Coração de titã é a alternativa explícita de vida.
 - Descanso: ouro treina oito atributos gerais do herói; no máximo duas compras por checkpoint e três níveis por atributo. Custos crescem por nível e ato. Não há compra de dano bruto nem cura consumível.
 
 ## Formas de ataque automático
@@ -92,7 +92,7 @@ Cada ato adiciona complexidade: a Tecelã tem leques direcionados e o Soberano m
 
 ## Laboratório
 
-Frasco ou F2, disponível no build publicado. Estado, wave, fase, piloto, quatro presets e kit básico; edição de habilidades/perks, invencibilidade, velocidade e limpeza de wave. Abrir pausa. Saltar começa outra run, marcada como prática, com 250 de ouro. Prática não escreve recordes e suas modificações são descartadas no próximo início normal.
+Frasco ou F2, disponível no build publicado. Estado, wave, fase, piloto, presets de builds e kit básico; edição de habilidades/perks, invencibilidade, velocidade e limpeza de wave. Abrir pausa. Saltar começa outra run, marcada como prática, com 250 de ouro. Prática não escreve recordes e suas modificações são descartadas no próximo início normal.
 
 ## Rebalanceamento: progressão gradual e builds elementais
 
@@ -120,7 +120,7 @@ Ofertas condicionais exigem suas peças de entrada; por exemplo, Para-raios exig
 
 ### Pressão dos encontros
 
-Hordas misturam perseguidores, flanqueadores, atiradores e guardas durante o encontro, em grupos sucessivos. Atiradores chegam desde a primeira wave e guardas desde a segunda. Unidades comuns resistem a mais de um tiro básico; atiradores e guardas têm leques de projéteis. O total cresce de 23 ameaças na primeira wave para 69 na wave 11, com aumento de resistência e velocidade por ato.
+Hordas (1/3/6/10) usam 21/38/52/68 inimigos, com grupos de 7–8 e Arautos nas marés posteriores. Precisão (2/5/7/9/11) usa 10/13/14/18/20 ameaças, em grupos de quatro, alternando leitura de investidas, comando e previsão de movimento. Especialistas têm três moedas base por abate. O objetivo é alternar controle de massa com esquiva e prioridade, em vez de aumentar apenas a contagem.
 
 Bosses têm 2700/5700/8700 HP, os mesmos quatro marcos de fase e intervalos de ataque de 2,4/2/1,75/1,5s. Da segunda fase em diante, algumas sequências anunciam uma investida por 0,8s. A direção é capturada no anúncio, sem seguir o jogador. Órbita corta um número limitado de tiros e sustentação/recargas não multiplicam o benefício de dezenas de mortes no mesmo instante.
 
@@ -153,3 +153,11 @@ Três tiros novos mudam a geometria: disco atravessa e volta à posição atual 
 Quatro passivas ligam peças do kit: Membrana prismática faz cada projétil que cruza a muralha perfurar um alvo extra, só uma vez; Retorno energético prepara a arma e adianta Q em 0,2s ao recuperar disco ou bloquear tiros (intervalo mínimo de 0,2s); Bastião sísmico cria impacto no outro lado da muralha ao usar o emissor perto dela, atingindo até seis alvos; Patins de esporos deixa nuvem ao disparar em movimento com motor, a cada 1,2s e até três nuvens próprias de rastro, que podem coexistir com os casulos dentro do limite global de seis campos. As ofertas exigem os componentes ativos correspondentes. Os três estilos têm presets de laboratório, sem seleção inicial de classe.
 
 No toque, movimento flutuante possui sua própria captura de ponteiro e aceita começar na metade esquerda do campo. Tamanho, sensibilidade e zona morta são limitados e persistidos; sensibilidade baixa ainda alcança a velocidade máxima ao arrastar mais. Modo fixo mantém o centro no dock; direcionais oferecem oito direções e alvos de 44px, com suporte a deslizar entre botões e combinar dedos. Ações ficam ancoradas à direita. Pausa, rotação, mudança de preferência e cancelamento removem qualquer entrada pendente.
+
+## Q em duas etapas
+
+Âncora: plantar → explorar por até 15s → voltar manualmente ou ao expirar. Incursão espectral: avançar → causar dano por até 6/7s → voltar com ecos limitados de dano real; vida recebida não é restaurada. Selo: lançar → decidir atravessar em até 5s; ao expirar não move o herói. Mina: plantar/armar → detonar por Q, proximidade ou prazo. Ímã: agrupar → implodir por Q ou prazo. Recargas começam após a segunda ação/expiração, com trava inicial de 0,22s (mina: 0,45s) contra duplo toque acidental. Pausa congela o prazo, novas runs limpam estados e a zona armada não pode ser descartada pelo limite de seis campos.
+
+Duelista anuncia direção fixa por 0,8s, avança até 236 unidades e se recupera por 0,7s. Arauto prepara até cinco corpos a até 380 unidades durante 0,9s, com destino fixo e recarga de 4,8s; abater o Arauto interrompe sua formação. Tecelão prevê até 0,45s do movimento atual e planta duas áreas (três no ato III) de raio 58, com aviso de pelo menos 1,1s; abater o conjurador cancela áreas ainda não disparadas. As silhuetas, avisos de trajetória e círculos de canalização distinguem os papéis em Kaplay.
+
+Ofertas guardam os Qs mostrados apenas na própria run. Primeira escolha oferece ataque/defesa/utilidade. Nas waves 5/7/10, um novo Q tem espaço reservado e duas cartas permanecem para evolução da build. Rerrolar prioriza alternativas fora do último trio e ainda não mostradas, respeitando elegibilidade e pool finito. Não há viés por histórico persistido do aparelho: seeds continuam reproduzíveis.

@@ -1,6 +1,6 @@
 import { Game } from "../game/engine";
 import type { Feedback } from "../game/engine";
-import { isUltimate, skillById, weaponById } from "../game/model";
+import { isUltimate, skillById, weaponById, RECASTS } from "../game/model";
 import type { WeaponId } from "../game/model";
 
 const LOCATIONS: Record<string, string> = {
@@ -8,15 +8,17 @@ const LOCATIONS: Record<string, string> = {
   aegis: "ACOMPANHA VOCÊ · BLOQUEIA TIROS",
   stasis: "ACOMPANHA VOCÊ · DESACELERA TIROS",
   overdrive: "DISPARE EM MOVIMENTO",
-  recall: "MARQUE · SAIA · RETORNE",
+  recall: "Q: RUNA · Q: VOLTAR · ATÉ 15s",
+  soulstep: "Q: AVANCE · CAUSE DANO · Q: VOLTAR + ECO",
+  relay: "Q: LANCE O SELO · Q: ATRAVESSE",
   venom: "NO ALVO MAIS PRÓXIMO",
   volley: "NA DIREÇÃO DO ALVO",
   nova: "AO SEU REDOR · EMPURRA",
   quake: "PERTO DE VOCÊ · CURA AO ACERTAR",
-  vortex: "NO ALVO · PUXA A HORDA",
+  vortex: "Q: AGRUPE · Q: IMPLODA",
   storm: "NO ALVO · ZONA DE RAIOS",
   turret: "NO SEU CHÃO · ATIRA SOZINHA",
-  mine: "NO SEU CHÃO · ATRAIA A HORDA",
+  mine: "Q: PLANTE · Q: DETONE",
   orbit: "ACOMPANHA VOCÊ · CORTA TIROS",
   decoy: "DEIXE A ISCA · REPOSICIONE-SE",
   tempest: "ACOMPANHA VOCÊ POR 5s",
@@ -51,10 +53,14 @@ export function powerInfo(id: string) {
   return {
     ...s,
     where: LOCATIONS[key],
-    trigger: ultimate ? "ULTIMATE · E" : "HABILIDADE · Q",
+    trigger: ultimate
+      ? "ULTIMATE · E"
+      : RECASTS[key]
+        ? "Q → Q · RECONJURÁVEL"
+        : "HABILIDADE · Q",
     timing: ultimate
       ? "ACERTE ATAQUES PARA CARREGAR · SEM RECARGA PASSIVA"
-      : `${s.cooldown}s DE RECARGA BASE`,
+      : `${s.cooldown}s DE RECARGA BASE${RECASTS[key] ? " · COMEÇA AO ENCERRAR" : ""}`,
   };
 }
 export function powerDiagram(id: string, level = 1) {
@@ -67,6 +73,7 @@ class PreviewScene {
   game: Game;
   time = 0;
   cast = false;
+  recast = false;
   effects: (Feedback & { age: number })[] = [];
   private ctx: CanvasRenderingContext2D;
   constructor(readonly canvas: HTMLCanvasElement) {
@@ -82,6 +89,7 @@ class PreviewScene {
       );
     this.time = 0;
     this.cast = false;
+    this.recast = false;
     this.effects = [];
     this.game.onFeedback = (event) => {
       if (this.effects.length < 90) this.effects.push({ ...event, age: 0 });
@@ -104,12 +112,20 @@ class PreviewScene {
     g.stick.x =
       this.cast &&
       this.time < 2.1 &&
-      ["mine", "decoy", "turret", "recall"].includes(id)
+      ["mine", "decoy", "turret", "recall", "soulstep"].includes(id)
         ? -0.45
         : this.cast && this.time < 2.1 && ["orbit", "tempest"].includes(id)
           ? 0.3
           : 0;
     if (id === "overdrive") g.stick.x = this.time < 4 ? 0.35 : 0;
+    if (id === "soulstep") {
+      g.player.reload = 0.2;
+      if (this.time > 2.1) g.stick.x = 0;
+    }
+    if (this.time > 3.1 && g.recast && !this.recast) {
+      g.skill();
+      this.recast = true;
+    }
     // No gunfire before the action cue in weapon demonstrations.
     if (
       this.canvas.dataset.powerPreview!.startsWith("weapon:") &&
@@ -198,11 +214,17 @@ class PreviewScene {
         circle(f.x, f.y, f.radius, "#c5afff", "#c5afff11");
         c.setLineDash([]);
       }
-      if (f.kind === "recall") {
-        circle(f.x, f.y, 32, "#85d8ef");
+      if (["recall", "soulstep", "relay"].includes(f.kind)) {
+        const color = skillById(f.kind).color;
+        circle(f.x, f.y, 32, color);
         c.font = "24px monospace";
-        c.fillStyle = "#85d8ef";
+        c.fillStyle = color;
         c.fillText("↶", f.x - 10, f.y + 8);
+        c.beginPath();
+        c.moveTo(f.x, f.y);
+        c.lineTo(g.player.x, g.player.y);
+        c.strokeStyle = color;
+        c.stroke();
       }
       if (f.kind === "vortex")
         for (let i = 0; i < 3; i++) {

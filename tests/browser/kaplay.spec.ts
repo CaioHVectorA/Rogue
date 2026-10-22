@@ -49,7 +49,7 @@ test("hordes, combo feedback and effect budgets stay bounded across restarts", a
     .toBe(1);
   await page.evaluate(() => {
     const g = window.__rogue;
-    g.run.room = 11;
+    g.run.room = 10;
     g.run.act = 3;
     g.beginRoom();
     g.player.invulnerable = 1000;
