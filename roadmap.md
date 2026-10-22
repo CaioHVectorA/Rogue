@@ -3,7 +3,7 @@
 ## Implementado
 
 - [x] Ciclo completo de run com início, escolha, descanso, derrota e vitória.
-- [x] Três pilotos no laboratório, quinze habilidades para Q, três ultimates tardias para E e 28 perks de comportamento.
+- [x] Três pilotos no laboratório, dezessete habilidades para Q, três ultimates tardias para E e 28 perks de comportamento.
 - [x] Três atos, 12 encontros e três guardiões com quatro fases e transições.
 - [x] Interface HTML responsiva, HUD, teclado e controles de toque.
 - [x] Seeds, diária UTC e recordes locais sem bônus permanentes.
@@ -34,3 +34,7 @@ Adicionar conteúdo depois de confirmar que o ciclo curto sustenta partidas repe
 - [x] Joystick flutuante/fixo e direcionais, com tamanho, sensibilidade e zona morta persistidos.
 - [x] Maestrias de Q em cinco níveis, evolução por ouro e troca entre habilidades aprendidas no arsenal.
 - [x] Disco de retorno, cristal fragmentável e casulos tóxicos; três estilos de sinergia no laboratório.
+
+- [x] Qs reconjuráveis, runa de até 15s, ecos de incursão e selo de travessia.
+- [x] Waves alternando horda e precisão; Duelista, Arauto e Tecelão com respostas próprias.
+- [x] Histórico de Qs oferecidos na run e novas habilidades garantidas nos checkpoints 5/7/10.

@@ -82,7 +82,9 @@ it("weapon sidegrades do not multiply single-target output; waves mix pressure e
   }
   expect(roomComposition(1)).toContain("shooter");
   expect(roomComposition(2)).toContain("guard");
-  expect(roomComposition(11).length).toBeGreaterThan(roomComposition(3).length);
+  expect(roomComposition(11).length).toBeLessThan(roomComposition(10).length);
+  expect(roomComposition(11)).toContain("duelist");
+  expect(roomComposition(11)).toContain("weaver");
   const g = arena();
   (g as any).spawn("chaser", 100, 100);
   expect(g.enemies[0].hp).toBeGreaterThan(g.player.damage);

@@ -1,7 +1,7 @@
 import kaplay from "kaplay";
 import type { GameObj, KAPLAYCtx } from "kaplay";
 import type { Game, Feedback } from "./engine";
-import { ACTS, CLASSES, weaponById } from "./model";
+import { ACTS, CLASSES, weaponById, encounterByRoom, skillById } from "./model";
 import type { Enemy, Bullet, Hazard, Pickup, Player, Point } from "./model";
 
 type Entity = Enemy | Bullet | Hazard | Pickup | Player;
@@ -11,6 +11,9 @@ const COLORS = {
   runner: "#ffc452",
   shooter: "#c295ff",
   guard: "#69d6ff",
+  herald: "#ffda8a",
+  duelist: "#ff9b83",
+  weaver: "#e0a1ff",
 };
 
 /** Kaplay owns scene lifecycle, WebGL rendering, collision broad phase, audio and effects. */
@@ -364,9 +367,15 @@ export class KaplayRuntime {
             ? 4
             : e.kind === "guard"
               ? 8
-              : e.kind === "boss"
-                ? 6
-                : 5;
+              : e.kind === "weaver"
+                ? 8
+                : e.kind === "duelist"
+                  ? 3
+                  : e.kind === "herald"
+                    ? 6
+                    : e.kind === "boss"
+                      ? 6
+                      : 5;
       this.poly({ x: 0, y: 6 }, e.radius + 5, sides, "#000000", 0.35, angle);
       this.poly(zero, e.radius + 6, sides, color, 0.07, angle);
       this.poly(zero, e.radius, sides, "#1d1829", 1, angle);
@@ -424,7 +433,38 @@ export class KaplayRuntime {
         );
         if (e.kind === "shooter")
           this.ring(zero, e.radius + 6, color, 0.6, 1.5);
+        if (e.kind === "herald") {
+          this.ring(zero, e.radius + 10, color, 0.7, 2);
+          for (const side of [-1, 1])
+            this.poly({ x: side * 28, y: -15 }, 7, 3, color, 0.9, -Math.PI / 2);
+        }
+        if (e.kind === "duelist")
+          for (const side of [-1, 1])
+            this.poly({ x: side * 23, y: 0 }, 12, 3, color, 0.9, angle);
+        if (e.kind === "weaver")
+          for (let i = 0; i < 4; i++)
+            this.poly(
+              {
+                x: Math.cos((i * Math.PI) / 2 + this.time) * 31,
+                y: Math.sin((i * Math.PI) / 2 + this.time) * 31,
+              },
+              5,
+              4,
+              color,
+              0.85,
+              this.time,
+            );
       }
+      if (g.recast?.damage.has(e.id))
+        this.poly(
+          { x: 0, y: -e.radius - 40 },
+          7,
+          4,
+          "#c5afff",
+          0.95,
+          Math.PI / 4,
+        );
+      if (e.windup > 0) this.ring(zero, e.radius + 14, "#fff3cd", 0.85, 3);
       if (e.shock > 0)
         for (let i = 0; i < e.shock; i++)
           this.poly(
@@ -624,11 +664,11 @@ export class KaplayRuntime {
       }
     }
     for (const boss of g.enemies.filter(
-      (e) => e.kind === "boss" && e.windup > 0,
+      (e) => e.windup > 0 && e.dashLeft > 0,
     )) {
       const end = {
-        x: boss.x + boss.dashVX * 0.3,
-        y: boss.y + boss.dashVY * 0.3,
+        x: boss.x + boss.dashVX * boss.dashLeft,
+        y: boss.y + boss.dashVY * boss.dashLeft,
       };
       k.drawLine({
         p1: k.vec2(boss.x, boss.y),
@@ -718,15 +758,38 @@ export class KaplayRuntime {
         }
         continue;
       }
-      if (field.kind === "recall") {
-        this.ring(field, 28, "#85d8ef", 0.8, 3);
-        this.poly(field, 18, 6, "#85d8ef", 0.6, -this.time * 2);
+      if (["recall", "soulstep", "relay"].includes(field.kind)) {
+        const color = skillById(field.kind).color;
+        this.ring(field, 32, color, 0.8, 3);
+        this.ring(
+          field,
+          39,
+          color,
+          0.9,
+          3,
+          Math.max(0, field.life / (g.recast?.duration ?? 15)) * 359.9,
+        );
+        this.poly(
+          field,
+          18,
+          field.kind === "relay" ? 4 : 6,
+          color,
+          0.6,
+          -this.time * 2,
+        );
         k.drawLine({
           p1: k.vec2(field.x, field.y),
           p2: k.vec2(g.player.x, g.player.y),
-          color: k.Color.fromHex("#85d8ef"),
+          color: k.Color.fromHex(color),
           width: 1,
           opacity: 0.25,
+        });
+        k.drawText({
+          text: `Q · ${Math.ceil(field.life)}s`,
+          pos: k.vec2(field.x, field.y + 53),
+          anchor: "center",
+          size: 15,
+          color: k.Color.fromHex(color),
         });
         continue;
       }
@@ -839,11 +902,29 @@ export class KaplayRuntime {
         text:
           g.run.room % 4 === 0
             ? "GUARDIAN"
-            : `WAVE ${g.run.room.toString().padStart(2, "0")}`,
+            : `WAVE ${g.run.room.toString().padStart(2, "0")} · ${encounterByRoom(g.run.room).type}`,
         pos: k.vec2(g.width / 2, g.height / 2 - 50),
         size: 46,
         anchor: "center",
         color: k.rgb(231, 241, 255),
+        opacity: Math.min(1, g.intro * 2),
+      });
+      k.drawText({
+        text: encounterByRoom(g.run.room).name.toUpperCase(),
+        pos: k.vec2(g.width / 2, g.height / 2 + 4),
+        size: 20,
+        anchor: "center",
+        color: k.Color.fromHex("#ffda8a"),
+        opacity: Math.min(1, g.intro * 2),
+      });
+      k.drawText({
+        text: encounterByRoom(g.run.room).hint,
+        pos: k.vec2(g.width / 2, g.height / 2 + 42),
+        size: 15,
+        width: g.width - 100,
+        align: "center",
+        anchor: "center",
+        color: k.rgb(190, 204, 225),
         opacity: Math.min(1, g.intro * 2),
       });
     }

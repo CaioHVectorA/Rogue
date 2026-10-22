@@ -22,6 +22,8 @@ import {
   createRun,
   randomFromSeed,
   roomComposition,
+  encounterByRoom,
+  RECASTS,
   rewardOffers,
   applyReward,
   advanceRoom,
@@ -85,6 +87,13 @@ export class Game {
   hazards: Hazard[] = [];
   pickups: Pickup[] = [];
   fields: Field[] = [];
+  recast: {
+    id: string;
+    field: Field;
+    duration: number;
+    damage: Map<number, number>;
+    budget: number;
+  } | null = null;
   overdrive = 0;
   private returnCd = 0;
   private trailCd = 0;
@@ -205,6 +214,7 @@ export class Game {
     this.pickups = [];
     this.chainQueue = [];
     this.fields = [];
+    this.recast = null;
     this.overdrive = this.returnCd = this.trailCd = 0;
     this.ultimatePulses = [];
     this.energyBudget = 6;
@@ -230,16 +240,20 @@ export class Game {
     this.player.invulnerable = 1.5;
     this.player.dashTime = 0;
     this.player.moving = false;
+    const encounter = encounterByRoom(this.run.room);
+    let packSide = 0;
     this.spawnQueue = roomComposition(this.run.room).map((kind, i) => {
-      const side = Math.floor(this.random() * 4);
+      if (i % encounter.pack === 0) packSide = Math.floor(this.random() * 4);
+      const side =
+        encounter.type === "HORDA" ? packSide : Math.floor(this.random() * 4);
       const offset =
         90 + this.random() * (side % 2 ? this.height - 180 : this.width - 180);
       return {
         kind,
         at:
           1.5 +
-          Math.floor(i / 8) * (this.run.room % 4 === 0 ? 2.1 : 2.5) +
-          (i % 8) * 0.14,
+          Math.floor(i / encounter.pack) * encounter.gap +
+          (i % encounter.pack) * 0.14,
         x:
           kind === "boss"
             ? this.width / 2
@@ -285,14 +299,23 @@ export class Game {
       return;
     this.run.rerolls--;
     this.offerRound++;
+    this.draftOffers(this.run.offers);
+    this.onChange();
+  }
+  private draftOffers(exclude: string[] = []) {
     this.run.offers = rewardOffers(
       this.run,
       randomFromSeed(
         `${this.run.seed}:offers:${this.run.room}:${this.offerRound}`,
       ),
-      this.run.offers,
+      exclude,
     );
-    this.onChange();
+    for (const id of this.run.offers)
+      if (
+        id.startsWith("skill:") &&
+        !this.run.offeredSkills.includes(id.slice(6))
+      )
+        this.run.offeredSkills.push(id.slice(6));
   }
   buy(id: HeroStat) {
     if (this.phase !== "camp" || !HERO_STATS.some((s) => s.id === id)) return;
@@ -616,13 +639,12 @@ export class Game {
   skill(slot: 0 | 1 = 0) {
     const id = this.run.skills[slot];
     const p = this.player;
-    if (
-      !id ||
-      this.phase !== "combat" ||
-      this.intro > 0 ||
-      (slot === 0 ? p.skillCd : p.secondCd) > 0
-    )
+    if (!id || this.phase !== "combat" || this.intro > 0) return;
+    if (slot === 0 && this.recast) {
+      if (this.canRecast) this.finishRecast(true);
       return;
+    }
+    if ((slot === 0 ? p.skillCd : p.secondCd) > 0) return;
     if (slot === 1) {
       if (
         !isUltimate(id) ||
@@ -635,10 +657,7 @@ export class Game {
     }
     const definition = skillById(id);
     const level = this.qLevel;
-    p.skillCd =
-      definition.cooldown *
-      0.94 ** (this.run.training.focus ?? 0) *
-      (level >= 4 ? 0.9 : 1);
+    p.skillCd = RECASTS[id] ? 0 : this.qCooldown(id);
     const target = this.nearest() ?? {
       x: p.x + this.aim.x * 180,
       y: p.y + this.aim.y * 180,
@@ -722,8 +741,16 @@ export class Game {
       );
       this.fields.at(-1)!.angle = direction;
     } else {
+      const reach = Math.min(distance(p, target), level >= 2 ? 380 : 300);
       const at =
-        id === "vortex" || id === "storm" || id === "venom" ? target : p;
+        id === "relay"
+          ? {
+              x: p.x + Math.cos(angle) * reach,
+              y: p.y + Math.sin(angle) * reach,
+            }
+          : id === "vortex" || id === "storm" || id === "venom"
+            ? target
+            : p;
       this.addField(
         id === "venom" ? "toxin" : (id as Field["kind"]),
         at,
@@ -736,6 +763,35 @@ export class Game {
       if (id === "decoy" && level >= 5)
         this.addField("decoy", { x: p.x + 70, y: p.y }, level);
       if (id === "decoy") p.invulnerable = Math.max(p.invulnerable, 0.5);
+    }
+    if (RECASTS[id]) {
+      const field = this.fields.at(-1)!;
+      this.recast = {
+        id,
+        field,
+        duration: field.life,
+        damage: new Map(),
+        budget: p.damage * 6,
+      };
+      if (id === "soulstep") {
+        const direction = this.direction();
+        const a =
+          Math.hypot(direction.x, direction.y) > 0.01
+            ? Math.atan2(direction.y, direction.x)
+            : angle;
+        p.x = clamp(
+          p.x + Math.cos(a) * (level >= 2 ? 150 : 110),
+          40,
+          this.width - 40,
+        );
+        p.y = clamp(
+          p.y + Math.sin(a) * (level >= 2 ? 150 : 110),
+          40,
+          this.height - 40,
+        );
+        p.invulnerable = Math.max(p.invulnerable, 0.25);
+        this.cutPath(field, p, 36, p.damage * 0.7);
+      }
     }
     this.onFeedback({
       type: "skill",
@@ -756,9 +812,132 @@ export class Game {
     this.shake = 4;
     this.sound(160, 0.22, "triangle", 0.06);
   }
+  private qCooldown(id: string) {
+    return (
+      skillById(id).cooldown *
+      0.94 ** (this.run.training.focus ?? 0) *
+      (this.qLevel >= 4 ? 0.9 : 1)
+    );
+  }
+  get canRecast() {
+    return (
+      !!this.recast &&
+      this.recast.duration - this.recast.field.life >=
+        (this.recast.id === "mine" ? 0.45 : 0.22)
+    );
+  }
+  private cutPath(from: Point, to: Point, radius: number, damage: number) {
+    const dx = to.x - from.x,
+      dy = to.y - from.y,
+      length = dx * dx + dy * dy;
+    for (const enemy of [...this.enemies]) {
+      const t = length
+        ? clamp(
+            ((enemy.x - from.x) * dx + (enemy.y - from.y) * dy) / length,
+            0,
+            1,
+          )
+        : 0;
+      if (
+        distance(enemy, { x: from.x + dx * t, y: from.y + dy * t }) <=
+        radius + enemy.radius
+      )
+        this.hitEnemy(enemy, damage, !!this.run.rewards.poison, "neutral");
+    }
+    this.onFeedback({
+      type: "beam",
+      x: from.x,
+      y: from.y,
+      toX: to.x,
+      toY: to.y,
+      color: "#c5afff",
+    });
+  }
+  private finishRecast(manual: boolean) {
+    const state = this.recast;
+    if (!state) return;
+    this.recast = null;
+    const { id, field } = state,
+      p = this.player,
+      level = field.level ?? 1;
+    p.skillCd = this.qCooldown(id);
+    if (id === "mine") {
+      // The field's normal explosion path handles both the remote trigger and proximity.
+      if (manual) field.life = field.timer = 0;
+      return;
+    }
+    field.life = 0;
+    if (id === "vortex") {
+      for (const e of [...this.enemies])
+        if (distance(e, field) <= field.radius + e.radius)
+          this.hitEnemy(
+            e,
+            field.power * (1.1 + (level >= 5 ? (3 - field.blocks) * 0.4 : 0)),
+            !!this.run.rewards.poison,
+            "neutral",
+          );
+    } else if (id !== "relay" || manual) {
+      const departure = { x: p.x, y: p.y };
+      if (id === "relay")
+        this.cutPath(departure, field, level >= 2 ? 58 : 42, field.power * 2);
+      p.x = field.x;
+      p.y = field.y;
+      p.dashTime = 0;
+      p.invulnerable = Math.max(p.invulnerable, 0.35);
+      p.charge = this.fireInterval;
+      if (id === "recall" || (id === "soulstep" && level >= 3))
+        this.bullets = this.bullets.filter(
+          (b) => !b.hostile || distance(b, field) > field.radius,
+        );
+      if (id === "soulstep") {
+        for (const [targetId, damage] of state.damage) {
+          const enemy = this.enemies.find((e) => e.id === targetId && e.hp > 0);
+          if (!enemy) continue;
+          this.onFeedback({
+            type: "beam",
+            x: p.x,
+            y: p.y,
+            toX: enemy.x,
+            toY: enemy.y,
+            color: "#c5afff",
+          });
+          this.hitEnemy(enemy, damage);
+          if (level >= 5 && enemy.hp > 0 && enemy.transition <= 0)
+            this.mark(enemy, !!this.run.rewards.poison, "neutral");
+        }
+      }
+      if (level >= 3 && id !== "soulstep") {
+        if (id === "relay")
+          for (const e of this.enemies)
+            if (distance(e, field) < field.radius) this.catalyse(e);
+        this.repel(field, field.radius, 85);
+      }
+      if (level >= 5 && id === "recall") {
+        this.addField("decoy", departure);
+        this.fields.at(-1)!.life = 1;
+      }
+      if (level >= 5 && id === "relay") {
+        this.addField("stasis", field, 3);
+        this.fields.at(-1)!.life = 1.5;
+      }
+      if (this.run.rewards.returnflux) this.recycle(p);
+    }
+    this.onFeedback({
+      type: "skill",
+      x: field.x,
+      y: field.y,
+      radius: field.radius,
+      color: skillById(id).color,
+    });
+    this.burst(field, skillById(id).color, 25, 180);
+    this.sound(260, 0.15, "triangle", 0.06);
+  }
   private addField(kind: Field["kind"], at: Point, level = 1) {
     // One build cannot flood the scene with persistent objects.
-    if (this.fields.length >= 6) this.fields.shift();
+    if (this.fields.length >= 6) {
+      const index = this.fields.findIndex((f) => f !== this.recast?.field);
+      this.fields.splice(Math.max(0, index), 1);
+    }
     const radii = {
       vortex: 185,
       storm: 145,
@@ -771,6 +950,8 @@ export class Game {
       aegis: 75,
       stasis: 170,
       recall: 110,
+      soulstep: 100,
+      relay: 100,
     };
     const lives = {
       vortex: 3,
@@ -783,7 +964,9 @@ export class Game {
       wall: 3,
       aegis: 3,
       stasis: 2.6,
-      recall: 2.2,
+      recall: 15,
+      soulstep: level >= 2 ? 7 : 6,
+      relay: 5,
     };
     this.fields.push({
       kind,
@@ -793,7 +976,10 @@ export class Game {
         radii[kind] * (level >= 2 ? 1.12 : 1) +
         (kind === "wall" ? (level - 1) * 10 : 0),
       life:
-        lives[kind] + (level >= 2 && kind !== "recall" ? (level - 1) * 0.2 : 0),
+        lives[kind] +
+        (level >= 2 && !["recall", "soulstep", "relay"].includes(kind)
+          ? (level - 1) * 0.2
+          : 0),
       timer: kind === "mine" ? 0.45 : 0,
       power: this.player.damage,
       blocks:
@@ -813,41 +999,15 @@ export class Game {
       field.life -= dt;
       field.timer -= dt;
       const level = field.level ?? 1;
+      if (field.life <= 0 && this.recast?.field === field)
+        this.finishRecast(false);
       if (field.life <= 0 && field.kind !== "mine" && field.kind !== "decoy") {
-        if (field.kind === "recall") {
-          const departure = { x: this.player.x, y: this.player.y };
-          this.player.x = field.x;
-          this.player.y = field.y;
-          this.player.invulnerable = Math.max(this.player.invulnerable, 0.35);
-          this.player.charge = this.fireInterval;
-          this.bullets = this.bullets.filter(
-            (b) => !b.hostile || distance(b, field) > field.radius,
-          );
-          if (level >= 3) this.repel(field, field.radius, 85);
-          if (level >= 5) {
-            this.addField("decoy", departure);
-            this.fields.at(-1)!.life = 1;
-          }
-          this.onFeedback({
-            type: "skill",
-            x: field.x,
-            y: field.y,
-            radius: field.radius,
-            color: "#85d8ef",
-          });
-        }
         if (field.kind === "wall" && level >= 5) {
           this.repel(field, 220, 70);
           this.burst(field, "#85d8ef", 20, 150);
         }
         if (field.kind === "aegis" && level >= 5)
           this.overdrive = Math.max(this.overdrive, field.blocks * 0.25);
-        if (field.kind === "vortex" && level >= 5 && field.blocks < 3) {
-          for (const e of [...this.enemies])
-            if (distance(e, field) < field.radius)
-              this.hitEnemy(e, field.power * (3 - field.blocks) * 0.4);
-          this.burst(field, "#c5afff", 25, 180);
-        }
         if (field.kind === "stasis" && level >= 5) {
           for (const b of this.bullets
             .filter(
@@ -865,7 +1025,8 @@ export class Game {
         field.x = this.player.x;
         field.y = this.player.y;
       }
-      if (field.kind === "wall" || field.kind === "recall") continue;
+      if (["wall", "recall", "soulstep", "relay"].includes(field.kind))
+        continue;
       if (field.kind === "stasis") {
         if (level >= 3)
           for (const e of this.enemies)
@@ -1083,6 +1244,7 @@ export class Game {
       }
     }
     this.ultimateDamage = false;
+    if (this.recast && this.recast.field.life <= 0) this.finishRecast(false);
     this.fields = this.fields.filter((f) => f.life > 0);
   }
   dash() {
@@ -1142,6 +1304,119 @@ export class Game {
       null,
     );
   }
+  private expertAttack(enemy: Enemy, target: Point, dt: number) {
+    if (!["herald", "duelist", "weaver"].includes(enemy.kind) || enemy.hp <= 0)
+      return;
+    const p = this.player,
+      dist = distance(enemy, target) || 1;
+    const dx = (target.x - enemy.x) / dist,
+      dy = (target.y - enemy.y) / dist;
+    // Specialists retreat and orbit instead of adding another body to the same pile.
+    if (
+      enemy.windup <= 0 &&
+      enemy.dashLeft <= 0 &&
+      (enemy.recovery ?? 0) <= 0
+    ) {
+      const retreat = enemy.kind !== "duelist" && dist < 225 ? -1 : 0;
+      const strafe = enemy.id % 2 ? 1 : -1;
+      enemy.x = clamp(
+        enemy.x + (dx * retreat - dy * strafe * 0.35) * enemy.speed * dt,
+        45,
+        this.width - 45,
+      );
+      enemy.y = clamp(
+        enemy.y + (dy * retreat + dx * strafe * 0.35) * enemy.speed * dt,
+        45,
+        this.height - 45,
+      );
+    }
+    if (
+      enemy.timer > 0 ||
+      enemy.windup > 0 ||
+      enemy.dashLeft > 0 ||
+      enemy.transition > 0 ||
+      (enemy.recovery ?? 0) > 0
+    )
+      return;
+    if (enemy.kind === "duelist") {
+      // Direction locks now; there is no tracking during the visible charge-up.
+      enemy.windup = 0.8;
+      enemy.dashLeft = Math.min(0.38, dist / 620);
+      enemy.dashVX = dx * 620;
+      enemy.dashVY = dy * 620;
+      enemy.timer = 3.5;
+      this.burst(enemy, "#ffbc8a", 7, 55);
+    } else if (enemy.kind === "herald") {
+      const allies = this.enemies
+        .filter(
+          (e) =>
+            ["chaser", "runner", "guard"].includes(e.kind) &&
+            e.hp > 0 &&
+            !e.commander &&
+            e.windup <= 0 &&
+            e.dashLeft <= 0 &&
+            distance(e, enemy) < 380,
+        )
+        .sort((a, b) => distance(a, enemy) - distance(b, enemy))
+        .slice(0, 5);
+      if (!allies.length) {
+        enemy.timer = 1.2;
+        return;
+      }
+      enemy.windup = 0.9;
+      enemy.timer = 4.8;
+      for (const ally of allies) {
+        const d = distance(ally, target) || 1;
+        ally.commander = enemy.id;
+        ally.windup = 0.9;
+        ally.dashLeft = Math.min(0.48, d / 450);
+        ally.dashVX = ((target.x - ally.x) / d) * 450;
+        ally.dashVY = ((target.y - ally.y) / d) * 450;
+        this.onFeedback({
+          type: "beam",
+          x: enemy.x,
+          y: enemy.y,
+          toX: ally.x,
+          toY: ally.y,
+          color: "#ffda8a",
+        });
+      }
+      this.onFeedback({
+        type: "reaction",
+        x: enemy.x,
+        y: enemy.y,
+        label: "AVANÇAR",
+        color: "#ffda8a",
+      });
+    } else {
+      const movement = this.direction();
+      const length = Math.max(1, Math.hypot(movement.x, movement.y));
+      const cx = clamp(
+        target.x + (movement.x / length) * p.speed * 0.45,
+        55,
+        this.width - 55,
+      );
+      const cy = clamp(
+        target.y + (movement.y / length) * p.speed * 0.45,
+        55,
+        this.height - 55,
+      );
+      const count = this.run.act >= 3 ? 3 : 2;
+      for (let i = 0; i < count && this.hazards.length < 24; i++)
+        this.hazards.push({
+          x: clamp(cx - dy * i * 95, 55, this.width - 55),
+          y: clamp(cy + dx * i * 95, 55, this.height - 55),
+          radius: 58,
+          delay: 1.1 + i * 0.16,
+          life: 0.22,
+          damage: enemy.damage,
+          fired: false,
+          owner: enemy.id,
+        });
+      enemy.windup = 1.1;
+      enemy.timer = 3.8;
+    }
+  }
   private spawn(kind: EnemyKind, x: number, y: number) {
     const act = this.run.act;
     const stats = {
@@ -1149,6 +1424,9 @@ export class Game {
       runner: [21, 165, 12, 11],
       shooter: [48, 72, 13, 19],
       guard: [105, 67, 19, 27],
+      herald: [100, 62, 12, 22],
+      duelist: [95, 105, 18, 19],
+      weaver: [88, 70, 15, 21],
       boss: [2700 + (act - 1) * 3000, 50, 26, 66],
     }[kind];
     const hp = stats[0] * (kind === "boss" ? 1 : 1 + (act - 1) * 0.38);
@@ -1400,6 +1678,23 @@ export class Game {
         }
       }
     } else enemy.hp -= damage;
+    if (
+      this.recast?.id === "soulstep" &&
+      element !== undefined &&
+      !this.ultimateDamage
+    ) {
+      const state = this.recast;
+      if (state.damage.has(enemy.id) || state.damage.size < 6) {
+        const echo = Math.min(
+          state.budget,
+          Math.max(0, hpBefore - Math.max(0, enemy.hp)) * 0.25,
+        );
+        if (echo > 0) {
+          state.damage.set(enemy.id, (state.damage.get(enemy.id) ?? 0) + echo);
+          state.budget -= echo;
+        }
+      }
+    }
     if (element !== undefined)
       this.gainUltimate(Math.min(damage, hpBefore - Math.max(0, enemy.hp)));
     if (damage >= 1) {
@@ -1562,7 +1857,11 @@ export class Game {
             : 1
           : 0;
       const value =
-        (enemy.kind === "boss" ? 35 : enemy.kind === "guard" ? 3 : 1) + bonus;
+        (enemy.kind === "boss"
+          ? 35
+          : ["guard", "herald", "duelist", "weaver"].includes(enemy.kind)
+            ? 3
+            : 1) + bonus;
       if (bonus) this.burst(enemy, "#ffda8a", 8, 90);
       if (this.run.rewards.battery && this.batteryCd <= 0) {
         this.batteryCd = 0.12;
@@ -1818,6 +2117,7 @@ export class Game {
     this.updateFields(dt);
     for (const enemy of [...this.enemies]) {
       enemy.transition = Math.max(0, enemy.transition - dt);
+      enemy.recovery = Math.max(0, (enemy.recovery ?? 0) - dt);
       enemy.slowed = Math.max(0, enemy.slowed - dt);
       enemy.flash = Math.max(0, enemy.flash - dt);
       enemy.markCd = Math.max(0, enemy.markCd - dt);
@@ -1843,8 +2143,18 @@ export class Game {
       const dist = distance(enemy, destination) || 1;
       const dx = (destination.x - enemy.x) / dist;
       const dy = (destination.y - enemy.y) / dist;
-      const stop =
-        enemy.kind === "shooter" ? 310 : enemy.kind === "boss" ? 240 : 0;
+      const stop = ["shooter", "herald", "weaver"].includes(enemy.kind)
+        ? 310
+        : enemy.kind === "boss"
+          ? 240
+          : 0;
+      if (
+        enemy.commander &&
+        !this.enemies.some((e) => e.id === enemy.commander && e.hp > 0)
+      ) {
+        enemy.windup = enemy.dashLeft = 0;
+        enemy.commander = undefined;
+      }
       if (enemy.windup > 0) enemy.windup = Math.max(0, enemy.windup - dt);
       else if (enemy.dashLeft > 0 && enemy.transition <= 0) {
         enemy.x = clamp(
@@ -1858,7 +2168,11 @@ export class Game {
           this.height - enemy.radius - 25,
         );
         enemy.dashLeft = Math.max(0, enemy.dashLeft - dt);
-      } else if (dist > stop && enemy.transition <= 0) {
+        if (enemy.dashLeft <= 0) {
+          enemy.commander = undefined;
+          if (enemy.kind === "duelist") enemy.recovery = 0.7;
+        }
+      } else if (dist > stop && enemy.transition <= 0 && enemy.recovery <= 0) {
         const slow = enemy.slowed > 0 ? 0.35 : 1;
         enemy.x += dx * enemy.speed * dt * slow;
         enemy.y += dy * enemy.speed * dt * slow;
@@ -1889,6 +2203,7 @@ export class Game {
           );
         enemy.timer = 3.8;
       }
+      this.expertAttack(enemy, destination, dt);
       if (
         enemy.kind === "boss" &&
         enemy.timer <= 0 &&
@@ -2037,6 +2352,14 @@ export class Game {
         b.y < this.height - 15,
     );
     for (const hazard of this.hazards) {
+      if (
+        hazard.owner &&
+        !hazard.fired &&
+        !this.enemies.some((e) => e.id === hazard.owner && e.hp > 0)
+      ) {
+        hazard.life = 0;
+        continue;
+      }
       hazard.delay -= dt;
       if (hazard.delay <= 0) {
         hazard.fired = true;
@@ -2210,6 +2533,7 @@ export class Game {
     this.bullets = [];
     this.hazards = [];
     this.fields = [];
+    this.recast = null;
     this.overdrive = 0;
     this.ultimatePulses = [];
     if (this.run.room === TOTAL_ROOMS) {
@@ -2223,10 +2547,7 @@ export class Game {
       );
       this.run.rerolls++;
     }
-    this.run.offers = rewardOffers(
-      this.run,
-      randomFromSeed(`${this.run.seed}:offers:${this.run.room}:0`),
-    );
+    this.draftOffers();
     this.sound(780, 0.2, "sine", 0.04);
     this.setPhase(this.run.offers.length ? "reward" : "camp");
   }
@@ -2309,6 +2630,18 @@ export class Game {
         skills: ["aegis", "tempest"],
         perks: ["returnflux", "capacitor", "groundwire"],
       },
+      raider: {
+        skills: ["soulstep", "tempest"],
+        perks: ["capacitor", "returnflux", "pierce"],
+      },
+      ambusher: {
+        skills: ["relay", "plague"],
+        perks: ["poison", "catalyst", "speed"],
+      },
+      anchor: {
+        skills: ["recall", "cataclysm"],
+        perks: ["returnflux", "dashload", "capacitor"],
+      },
       fresh: { skills: [null, null], perks: [] },
     };
     const preset = builds[build] ?? builds.control;
@@ -2321,7 +2654,7 @@ export class Game {
         ? "seismic"
         : build === "skater"
           ? "spore"
-          : build === "recycler"
+          : build === "recycler" || build === "raider"
             ? "disc"
             : build === "trickster"
               ? "shotgun"
@@ -2448,6 +2781,7 @@ export class Game {
     if (slot === 1) this.run.ultimateCharge = id ? 100 : 0;
     this.player.skillCd = this.player.secondCd = 0;
     this.fields = [];
+    this.recast = null;
     this.onChange();
   }
   labPerk(id: string) {

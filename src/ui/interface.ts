@@ -17,6 +17,8 @@ import {
   skillLevel,
   trainingCost,
   skillById,
+  RECASTS,
+  encounterByRoom,
   comboLootChance,
   TOTAL_ROOMS,
   formatTime,
@@ -473,8 +475,16 @@ export class Interface {
     );
     text(
       "skill-value",
-      g.player.skillCd > 0 ? `${g.player.skillCd.toFixed(1)}s` : "Pronta",
+      g.recast
+        ? `${RECASTS[g.recast.id]} · ${Math.max(0, g.recast.field.life).toFixed(1)}s`
+        : g.player.skillCd > 0
+          ? `${g.player.skillCd.toFixed(1)}s`
+          : "Pronta",
     );
+    this.hud
+      .querySelector("#skill-value")
+      ?.closest(".ability")
+      ?.classList.toggle("recast-ready", !!g.recast);
     text(
       "combat-hint",
       g.phase === "combat" ? `${g.enemies.length + g.spawnQueue.length}` : "—",
@@ -523,22 +533,37 @@ export class Interface {
         }
       }
       const ultimate = action === "skill2" && isUltimate(g.run.skills[1] ?? "");
+      const recast = action === "skill" ? g.recast : null;
+      button.classList.toggle("recast-ready", !!recast);
       button.classList.toggle("ultimate-action", ultimate);
       button.style.setProperty("--ultimate-fill", `${g.run.ultimateCharge}%`);
       button.disabled =
-        cooldown > 0 ||
+        (recast ? !g.canRecast : cooldown > 0) ||
         (ultimate && g.run.ultimateCharge < 100) ||
         g.intro > 0 ||
         g.phase !== "combat";
       const label = button.querySelector("small")!;
-      label.textContent = ultimate
-        ? g.run.ultimateCharge >= 100 && cooldown <= 0
-          ? "ULT PRONTA"
-          : `${Math.floor(g.run.ultimateCharge)}%`
-        : cooldown > 0
-          ? `${cooldown.toFixed(1)}s`
-          : "Pronta";
+      label.textContent = recast
+        ? `${RECASTS[recast.id].split(" +")[0]}\n${Math.max(0, recast.field.life).toFixed(1)}s`
+        : ultimate
+          ? g.run.ultimateCharge >= 100 && cooldown <= 0
+            ? "ULT PRONTA"
+            : `${Math.floor(g.run.ultimateCharge)}%`
+          : cooldown > 0
+            ? `${cooldown.toFixed(1)}s`
+            : "Pronta";
       button.classList.toggle("available", !button.disabled);
+      if (action !== "dash") {
+        button.setAttribute(
+          "aria-label",
+          recast
+            ? `Reconjurar: ${RECASTS[recast.id]}`
+            : action === "skill"
+              ? "Usar habilidade"
+              : "Usar ultimate",
+        );
+        button.setAttribute("aria-description", label.textContent);
+      }
     }
     this.hud.querySelector<HTMLElement>("#hp-meter")!.style.width =
       `${Math.max(0, g.player.hp / g.player.maxHp) * 100}%`;
@@ -657,7 +682,7 @@ export class Interface {
         )
         .join(
           "",
-        )}</div><div class="stack-actions"><button class="primary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} REPETIR</button><button class="secondary" data-action="menu" aria-label="Nova expedição">NOVA RUN ${icon("arrow")}</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
+        )}</div><div class="stack-actions"><button class="primary" data-action="menu" aria-label="Nova expedição">NOVA RUN ${icon("arrow")}</button><button class="secondary" data-action="retry" aria-label="Repetir código e caminho">${icon("repeat")} MESMA SEED</button></div><p class="result-seed">SEED <code>${escape(g.run.seed)}</code></p>`,
       "result-dialog",
     );
   }
@@ -702,7 +727,7 @@ export class Interface {
       ]
         .map(([id, name]) => `<option value="${id}">${name}</option>`)
         .join(""),
-    )}${select("lab-room", "ENCONTRO", Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === g.run.room ? "selected" : ""}>${(i + 1) % 4 === 0 ? `BOSS ${Math.ceil((i + 1) / 4)}` : `WAVE ${i + 1}`}</option>`).join(""))}${select("lab-phase", "FASE DO BOSS", [1, 2, 3, 4].map((n) => `<option value="${n}">${["", "I", "II", "III", "IV"][n]}</option>`).join(""))}${select(
+    )}${select("lab-room", "ENCONTRO", Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}" ${i + 1 === g.run.room ? "selected" : ""}>${(i + 1) % 4 === 0 ? `BOSS ${Math.ceil((i + 1) / 4)}` : `WAVE ${i + 1} · ${encounterByRoom(i + 1).name}`}</option>`).join(""))}${select("lab-phase", "FASE DO BOSS", [1, 2, 3, 4].map((n) => `<option value="${n}">${["", "I", "II", "III", "IV"][n]}</option>`).join(""))}${select(
       "lab-build",
       "ESTILO",
       [
@@ -716,6 +741,9 @@ export class Interface {
         ["bastion", "Bastião · muralha + ondas"],
         ["skater", "Patinador · motor + esporos"],
         ["recycler", "Reciclador · égide + disco"],
+        ["anchor", "Âncora · runa e retorno manual"],
+        ["raider", "Incursão · corpo e ecos de dano"],
+        ["ambusher", "Emboscada · selo e travessia"],
         ["fresh", "Sem perks · kit básico"],
       ]
         .map(([id, name]) => `<option value="${id}">${name}</option>`)
@@ -780,7 +808,7 @@ export class Interface {
         "help-dialog",
       );
     return this.dialog(
-      `${powers}<span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 2,6 segundos.</p></div><div><kbd>Q / E</kbd><p><b>Combine suas habilidades.</b> Você começa sem habilidades. Na wave 1, escolha uma relíquia; após a wave 2, equipe Q. A ultimate E chega após o segundo boss, na wave 8, e recarrega ao acertar ataques. Novas armas chegam após o primeiro boss. Elas também funcionam em movimento.</p></div><div>${icon("crown")}<p><b>Três atos. Três guardiões.</b> Escolha melhorias entre encontros. Chefes têm quatro fases; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Combo alto consome a barra mais rápido; mover acelera a queda. Acertos e abates renovam a barra. Mais combo aumenta a chance de ouro extra, até 40%. No arsenal, compre até dois níveis de atributos por checkpoint. Cada atributo tem três níveis e vale só nesta run. F2 ou o frasco abre o laboratório, com runs de prática sem recordes.</p><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
+      `${powers}<div class="enemy-codex" aria-label="Inimigos especialistas"><span>${icon("dash")}<b>DUELISTA</b><small>Trava a direção, avança e fica exposto. Saia de lado.</small></span><span>${icon("crown")}<b>ARAUTO</b><small>Comanda até cinco corpos. Abatê-lo interrompe a investida.</small></span><span>${icon("mark")}<b>TECELÃO</b><small>Prevê seu caminho. Mude de direção ou interrompa a conjuração.</small></span></div><span class="eyebrow">O BÁSICO, SEM MISTÉRIO</span><h1 id="screen-title">Jogue no seu <em>ritmo.</em></h1><div class="help-list"><div><kbd>WASD / ↑↓←→</kbd><p><b>Mova-se para escapar.</b> O personagem mira automaticamente no inimigo mais próximo.</p></div><div>${icon("target")}<p><b>Pare para disparar.</b> O contorno mostra a recarga. Em movimento ela avança a 65% da velocidade.</p></div><div><kbd>ESPAÇO</kbd><p><b>Esquive com invulnerabilidade.</b> Use uma direção ou repita a última. Recarga de 2,6 segundos.</p></div><div><kbd>Q / E</kbd><p><b>Combine suas habilidades.</b> Você começa sem habilidades. Na wave 1, escolha uma relíquia; após a wave 2, equipe Q. A ultimate E chega após o segundo boss, na wave 8, e recarrega ao acertar ataques. Novas armas chegam após o primeiro boss. Qs reconjuráveis mudam de ação e mostram o tempo restante: aperte Q novamente para voltar, atravessar ou detonar.</p></div><div>${icon("crown")}<p><b>Hordas e caçadas.</b> Waves de massa alternam com grupos especialistas. Escolha melhorias entre encontros. Chefes têm quatro fases; saia dos círculos antes de explodirem.</p></div><div><kbd>ESC</kbd><p><b>Pause quando precisar.</b> Trocar de aba também pausa. No celular, use o controle de movimento e os botões na arena.</p></div></div><p class="help-note">Combo alto consome a barra mais rápido; mover acelera a queda. Acertos e abates renovam a barra. Mais combo aumenta a chance de ouro extra, até 40%. No arsenal, compre até dois níveis de atributos por checkpoint. Cada atributo tem três níveis e vale só nesta run. F2 ou o frasco abre o laboratório, com runs de prática sem recordes.</p><p class="help-note">Runs não continuam após fechar a página. Só os recordes ficam salvos. A diária usa a data UTC; caminhos diferentes podem ter dificuldades diferentes.</p><button class="primary" data-action="close-help">Entendi ${icon("arrow")}</button>`,
       "help-dialog",
     );
   }

@@ -7,6 +7,7 @@ import {
   rewardOffers,
   randomFromSeed,
   SKILLS,
+  RECASTS,
 } from "../src/game/model";
 
 beforeEach(() => {
@@ -58,14 +59,25 @@ describe("playstyle mechanics", () => {
       const { g, enemy } = arena();
       g.run.skills = [skill.id, null];
       g.skill();
-      expect(g.player.skillCd).toBe(skill.cooldown);
+      expect(g.player.skillCd).toBe(RECASTS[skill.id] ? 0 : skill.cooldown);
       expect(g.player.secondCd).toBe(0);
       const objects = g.bullets.length + g.fields.length;
       g.skill();
       expect(g.bullets.length + g.fields.length).toBe(objects);
+      if (RECASTS[skill.id]) {
+        simulate(g, 0.6);
+        g.skill();
+      }
       simulate(g, 3.5);
       if (
-        !["wall", "aegis", "overdrive", "stasis", "recall"].includes(skill.id)
+        ![
+          "wall",
+          "aegis",
+          "overdrive",
+          "stasis",
+          "recall",
+          "soulstep",
+        ].includes(skill.id)
       )
         expect(enemy.hp).toBeLessThan(enemy.maxHp);
       else
@@ -194,6 +206,7 @@ describe("playstyle mechanics", () => {
     g.practice(12, 4, "control", "arcanist");
     expect(g.enemies[0].phase).toBe(4);
     expect(g.run.skills).toEqual(["vortex", "tempest"]);
+    g.labEquip("storm", 0);
     g.intro = 0;
     for (let i = 0; i < 10; i++) {
       g.player.skillCd = 0;

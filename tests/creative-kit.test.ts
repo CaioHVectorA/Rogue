@@ -153,7 +153,8 @@ it("recall returns to the anchor, prepares the gun and leaves a decoy only at ma
   simulate(g, 3);
   expect(g.player.x).toBe(origin.x + 100);
   g.pause();
-  for (let i = 0; i < 400 && g.player.x !== origin.x; i++) g.update(1 / 120);
+  simulate(g, 0.3);
+  g.skill();
   expect(g.player.x).toBe(origin.x);
   expect(g.fields.some((f) => f.kind === "decoy")).toBe(true);
   expect(g.player.charge).toBe(g.fireInterval);

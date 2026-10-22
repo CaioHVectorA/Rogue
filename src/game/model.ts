@@ -3,7 +3,15 @@ export const HEIGHT = 760;
 export const TOTAL_ROOMS = 12;
 export type Phase = "menu" | "combat" | "reward" | "camp" | "paused" | "result";
 export type ClassId = "ranger" | "arcanist" | "colossus";
-export type EnemyKind = "chaser" | "runner" | "shooter" | "guard" | "boss";
+export type EnemyKind =
+  | "chaser"
+  | "runner"
+  | "shooter"
+  | "guard"
+  | "herald"
+  | "duelist"
+  | "weaver"
+  | "boss";
 export interface Point {
   x: number;
   y: number;
@@ -33,6 +41,8 @@ export interface Enemy extends Point {
   dashLeft: number;
   dashVX: number;
   dashVY: number;
+  commander?: number;
+  recovery?: number;
 }
 export interface Bullet extends Point {
   vx: number;
@@ -64,7 +74,9 @@ export interface Field extends Point {
     | "wall"
     | "aegis"
     | "stasis"
-    | "recall";
+    | "recall"
+    | "soulstep"
+    | "relay";
   radius: number;
   life: number;
   timer: number;
@@ -76,6 +88,7 @@ export interface Field extends Point {
   source?: "seed" | "trail";
 }
 export interface Hazard extends Point {
+  owner?: number;
   radius: number;
   delay: number;
   life: number;
@@ -126,6 +139,7 @@ export interface Run {
   training: Partial<Record<HeroStat, number>>;
   ultimateCharge: number;
   learnedSkills: string[];
+  offeredSkills: string[];
   skillLevels: Record<string, number>;
   skillPurchase: boolean;
   won: boolean;
@@ -370,7 +384,7 @@ export const SKILLS = [
     id: "vortex",
     name: "Ímã gravitacional",
     tag: "AGRUPAR",
-    desc: "Durante 3s, um poço no inimigo mais próximo puxa a horda. Combine com ataques de área.",
+    desc: "Um poço puxa a horda por até 3s. Aperte Q novamente para implodir antes: a explosão atinge os inimigos reunidos. Combine com ataques de área.",
     cooldown: 5,
     color: "#c5afff",
     glyph: "mark",
@@ -397,7 +411,7 @@ export const SKILLS = [
     id: "mine",
     name: "Mina de proximidade",
     tag: "ARMADILHA",
-    desc: "Planta uma mina aos seus pés. Arma em 0,45s e explode quando um inimigo se aproxima, ou após 5s.",
+    desc: "Planta uma mina aos seus pés. Arma em 0,45s; outro Q detona à distância. Também explode por proximidade ou após 5s.",
     cooldown: 3.8,
     color: "#ffbc8a",
     glyph: "explosion",
@@ -469,10 +483,28 @@ export const SKILLS = [
     id: "recall",
     name: "Âncora de retorno",
     tag: "TRUQUE · REPOSICIONAR",
-    desc: "Marca o chão e, após 2,2s, leva você de volta. O retorno apaga tiros próximos e prepara o disparo. Saia, ataque e deixe a âncora resgatar você.",
+    desc: "Q planta uma runa por até 15s. Outro Q retorna imediatamente, limpa tiros próximos e prepara a arma. Ao esgotar o tempo, você volta automaticamente. A recarga começa no retorno.",
     cooldown: 6.5,
     color: "#85d8ef",
     glyph: "dash",
+  },
+  {
+    id: "soulstep",
+    name: "Incursão espectral",
+    tag: "RECONJURAR · ECO",
+    desc: "Avance na direção do movimento e deixe seu corpo por até 6s. Outro Q retorna e repete parte do dano direto causado aos alvos marcados, com limite de seis alvos e energia. Ao expirar, retorna sozinho. Não recupera vida perdida.",
+    cooldown: 7,
+    color: "#c5afff",
+    glyph: "repeat",
+  },
+  {
+    id: "relay",
+    name: "Selo de travessia",
+    tag: "RECONJURAR · EMBOSCADA",
+    desc: "Lance um selo até 300 passos na direção do alvo. Durante 5s, outro Q atravessa até ele e corta os inimigos no caminho. Sem reconjurar, o selo se desfaz: escolha quando se comprometer.",
+    cooldown: 5.5,
+    color: "#ffbc8a",
+    glyph: "mark",
   },
 ] as const;
 export const ULTIMATES = [
@@ -507,6 +539,13 @@ export const ULTIMATES = [
 export const isUltimate = (id: string) => ULTIMATES.some((s) => s.id === id);
 export const skillById = (id: string) =>
   [...SKILLS, ...ULTIMATES].find((s) => s.id === id)!;
+export const RECASTS: Record<string, string> = {
+  recall: "VOLTAR",
+  soulstep: "VOLTAR + ECO",
+  relay: "ATRAVESSAR",
+  mine: "DETONAR",
+  vortex: "IMPLODIR",
+};
 export const HERO_STATS = [
   {
     id: "vitality",
@@ -578,7 +617,7 @@ export const skillUpgradeCost = (run: Run) =>
 export const skillRole = (id: string) =>
   ["nova", "wall", "aegis", "stasis"].includes(id)
     ? "defense"
-    : ["overdrive", "recall", "vortex", "decoy"].includes(id)
+    : ["overdrive", "recall", "relay", "vortex", "decoy"].includes(id)
       ? "utility"
       : "attack";
 export const SKILL_EVOLUTION: Record<string, [string, string, string, string]> =
@@ -672,6 +711,18 @@ export const SKILL_EVOLUTION: Record<string, [string, string, string, string]> =
       "A chegada provoca uma onda de repulsão.",
       "Recarga mais curta.",
       "Deixa uma isca explosiva onde você estava.",
+    ],
+    soulstep: [
+      "Incursão dura 7s e o avanço alcança mais longe.",
+      "Retornar limpa tiros próximos ao corpo.",
+      "Recarga mais curta.",
+      "Os ecos também transmitem as cargas e doses da build.",
+    ],
+    relay: [
+      "Selo pode ser lançado mais longe; corte fica mais largo.",
+      "A chegada empurra inimigos e detona toxinas com Catálise.",
+      "Recarga mais curta.",
+      "A chegada deixa uma bolha temporal por 1,5s.",
     ],
   };
 export const REWARDS: Reward[] = [
@@ -963,6 +1014,7 @@ export function createRun(seed: string, classId: ClassId): Run {
     training: {},
     ultimateCharge: 0,
     learnedSkills: [],
+    offeredSkills: [],
     skillLevels: {},
     skillPurchase: false,
     won: false,
@@ -1044,7 +1096,9 @@ export function rewardOffers(
       r.id === "returnflux" &&
       !(
         run.weapon === "disc" ||
-        run.skills.some((s) => s === "aegis" || s === "orbit")
+        run.skills.some((s) =>
+          ["aegis", "orbit", "recall", "soulstep", "relay"].includes(s ?? ""),
+        )
       )
     )
       return false;
@@ -1075,7 +1129,9 @@ export function rewardOffers(
       r.id === "catalyst" &&
       !(
         run.weapon === "seismic" ||
-        run.skills.some((id) => id === "quake" || id === "mine")
+        run.skills.some(
+          (id) => id === "quake" || id === "mine" || id === "relay",
+        )
       )
     )
       return false;
@@ -1100,27 +1156,38 @@ export function rewardOffers(
     ...eligible.filter((r) => exclude.includes(r.id)),
   ];
   const result: string[] = [];
+  const pick = (options: Reward[]) => {
+    const fresh = options.filter((r) => !exclude.includes(r.id));
+    const available = fresh.length ? fresh : options;
+    const unseen = available.filter(
+      (r) =>
+        !r.id.startsWith("skill:") ||
+        !run.offeredSkills.includes(r.id.slice(6)),
+    );
+    const choices = unseen.length ? unseen : available;
+    if (!choices.length) return;
+    const chosen = choices[Math.floor(random() * choices.length)];
+    result.push(chosen.id);
+    pool.splice(pool.indexOf(chosen), 1);
+  };
   // The first Q draft contrasts offense, protection and utility without an initial class choice.
   if (kind === "skill")
     for (const role of ["attack", "defense", "utility"]) {
-      const options = pool.filter(
-        (r) => skillRole(r.id.slice(6)) === role && !exclude.includes(r.id),
-      );
-      const fallback = options.length
-        ? options
-        : pool.filter((r) => skillRole(r.id.slice(6)) === role);
-      if (fallback.length) {
-        const picked = fallback[Math.floor(random() * fallback.length)];
-        result.push(picked.id);
-        pool.splice(pool.indexOf(picked), 1);
-      }
+      pick(pool.filter((r) => skillRole(r.id.slice(6)) === role));
     }
+  // Every later Q checkpoint reserves one card for a fresh ability; passives keep two slots.
+  if (kind === "perk" && [5, 7, 10].includes(run.room)) {
+    pick(pool.filter((r) => r.id.startsWith("skill:")));
+    for (let i = pool.length - 1; i >= 0; i--)
+      if (pool[i].id.startsWith("skill:")) pool.splice(i, 1);
+  }
   while (result.length < 3 && pool.length) {
     const fresh = pool.filter((r) => !exclude.includes(r.id));
     let choices = fresh.length ? fresh : pool;
     // One fitting offer helps a build become coherent; the others keep the draft open.
     const fitting = choices.filter((r) => rewardSynergy(run, r.id));
-    if (!result.length && fitting.length) choices = fitting;
+    if (!result.some((id) => !id.startsWith("skill:")) && fitting.length)
+      choices = fitting;
     const picked = choices[Math.floor(random() * choices.length)];
     result.push(picked.id);
     pool.splice(pool.indexOf(picked), 1);
@@ -1158,35 +1225,135 @@ export function applyReward(run: Run, player: Player, id: string): boolean {
   }
   return true;
 }
+export const ENCOUNTERS = [
+  {
+    name: "Primeiro contato",
+    type: "HORDA",
+    hint: "Abra espaço. Pare para disparar.",
+    pack: 7,
+    gap: 2.5,
+    groups: { chaser: 18, runner: 2, shooter: 1 },
+  },
+  {
+    name: "Dança das lâminas",
+    type: "PRECISÃO",
+    hint: "Duelistas miram antes de avançar. Saia da linha.",
+    pack: 4,
+    gap: 3.4,
+    groups: { chaser: 4, duelist: 2, shooter: 3, guard: 1 },
+  },
+  {
+    name: "Maré comandada",
+    type: "HORDA",
+    hint: "Abata o Arauto para interromper a investida da horda.",
+    pack: 8,
+    gap: 2.5,
+    groups: { chaser: 30, runner: 5, shooter: 2, herald: 1 },
+  },
+  {
+    name: "Guardião I",
+    type: "BOSS",
+    hint: "Quatro fases. Leia o chão e preserve sua esquiva.",
+    pack: 8,
+    gap: 2.1,
+    groups: { boss: 1, chaser: 8 },
+  },
+  {
+    name: "Chão proibido",
+    type: "PRECISÃO",
+    hint: "Tecelões antecipam seu caminho. Mude de direção.",
+    pack: 4,
+    gap: 3.4,
+    groups: { chaser: 3, duelist: 3, weaver: 2, shooter: 3, guard: 2 },
+  },
+  {
+    name: "Enxame em marcha",
+    type: "HORDA",
+    hint: "Limpeza em área abre espaço; Arautos tornam a massa perigosa.",
+    pack: 8,
+    gap: 2.5,
+    groups: { chaser: 42, runner: 6, herald: 2, shooter: 2 },
+  },
+  {
+    name: "Círculo de caça",
+    type: "PRECISÃO",
+    hint: "Priorize Tecelões e Arautos antes que combinem ataques.",
+    pack: 4,
+    gap: 3.8,
+    groups: { duelist: 4, weaver: 3, herald: 2, guard: 2, shooter: 3 },
+  },
+  {
+    name: "Guardião II",
+    type: "BOSS",
+    hint: "Use a ultimate quando houver uma abertura.",
+    pack: 8,
+    gap: 2.1,
+    groups: { boss: 1, chaser: 10 },
+  },
+  {
+    name: "Caçada cruzada",
+    type: "PRECISÃO",
+    hint: "Atraia investidas e saia de lado; use o terreno da sua build.",
+    pack: 4,
+    gap: 3.4,
+    groups: {
+      chaser: 3,
+      duelist: 5,
+      weaver: 3,
+      herald: 2,
+      shooter: 3,
+      guard: 2,
+    },
+  },
+  {
+    name: "Última maré",
+    type: "HORDA",
+    hint: "Prepare áreas de dano e rompa o comando dos Arautos.",
+    pack: 8,
+    gap: 2.5,
+    groups: { chaser: 54, runner: 8, herald: 3, shooter: 3 },
+  },
+  {
+    name: "Conselho da ruptura",
+    type: "PRECISÃO",
+    hint: "Poucos alvos, funções diferentes. Escolha quem eliminar primeiro.",
+    pack: 4,
+    gap: 3.8,
+    groups: { duelist: 6, weaver: 4, herald: 3, guard: 3, shooter: 4 },
+  },
+  {
+    name: "Guardião III",
+    type: "BOSS",
+    hint: "Último confronto. Quatro fases até o núcleo cair.",
+    pack: 8,
+    gap: 2.1,
+    groups: { boss: 1, chaser: 12 },
+  },
+] as const;
+export const encounterByRoom = (room: number) =>
+  ENCOUNTERS[Math.max(0, Math.min(11, Math.floor(room) - 1))];
 export function roomComposition(room: number): EnemyKind[] {
-  const act = Math.ceil(room / 4),
-    stage = (room - 1) % 4;
-  if (room % 4 === 0)
-    return [
-      "boss",
-      ...Array.from({ length: 6 + act * 2 }, () => "chaser" as const),
-    ];
-  const groups: Record<Exclude<EnemyKind, "boss">, number> = {
-    chaser: 20 + stage * 6 + (act - 1) * 8,
-    runner: 2 + stage * 2 + (act - 1) * 2,
-    shooter: 1 + stage + (act - 1) * 2,
-    guard: Math.max(0, stage + act - 1),
+  const groups: Partial<Record<EnemyKind, number>> = {
+    ...encounterByRoom(room).groups,
   };
   const result: EnemyKind[] = [];
-  // Interleave threats: ranged and flankers no longer arrive only after the basic horde.
-  while (Object.values(groups).some((n) => n > 0))
+  // Supports arrive alongside the bodies they command, rather than after the horde dies.
+  while (Object.values(groups).some((n) => n! > 0))
     for (const kind of [
+      "boss",
+      "herald",
       "chaser",
+      "duelist",
       "chaser",
+      "weaver",
       "runner",
-      "chaser",
       "shooter",
       "chaser",
       "guard",
     ] as const)
-      if (groups[kind] > 0) {
+      if ((groups[kind] ?? 0) > 0) {
         result.push(kind);
-        groups[kind]--;
+        groups[kind]!--;
       }
   return result;
 }
