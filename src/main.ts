@@ -2,6 +2,7 @@ import { Game } from "./game/engine";
 import { KaplayRuntime } from "./game/kaplay";
 import { Interface } from "./ui/interface";
 import { DeviceLayout } from "./ui/device";
+import { ControlSettings } from "./ui/control-settings";
 import { TouchControls } from "./ui/touch";
 import { arenaDimensions } from "./game/viewport";
 import "./ui/style.css";
@@ -13,7 +14,13 @@ app.innerHTML =
   '<div id="arena-frame"><canvas id="arena" aria-label="Arena do Rogue. Mova com WASD ou setas, espaço para esquivar, Q e E para habilidades. As estatísticas aparecem na interface ao redor."></canvas></div><div id="interface"></div>';
 const layout = new DeviceLayout();
 const game = new Game();
-const ui = new Interface(document.querySelector("#interface")!, game, layout);
+const controls = new ControlSettings();
+const ui = new Interface(
+  document.querySelector("#interface")!,
+  game,
+  layout,
+  controls,
+);
 const runtime = new KaplayRuntime(
   document.querySelector("#arena")!,
   document.querySelector("#arena-frame")!,
@@ -24,6 +31,7 @@ const touch = new TouchControls(
   document.querySelector("#interface")!,
   game,
   () => ui.tick(),
+  controls,
 );
 let previousPhase = game.phase;
 game.onChange = () => {

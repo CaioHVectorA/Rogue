@@ -83,6 +83,12 @@ for (const size of [
       };
     });
     const a = boxes.arena;
+    expect(
+      boxes.joystick.right <= boxes.actions.x ||
+        boxes.actions.right <= boxes.joystick.x ||
+        boxes.joystick.bottom <= boxes.actions.y ||
+        boxes.actions.bottom <= boxes.joystick.y,
+    ).toBe(true);
     for (const controls of [boxes.joystick, boxes.actions]) {
       expect(
         a.right <= controls.x ||
@@ -214,6 +220,11 @@ test("two simultaneous fingers move and cast; cancellation never leaves movement
   };
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
+    touchPoints: [{ ...movement, x: movement.x - 28 }],
+  });
+  expect(await page.evaluate(() => window.__rogue.stick.x)).toBe(0);
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
     touchPoints: [movement],
   });
   await expect
@@ -234,7 +245,9 @@ test("two simultaneous fingers move and cast; cancellation never leaves movement
   );
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
-    touchPoints: [movement],
+    touchPoints: [
+      { id: 2, x: skill.x + skill.width / 2, y: skill.y + skill.height / 2 },
+    ],
   });
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",

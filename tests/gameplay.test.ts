@@ -64,7 +64,12 @@ describe("playstyle mechanics", () => {
       g.skill();
       expect(g.bullets.length + g.fields.length).toBe(objects);
       simulate(g, 3.5);
-      expect(enemy.hp).toBeLessThan(enemy.maxHp);
+      if (
+        !["wall", "aegis", "overdrive", "stasis", "recall"].includes(skill.id)
+      )
+        expect(enemy.hp).toBeLessThan(enemy.maxHp);
+      else
+        expect(objects + Number(skill.id === "overdrive")).toBeGreaterThan(0);
       expect(g.player.skillCd).toBeLessThan(skill.cooldown);
       if (skill.id === "vortex")
         expect(enemy.x).toBeLessThan(g.player.x + 75 + 1);

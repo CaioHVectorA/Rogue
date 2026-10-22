@@ -4,6 +4,11 @@ import { isUltimate, skillById, weaponById } from "../game/model";
 import type { WeaponId } from "../game/model";
 
 const LOCATIONS: Record<string, string> = {
+  wall: "DIANTE DA MAIOR HORDA · TIROS ATRAVESSAM",
+  aegis: "ACOMPANHA VOCÊ · BLOQUEIA TIROS",
+  stasis: "ACOMPANHA VOCÊ · DESACELERA TIROS",
+  overdrive: "DISPARE EM MOVIMENTO",
+  recall: "MARQUE · SAIA · RETORNE",
   venom: "NO ALVO MAIS PRÓXIMO",
   volley: "NA DIREÇÃO DO ALVO",
   nova: "AO SEU REDOR · EMPURRA",
@@ -26,11 +31,17 @@ export function powerInfo(id: string) {
     return {
       ...w,
       where:
-        w.pattern === "circle"
-          ? "AO SEU REDOR · ALCANCE CURTO"
-          : w.pattern === "chain"
-            ? "SALTA ENTRE INIMIGOS PRÓXIMOS"
-            : "NA DIREÇÃO DO ALVO",
+        w.id === "disc"
+          ? "ATRAVESSA · VOLTA ATÉ VOCÊ"
+          : w.id === "prism"
+            ? "IMPACTO → TRÊS ESTILHAÇOS"
+            : w.id === "spore"
+              ? "IMPACTO → NUVEM TÓXICA"
+              : w.pattern === "circle"
+                ? "AO SEU REDOR · ALCANCE CURTO"
+                : w.pattern === "chain"
+                  ? "SALTA ENTRE INIMIGOS PRÓXIMOS"
+                  : "NA DIREÇÃO DO ALVO",
       trigger: "AUTOMÁTICO AO PARAR",
       timing: `${w.interval.toFixed(2)}s ENTRE ATAQUES`,
     };
@@ -46,9 +57,9 @@ export function powerInfo(id: string) {
       : `${s.cooldown}s DE RECARGA BASE`,
   };
 }
-export function powerDiagram(id: string) {
+export function powerDiagram(id: string, level = 1) {
   const info = powerInfo(id);
-  return `<span class="power-preview" style="--preview-color:${info.color}"><canvas class="power-diagram" data-power-preview="${id}" width="800" height="450" aria-hidden="true"></canvas><span class="preview-caption">${info.where}</span></span>`;
+  return `<span class="power-preview" style="--preview-color:${info.color}"><canvas class="power-diagram" data-power-preview="${id}" data-power-level="${level}" width="800" height="450" aria-hidden="true"></canvas><span class="preview-caption">${info.where}</span></span>`;
 }
 
 /** These canvases teach attacks using Game's actual simulation; the playable arena stays in Kaplay. */
@@ -65,6 +76,10 @@ class PreviewScene {
   }
   reset() {
     this.game = Game.demonstration(this.canvas.dataset.powerPreview!);
+    if (this.game.run.skills[0])
+      this.game.run.skillLevels[this.game.run.skills[0]] = Number(
+        this.canvas.dataset.powerLevel ?? 1,
+      );
     this.time = 0;
     this.cast = false;
     this.effects = [];
@@ -87,11 +102,14 @@ class PreviewScene {
     }
     // Retreat demonstrates planted objects; moving demonstrates following effects.
     g.stick.x =
-      this.cast && this.time < 2.1 && ["mine", "decoy", "turret"].includes(id)
+      this.cast &&
+      this.time < 2.1 &&
+      ["mine", "decoy", "turret", "recall"].includes(id)
         ? -0.45
         : this.cast && this.time < 2.1 && ["orbit", "tempest"].includes(id)
           ? 0.3
           : 0;
+    if (id === "overdrive") g.stick.x = this.time < 4 ? 0.35 : 0;
     // No gunfire before the action cue in weapon demonstrations.
     if (
       this.canvas.dataset.powerPreview!.startsWith("weapon:") &&
@@ -152,6 +170,40 @@ class PreviewScene {
               : color;
       c.lineWidth = 3;
       circle(f.x, f.y, f.radius, tint + "99", tint + "18");
+      if (f.kind === "wall") {
+        const a = f.angle ?? 0,
+          nx = Math.cos(a),
+          ny = Math.sin(a);
+        c.lineWidth = 12;
+        c.strokeStyle = "#85d8ef";
+        c.beginPath();
+        c.moveTo(f.x - ny * f.radius, f.y + nx * f.radius);
+        c.lineTo(f.x + ny * f.radius, f.y - nx * f.radius);
+        c.stroke();
+      }
+      if (f.kind === "aegis") {
+        c.lineWidth = 5;
+        circle(f.x, f.y, f.radius, "#a4f6c1");
+        for (let i = 0; i < f.blocks; i++)
+          circle(
+            f.x - 25 + i * 12,
+            f.y - f.radius - 10,
+            4,
+            "#a4f6c1",
+            "#a4f6c1",
+          );
+      }
+      if (f.kind === "stasis") {
+        c.setLineDash([8, 8]);
+        circle(f.x, f.y, f.radius, "#c5afff", "#c5afff11");
+        c.setLineDash([]);
+      }
+      if (f.kind === "recall") {
+        circle(f.x, f.y, 32, "#85d8ef");
+        c.font = "24px monospace";
+        c.fillStyle = "#85d8ef";
+        c.fillText("↶", f.x - 10, f.y + 8);
+      }
       if (f.kind === "vortex")
         for (let i = 0; i < 3; i++) {
           c.beginPath();
@@ -237,6 +289,10 @@ class PreviewScene {
         circle(e.x - 12 + i * 8, e.y + 30, 3, "#b8ff62", "#b8ff62");
       for (let i = 0; i < e.shock; i++)
         circle(e.x - 12 + i * 8, e.y + 39, 3, "#85d8ef", "#85d8ef");
+    }
+    if (g.overdrive > 0) {
+      c.lineWidth = 4;
+      circle(g.player.x, g.player.y, 36, "#ffda8a");
     }
     for (const b of g.bullets) {
       c.lineWidth = b.hostile ? 5 : 7;

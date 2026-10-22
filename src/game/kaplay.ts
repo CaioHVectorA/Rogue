@@ -473,6 +473,13 @@ export class KaplayRuntime {
         color: k.Color.fromHex(color),
         opacity: 0.3,
       });
+      if (b.origin === "disc") {
+        this.poly(zero, 12, 6, color, 1, this.time * 12);
+        this.ring(zero, 16, color, 0.4, 2);
+      }
+      if (b.origin === "prism") this.poly(zero, 10, 4, color, 1, Math.PI / 4);
+      if (b.origin === "seed")
+        this.poly(zero, 9, 6, "#b8ff62", 0.8, this.time * 3);
       this.poly(zero, b.radius + 3, 4, color, 0.18, Math.PI / 4);
       this.poly(
         zero,
@@ -632,7 +639,98 @@ export class KaplayRuntime {
       });
       this.ring(end, boss.radius, "#ff6b88", 0.75, 3);
     }
+    if (g.overdrive > 0) {
+      this.ring(g.player, 34, "#ffda8a", 0.8, 3);
+      for (let i = 0; i < 3; i++)
+        this.poly(
+          { x: g.player.x - 25, y: g.player.y + (i - 1) * 14 },
+          5,
+          3,
+          "#ffda8a",
+          0.7,
+          this.time * 3,
+        );
+    }
     for (const field of g.fields) {
+      if (field.kind === "wall") {
+        const a = field.angle ?? 0,
+          nx = Math.cos(a),
+          ny = Math.sin(a);
+        k.drawLine({
+          p1: k.vec2(field.x - ny * field.radius, field.y + nx * field.radius),
+          p2: k.vec2(field.x + ny * field.radius, field.y - nx * field.radius),
+          color: k.Color.fromHex("#85d8ef"),
+          width: 18,
+          opacity: 0.2,
+        });
+        k.drawLine({
+          p1: k.vec2(field.x - ny * field.radius, field.y + nx * field.radius),
+          p2: k.vec2(field.x + ny * field.radius, field.y - nx * field.radius),
+          color: k.Color.fromHex("#85d8ef"),
+          width: 4,
+          opacity: 0.9,
+        });
+        for (let t = -field.radius; t <= field.radius; t += 28)
+          this.poly(
+            { x: field.x - ny * t, y: field.y + nx * t },
+            9,
+            4,
+            "#85d8ef",
+            0.6,
+            this.time,
+          );
+        continue;
+      }
+      if (field.kind === "aegis") {
+        this.ring(field, field.radius, "#a4f6c1", 0.65, 3);
+        for (let i = 0; i < field.blocks; i++) {
+          const a = this.time + (i * TAU) / Math.max(1, field.blocks);
+          this.poly(
+            {
+              x: field.x + Math.cos(a) * field.radius,
+              y: field.y + Math.sin(a) * field.radius,
+            },
+            5,
+            4,
+            "#a4f6c1",
+            0.9,
+            a,
+          );
+        }
+        continue;
+      }
+      if (field.kind === "stasis") {
+        this.ring(field, field.radius, "#c5afff", 0.5, 2);
+        this.ring(field, field.radius * 0.9, "#c5afff", 0.2, 1);
+        for (let i = 0; i < 8; i++) {
+          const a = (i * TAU) / 8 + this.time * 0.3;
+          this.poly(
+            {
+              x: field.x + Math.cos(a) * field.radius,
+              y: field.y + Math.sin(a) * field.radius,
+            },
+            4,
+            3,
+            "#c5afff",
+            0.7,
+            a,
+          );
+        }
+        continue;
+      }
+      if (field.kind === "recall") {
+        this.ring(field, 28, "#85d8ef", 0.8, 3);
+        this.poly(field, 18, 6, "#85d8ef", 0.6, -this.time * 2);
+        k.drawLine({
+          p1: k.vec2(field.x, field.y),
+          p2: k.vec2(g.player.x, g.player.y),
+          color: k.Color.fromHex("#85d8ef"),
+          width: 1,
+          opacity: 0.25,
+        });
+        continue;
+      }
+
       const color =
         field.kind === "vortex"
           ? "#c5afff"
